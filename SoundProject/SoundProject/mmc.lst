@@ -1,0 +1,774 @@
+   1               		.file	"mmc.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  11               	send_cmd:
+  12               	.LFB1:
+  13               		.file 1 "mmc.c"
+   1:mmc.c         **** /*-----------------------------------------------------------------------*/
+   2:mmc.c         **** /* Low level disk control module                        (C)ChaN, 2009    */
+   3:mmc.c         **** /*-----------------------------------------------------------------------*/
+   4:mmc.c         **** 
+   5:mmc.c         **** #include "diskio.h"
+   6:mmc.c         **** 
+   7:mmc.c         **** 
+   8:mmc.c         **** /* Low level SPI control functions */
+   9:mmc.c         **** void init_spi (void);
+  10:mmc.c         **** void select (void);
+  11:mmc.c         **** void deselect (void);
+  12:mmc.c         **** void xmit_spi (BYTE);
+  13:mmc.c         **** BYTE rcv_spi (void);
+  14:mmc.c         **** void read_blk_part (void*, WORD, WORD);
+  15:mmc.c         **** 
+  16:mmc.c         **** 
+  17:mmc.c         **** /* Definitions of MMC/SDC command */
+  18:mmc.c         **** #define CMD0	(0x40+0)	/* GO_IDLE_STATE */
+  19:mmc.c         **** #define CMD1	(0x40+1)	/* SEND_OP_COND (MMC) */
+  20:mmc.c         **** #define	ACMD41	(0xC0+41)	/* SEND_OP_COND (SDC) */
+  21:mmc.c         **** #define CMD8	(0x40+8)	/* SEND_IF_COND */
+  22:mmc.c         **** #define CMD16	(0x40+16)	/* SET_BLOCKLEN */
+  23:mmc.c         **** #define CMD17	(0x40+17)	/* READ_SINGLE_BLOCK */
+  24:mmc.c         **** #define CMD55	(0x40+55)	/* APP_CMD */
+  25:mmc.c         **** #define CMD58	(0x40+58)	/* READ_OCR */
+  26:mmc.c         **** 
+  27:mmc.c         **** 
+  28:mmc.c         **** 
+  29:mmc.c         **** /*--------------------------------------------------------------------------
+  30:mmc.c         **** 
+  31:mmc.c         ****    Module Private Functions
+  32:mmc.c         **** 
+  33:mmc.c         **** ---------------------------------------------------------------------------*/
+  34:mmc.c         **** 
+  35:mmc.c         **** BYTE CardType;
+  36:mmc.c         **** 
+  37:mmc.c         **** 
+  38:mmc.c         **** /*-----------------------------------------------------------------------*/
+  39:mmc.c         **** /* Deselect the card and release SPI bus                                 */
+  40:mmc.c         **** /*-----------------------------------------------------------------------*/
+  41:mmc.c         **** 
+  42:mmc.c         **** static
+  43:mmc.c         **** void release_spi (void)
+  44:mmc.c         **** {
+  45:mmc.c         **** 	deselect();
+  46:mmc.c         **** 	rcv_spi();
+  47:mmc.c         **** }
+  48:mmc.c         **** 
+  49:mmc.c         **** 
+  50:mmc.c         **** /*-----------------------------------------------------------------------*/
+  51:mmc.c         **** /* Send a command packet to MMC                                          */
+  52:mmc.c         **** /*-----------------------------------------------------------------------*/
+  53:mmc.c         **** 
+  54:mmc.c         **** static
+  55:mmc.c         **** BYTE send_cmd (
+  56:mmc.c         **** 	BYTE cmd,		/* Command byte */
+  57:mmc.c         **** 	DWORD arg		/* Argument */
+  58:mmc.c         **** )
+  59:mmc.c         **** {
+  14               		.loc 1 59 0
+  15               		.cfi_startproc
+  16               	.LVL0:
+  17 0000 FF92      		push r15
+  18               	.LCFI0:
+  19               		.cfi_def_cfa_offset 3
+  20               		.cfi_offset 15, -2
+  21 0002 0F93      		push r16
+  22               	.LCFI1:
+  23               		.cfi_def_cfa_offset 4
+  24               		.cfi_offset 16, -3
+  25 0004 1F93      		push r17
+  26               	.LCFI2:
+  27               		.cfi_def_cfa_offset 5
+  28               		.cfi_offset 17, -4
+  29 0006 CF93      		push r28
+  30               	.LCFI3:
+  31               		.cfi_def_cfa_offset 6
+  32               		.cfi_offset 28, -5
+  33 0008 DF93      		push r29
+  34               	.LCFI4:
+  35               		.cfi_def_cfa_offset 7
+  36               		.cfi_offset 29, -6
+  37               	/* prologue: function */
+  38               	/* frame size = 0 */
+  39               	/* stack size = 5 */
+  40               	.L__stack_usage = 5
+  41 000a C82F      		mov r28,r24
+  42 000c D42F      		mov r29,r20
+  43 000e 152F      		mov r17,r21
+  44 0010 062F      		mov r16,r22
+  45 0012 F72E      		mov r15,r23
+  60:mmc.c         **** 	BYTE n, res;
+  61:mmc.c         **** 
+  62:mmc.c         **** 
+  63:mmc.c         **** 	if (cmd & 0x80) {	/* ACMD<n> is the command sequense of CMD55-CMD<n> */
+  46               		.loc 1 63 0
+  47 0014 87FF      		sbrs r24,7
+  48 0016 00C0      		rjmp .L2
+  49               	.LVL1:
+  64:mmc.c         **** 		cmd &= 0x7F;
+  65:mmc.c         **** 		res = send_cmd(CMD55, 0);
+  50               		.loc 1 65 0
+  51 0018 40E0      		ldi r20,0
+  52 001a 50E0      		ldi r21,0
+  53 001c BA01      		movw r22,r20
+  54               	.LVL2:
+  55 001e 87E7      		ldi r24,lo8(119)
+  56               	.LVL3:
+  57 0020 00D0      		rcall send_cmd
+  58               	.LVL4:
+  66:mmc.c         **** 		if (res > 1) return res;
+  59               		.loc 1 66 0
+  60 0022 8230      		cpi r24,lo8(2)
+  61 0024 00F4      		brsh .L3
+  64:mmc.c         **** 		cmd &= 0x7F;
+  62               		.loc 1 64 0
+  63 0026 CF77      		andi r28,lo8(127)
+  64               	.LVL5:
+  65               	.L2:
+  67:mmc.c         **** 	}
+  68:mmc.c         **** 
+  69:mmc.c         **** 	/* Select the card and wait for ready */
+  70:mmc.c         **** 	deselect();
+  66               		.loc 1 70 0
+  67 0028 00D0      		rcall deselect
+  68               	.LVL6:
+  71:mmc.c         **** 	rcv_spi();
+  69               		.loc 1 71 0
+  70 002a 00D0      		rcall rcv_spi
+  71               	.LVL7:
+  72:mmc.c         **** 	select();
+  72               		.loc 1 72 0
+  73 002c 00D0      		rcall select
+  74               	.LVL8:
+  73:mmc.c         **** 	rcv_spi();
+  75               		.loc 1 73 0
+  76 002e 00D0      		rcall rcv_spi
+  77               	.LVL9:
+  74:mmc.c         **** 
+  75:mmc.c         **** 	/* Send command packet */
+  76:mmc.c         **** 	xmit_spi(cmd);						/* Start + Command index */
+  78               		.loc 1 76 0
+  79 0030 8C2F      		mov r24,r28
+  80 0032 00D0      		rcall xmit_spi
+  81               	.LVL10:
+  77:mmc.c         **** 	xmit_spi((BYTE)(arg >> 24));		/* Argument[31..24] */
+  82               		.loc 1 77 0
+  83 0034 8F2D      		mov r24,r15
+  84 0036 00D0      		rcall xmit_spi
+  85               	.LVL11:
+  78:mmc.c         **** 	xmit_spi((BYTE)(arg >> 16));		/* Argument[23..16] */
+  86               		.loc 1 78 0
+  87 0038 802F      		mov r24,r16
+  88 003a 00D0      		rcall xmit_spi
+  89               	.LVL12:
+  79:mmc.c         **** 	xmit_spi((BYTE)(arg >> 8));			/* Argument[15..8] */
+  90               		.loc 1 79 0
+  91 003c 812F      		mov r24,r17
+  92 003e 00D0      		rcall xmit_spi
+  93               	.LVL13:
+  80:mmc.c         **** 	xmit_spi((BYTE)arg);				/* Argument[7..0] */
+  94               		.loc 1 80 0
+  95 0040 8D2F      		mov r24,r29
+  96 0042 00D0      		rcall xmit_spi
+  97               	.LVL14:
+  81:mmc.c         **** 	n = 0x01;							/* Dummy CRC + Stop */
+  82:mmc.c         **** 	if (cmd == CMD0) n = 0x95;			/* Valid CRC for CMD0(0) */
+  98               		.loc 1 82 0
+  99 0044 C034      		cpi r28,lo8(64)
+ 100 0046 01F0      		breq .L7
+  83:mmc.c         **** 	if (cmd == CMD8) n = 0x87;			/* Valid CRC for CMD8(0x1AA) */
+ 101               		.loc 1 83 0
+ 102 0048 C834      		cpi r28,lo8(72)
+ 103 004a 01F4      		brne .L8
+ 104 004c 87E8      		ldi r24,lo8(-121)
+ 105 004e 00C0      		rjmp .L4
+ 106               	.L7:
+  82:mmc.c         **** 	if (cmd == CMD8) n = 0x87;			/* Valid CRC for CMD8(0x1AA) */
+ 107               		.loc 1 82 0
+ 108 0050 85E9      		ldi r24,lo8(-107)
+ 109 0052 00C0      		rjmp .L4
+ 110               	.L8:
+  81:mmc.c         **** 	n = 0x01;							/* Dummy CRC + Stop */
+ 111               		.loc 1 81 0
+ 112 0054 81E0      		ldi r24,lo8(1)
+ 113               	.L4:
+ 114               	.LVL15:
+  84:mmc.c         **** 	xmit_spi(n);
+ 115               		.loc 1 84 0
+ 116 0056 00D0      		rcall xmit_spi
+ 117               	.LVL16:
+ 118 0058 CAE0      		ldi r28,lo8(10)
+ 119               	.LVL17:
+ 120               	.L5:
+ 121               	.LBB4:
+ 122               	.LBB5:
+  85:mmc.c         **** 
+  86:mmc.c         **** 	/* Receive command response */
+  87:mmc.c         **** 	n = 10;								/* Wait for a valid response in timeout of 10 attempts */
+  88:mmc.c         **** 	do {
+  89:mmc.c         **** 		res = rcv_spi();
+ 123               		.loc 1 89 0
+ 124 005a 00D0      		rcall rcv_spi
+ 125               	.LVL18:
+  90:mmc.c         **** 	} while ((res & 0x80) && --n);
+ 126               		.loc 1 90 0
+ 127 005c 87FF      		sbrs r24,7
+ 128 005e 00C0      		rjmp .L3
+ 129               	.LVL19:
+ 130 0060 C150      		subi r28,lo8(-(-1))
+ 131               	.LVL20:
+ 132 0062 01F4      		brne .L5
+ 133               	.LVL21:
+ 134               	.L3:
+ 135               	/* epilogue start */
+ 136               	.LBE5:
+ 137               	.LBE4:
+  91:mmc.c         **** 
+  92:mmc.c         **** 	return res;			/* Return with the response value */
+  93:mmc.c         **** }
+ 138               		.loc 1 93 0
+ 139 0064 DF91      		pop r29
+ 140 0066 CF91      		pop r28
+ 141 0068 1F91      		pop r17
+ 142 006a 0F91      		pop r16
+ 143 006c FF90      		pop r15
+ 144 006e 0895      		ret
+ 145               		.cfi_endproc
+ 146               	.LFE1:
+ 148               	.global	disk_initialize
+ 150               	disk_initialize:
+ 151               	.LFB2:
+  94:mmc.c         **** 
+  95:mmc.c         **** 
+  96:mmc.c         **** 
+  97:mmc.c         **** /*--------------------------------------------------------------------------
+  98:mmc.c         **** 
+  99:mmc.c         ****    Public Functions
+ 100:mmc.c         **** 
+ 101:mmc.c         **** ---------------------------------------------------------------------------*/
+ 102:mmc.c         **** 
+ 103:mmc.c         **** 
+ 104:mmc.c         **** /*-----------------------------------------------------------------------*/
+ 105:mmc.c         **** /* Initialize Disk Drive                                                 */
+ 106:mmc.c         **** /*-----------------------------------------------------------------------*/
+ 107:mmc.c         **** 
+ 108:mmc.c         **** DSTATUS disk_initialize (void)
+ 109:mmc.c         **** {
+ 152               		.loc 1 109 0
+ 153               		.cfi_startproc
+ 154 0070 DF92      		push r13
+ 155               	.LCFI5:
+ 156               		.cfi_def_cfa_offset 3
+ 157               		.cfi_offset 13, -2
+ 158 0072 EF92      		push r14
+ 159               	.LCFI6:
+ 160               		.cfi_def_cfa_offset 4
+ 161               		.cfi_offset 14, -3
+ 162 0074 FF92      		push r15
+ 163               	.LCFI7:
+ 164               		.cfi_def_cfa_offset 5
+ 165               		.cfi_offset 15, -4
+ 166 0076 0F93      		push r16
+ 167               	.LCFI8:
+ 168               		.cfi_def_cfa_offset 6
+ 169               		.cfi_offset 16, -5
+ 170 0078 1F93      		push r17
+ 171               	.LCFI9:
+ 172               		.cfi_def_cfa_offset 7
+ 173               		.cfi_offset 17, -6
+ 174 007a CF93      		push r28
+ 175               	.LCFI10:
+ 176               		.cfi_def_cfa_offset 8
+ 177               		.cfi_offset 28, -7
+ 178 007c DF93      		push r29
+ 179               	.LCFI11:
+ 180               		.cfi_def_cfa_offset 9
+ 181               		.cfi_offset 29, -8
+ 182 007e 00D0      		rcall .
+ 183 0080 00D0      		rcall .
+ 184               	.LCFI12:
+ 185               		.cfi_def_cfa_offset 13
+ 186 0082 CDB7      		in r28,__SP_L__
+ 187 0084 DEB7      		in r29,__SP_H__
+ 188               	.LCFI13:
+ 189               		.cfi_def_cfa_register 28
+ 190               	/* prologue: function */
+ 191               	/* frame size = 4 */
+ 192               	/* stack size = 11 */
+ 193               	.L__stack_usage = 11
+ 110:mmc.c         **** 	BYTE n, cmd, ty, ocr[4];
+ 111:mmc.c         **** 	WORD tmr;
+ 112:mmc.c         **** 
+ 113:mmc.c         **** 
+ 114:mmc.c         **** 	init_spi();		/* Initialize USI */
+ 194               		.loc 1 114 0
+ 195 0086 00D0      		rcall init_spi
+ 196               	.LVL22:
+ 197 0088 0AE0      		ldi r16,lo8(10)
+ 198 008a 10E0      		ldi r17,0
+ 199               	.LVL23:
+ 200               	.L13:
+ 115:mmc.c         **** 
+ 116:mmc.c         **** 	for (tmr = 10; tmr; tmr--) rcv_spi();	/* Dummy clocks */
+ 201               		.loc 1 116 0 discriminator 3
+ 202 008c 00D0      		rcall rcv_spi
+ 203               	.LVL24:
+ 204 008e 0150      		subi r16,1
+ 205 0090 1109      		sbc r17,__zero_reg__
+ 206               	.LVL25:
+ 207 0092 01F4      		brne .L13
+ 117:mmc.c         **** 	select();
+ 208               		.loc 1 117 0
+ 209 0094 00D0      		rcall select
+ 210               	.LVL26:
+ 211 0096 08E5      		ldi r16,lo8(88)
+ 212 0098 12E0      		ldi r17,lo8(2)
+ 213               	.LVL27:
+ 214               	.L14:
+ 118:mmc.c         **** 	for (tmr = 600; tmr; tmr--) rcv_spi();	/* Dummy clocks */
+ 215               		.loc 1 118 0 discriminator 3
+ 216 009a 00D0      		rcall rcv_spi
+ 217               	.LVL28:
+ 218 009c 0150      		subi r16,1
+ 219 009e 1109      		sbc r17,__zero_reg__
+ 220               	.LVL29:
+ 221 00a0 01F4      		brne .L14
+ 222               	.LVL30:
+ 119:mmc.c         **** 
+ 120:mmc.c         **** 	ty = 0;
+ 121:mmc.c         **** 	if (send_cmd(CMD0, 0) == 1) {			/* Enter Idle state */
+ 223               		.loc 1 121 0
+ 224 00a2 40E0      		ldi r20,0
+ 225 00a4 50E0      		ldi r21,0
+ 226 00a6 BA01      		movw r22,r20
+ 227 00a8 80E4      		ldi r24,lo8(64)
+ 228 00aa 00D0      		rcall send_cmd
+ 229               	.LVL31:
+ 230 00ac 8130      		cpi r24,lo8(1)
+ 231 00ae 01F0      		breq .+2
+ 232 00b0 00C0      		rjmp .L56
+ 122:mmc.c         **** 		if (send_cmd(CMD8, 0x1AA) == 1) {	/* SDv2 */
+ 233               		.loc 1 122 0
+ 234 00b2 4AEA      		ldi r20,lo8(-86)
+ 235 00b4 51E0      		ldi r21,lo8(1)
+ 236 00b6 60E0      		ldi r22,0
+ 237 00b8 70E0      		ldi r23,0
+ 238 00ba 88E4      		ldi r24,lo8(72)
+ 239 00bc 00D0      		rcall send_cmd
+ 240               	.LVL32:
+ 241 00be 8130      		cpi r24,lo8(1)
+ 242 00c0 01F4      		brne .L17
+ 243 00c2 8E01      		movw r16,r28
+ 244               	.LVL33:
+ 245 00c4 0F5F      		subi r16,-1
+ 246 00c6 1F4F      		sbci r17,-1
+ 247 00c8 7801      		movw r14,r16
+ 248 00ca 24E0      		ldi r18,lo8(4)
+ 249 00cc D22E      		mov r13,r18
+ 250 00ce D00E      		add r13,r16
+ 251               	.L18:
+ 123:mmc.c         **** 			for (n = 0; n < 4; n++) ocr[n] = rcv_spi();		/* Get trailing return value of R7 resp */
+ 252               		.loc 1 123 0 discriminator 3
+ 253 00d0 00D0      		rcall rcv_spi
+ 254               	.LVL34:
+ 255 00d2 F701      		movw r30,r14
+ 256 00d4 8193      		st Z+,r24
+ 257 00d6 7F01      		movw r14,r30
+ 258               	.LVL35:
+ 259 00d8 DE12      		cpse r13,r30
+ 260 00da 00C0      		rjmp .L18
+ 124:mmc.c         **** 			if (ocr[2] == 0x01 && ocr[3] == 0xAA) {				/* The card can work at vdd range of 2.7-3.6V */
+ 261               		.loc 1 124 0
+ 262 00dc 8B81      		ldd r24,Y+3
+ 263 00de 8130      		cpi r24,lo8(1)
+ 264 00e0 01F0      		breq .+2
+ 265 00e2 00C0      		rjmp .L56
+ 266               		.loc 1 124 0 is_stmt 0 discriminator 1
+ 267 00e4 8C81      		ldd r24,Y+4
+ 268 00e6 8A3A      		cpi r24,lo8(-86)
+ 269 00e8 01F0      		breq .+2
+ 270 00ea 00C0      		rjmp .L56
+ 271 00ec 98EA      		ldi r25,lo8(-88)
+ 272 00ee E92E      		mov r14,r25
+ 273 00f0 91E6      		ldi r25,lo8(97)
+ 274 00f2 F92E      		mov r15,r25
+ 275               	.L20:
+ 276               	.LVL36:
+ 125:mmc.c         **** 				for (tmr = 25000; tmr && send_cmd(ACMD41, 1UL << 30); tmr--) ;	/* Wait for leaving idle state (
+ 277               		.loc 1 125 0 is_stmt 1 discriminator 3
+ 278 00f4 40E0      		ldi r20,0
+ 279 00f6 50E0      		ldi r21,0
+ 280 00f8 60E0      		ldi r22,0
+ 281 00fa 70E4      		ldi r23,lo8(64)
+ 282 00fc 89EE      		ldi r24,lo8(-23)
+ 283 00fe 00D0      		rcall send_cmd
+ 284               	.LVL37:
+ 285 0100 8823      		tst r24
+ 286 0102 01F0      		breq .L57
+ 287               	.LVL38:
+ 288 0104 F1E0      		ldi r31,1
+ 289 0106 EF1A      		sub r14,r31
+ 290 0108 F108      		sbc r15,__zero_reg__
+ 291               	.LVL39:
+ 292               		.loc 1 125 0 is_stmt 0 discriminator 4
+ 293 010a 01F4      		brne .L20
+ 294 010c 00C0      		rjmp .L56
+ 295               	.LVL40:
+ 296               	.L17:
+ 126:mmc.c         **** 				if (tmr && send_cmd(CMD58, 0) == 0) {		/* Check CCS bit in the OCR */
+ 127:mmc.c         **** 					for (n = 0; n < 4; n++) ocr[n] = rcv_spi();
+ 128:mmc.c         **** 					ty = (ocr[0] & 0x40) ? CT_SD2 | CT_BLOCK : CT_SD2;	/* SDv2 */
+ 129:mmc.c         **** 				}
+ 130:mmc.c         **** 			}
+ 131:mmc.c         **** 		} else {							/* SDv1 or MMC */
+ 132:mmc.c         **** 			if (send_cmd(ACMD41, 0) <= 1) 	{
+ 297               		.loc 1 132 0 is_stmt 1
+ 298 010e 40E0      		ldi r20,0
+ 299 0110 50E0      		ldi r21,0
+ 300 0112 BA01      		movw r22,r20
+ 301 0114 89EE      		ldi r24,lo8(-23)
+ 302 0116 00D0      		rcall send_cmd
+ 303               	.LVL41:
+ 304 0118 8230      		cpi r24,lo8(2)
+ 305 011a 00F0      		brlo .L32
+ 133:mmc.c         **** 				ty = CT_SD1; cmd = ACMD41;	/* SDv1 */
+ 134:mmc.c         **** 			} else {
+ 135:mmc.c         **** 				ty = CT_MMC; cmd = CMD1;	/* MMCv3 */
+ 306               		.loc 1 135 0
+ 307 011c 11E0      		ldi r17,lo8(1)
+ 308 011e 01E4      		ldi r16,lo8(65)
+ 309               	.LVL42:
+ 310 0120 00C0      		rjmp .L25
+ 311               	.LVL43:
+ 312               	.L32:
+ 133:mmc.c         **** 				ty = CT_SD1; cmd = ACMD41;	/* SDv1 */
+ 313               		.loc 1 133 0
+ 314 0122 12E0      		ldi r17,lo8(2)
+ 315 0124 09EE      		ldi r16,lo8(-23)
+ 316               	.LVL44:
+ 317               	.L25:
+ 318               		.loc 1 135 0
+ 319 0126 88EA      		ldi r24,lo8(-88)
+ 320 0128 E82E      		mov r14,r24
+ 321 012a 81E6      		ldi r24,lo8(97)
+ 322 012c F82E      		mov r15,r24
+ 323               	.LVL45:
+ 324               	.L26:
+ 136:mmc.c         **** 			}
+ 137:mmc.c         **** 			for (tmr = 25000; tmr && send_cmd(cmd, 0); tmr--) ;	/* Wait for leaving idle state */
+ 325               		.loc 1 137 0 discriminator 3
+ 326 012e 40E0      		ldi r20,0
+ 327 0130 50E0      		ldi r21,0
+ 328 0132 BA01      		movw r22,r20
+ 329 0134 802F      		mov r24,r16
+ 330 0136 00D0      		rcall send_cmd
+ 331               	.LVL46:
+ 332 0138 8823      		tst r24
+ 333 013a 01F0      		breq .L58
+ 334               	.LVL47:
+ 335 013c F1E0      		ldi r31,1
+ 336 013e EF1A      		sub r14,r31
+ 337 0140 F108      		sbc r15,__zero_reg__
+ 338               	.LVL48:
+ 339               		.loc 1 137 0 is_stmt 0 discriminator 4
+ 340 0142 01F4      		brne .L26
+ 341 0144 00C0      		rjmp .L56
+ 342               	.LVL49:
+ 343               	.L57:
+ 126:mmc.c         **** 					for (n = 0; n < 4; n++) ocr[n] = rcv_spi();
+ 344               		.loc 1 126 0 is_stmt 1
+ 345 0146 40E0      		ldi r20,0
+ 346 0148 50E0      		ldi r21,0
+ 347 014a BA01      		movw r22,r20
+ 348 014c 8AE7      		ldi r24,lo8(122)
+ 349 014e 00D0      		rcall send_cmd
+ 350               	.LVL50:
+ 351 0150 8111      		cpse r24,__zero_reg__
+ 352 0152 00C0      		rjmp .L56
+ 353               	.L43:
+ 127:mmc.c         **** 					ty = (ocr[0] & 0x40) ? CT_SD2 | CT_BLOCK : CT_SD2;	/* SDv2 */
+ 354               		.loc 1 127 0 discriminator 3
+ 355 0154 00D0      		rcall rcv_spi
+ 356               	.LVL51:
+ 357 0156 F801      		movw r30,r16
+ 358 0158 8193      		st Z+,r24
+ 359 015a 8F01      		movw r16,r30
+ 360 015c DE12      		cpse r13,r30
+ 361 015e 00C0      		rjmp .L43
+ 128:mmc.c         **** 				}
+ 362               		.loc 1 128 0
+ 363 0160 8981      		ldd r24,Y+1
+ 364 0162 86FD      		sbrc r24,6
+ 365 0164 00C0      		rjmp .L59
+ 366 0166 14E0      		ldi r17,lo8(4)
+ 367 0168 00C0      		rjmp .L16
+ 368               	.L59:
+ 369 016a 1CE0      		ldi r17,lo8(12)
+ 370               	.LVL52:
+ 371               	.L16:
+ 138:mmc.c         **** 			if (!tmr || send_cmd(CMD16, 512) != 0) {			/* Set R/W block length to 512 */
+ 139:mmc.c         **** 				ty = 0;
+ 140:mmc.c         **** 			}
+ 141:mmc.c         **** 		}
+ 142:mmc.c         **** 	}
+ 143:mmc.c         **** 	CardType = ty;
+ 372               		.loc 1 143 0
+ 373 016c 1093 0000 		sts CardType,r17
+ 374               	.LBB8:
+ 375               	.LBB9:
+  45:mmc.c         **** 	rcv_spi();
+ 376               		.loc 1 45 0
+ 377 0170 00D0      		rcall deselect
+ 378               	.LVL53:
+  46:mmc.c         **** }
+ 379               		.loc 1 46 0
+ 380 0172 00D0      		rcall rcv_spi
+ 381               	.LVL54:
+ 382               	.LBE9:
+ 383               	.LBE8:
+ 144:mmc.c         **** 	release_spi();
+ 145:mmc.c         **** 
+ 146:mmc.c         **** 	return ty ? 0 : STA_NOINIT;
+ 384               		.loc 1 146 0
+ 385 0174 81E0      		ldi r24,lo8(1)
+ 386 0176 1123      		tst r17
+ 387 0178 01F0      		breq .L38
+ 388 017a 80E0      		ldi r24,0
+ 389 017c 00C0      		rjmp .L38
+ 390               	.LVL55:
+ 391               	.L58:
+ 138:mmc.c         **** 				ty = 0;
+ 392               		.loc 1 138 0
+ 393 017e 40E0      		ldi r20,0
+ 394 0180 52E0      		ldi r21,lo8(2)
+ 395 0182 60E0      		ldi r22,0
+ 396 0184 70E0      		ldi r23,0
+ 397 0186 80E5      		ldi r24,lo8(80)
+ 398 0188 00D0      		rcall send_cmd
+ 399               	.LVL56:
+ 400 018a 8823      		tst r24
+ 401 018c 01F0      		breq .L16
+ 402               	.LVL57:
+ 403               	.L56:
+ 139:mmc.c         **** 			}
+ 404               		.loc 1 139 0
+ 405 018e 10E0      		ldi r17,0
+ 406 0190 00C0      		rjmp .L16
+ 407               	.LVL58:
+ 408               	.L38:
+ 409               	/* epilogue start */
+ 147:mmc.c         **** }
+ 410               		.loc 1 147 0
+ 411 0192 0F90      		pop __tmp_reg__
+ 412 0194 0F90      		pop __tmp_reg__
+ 413 0196 0F90      		pop __tmp_reg__
+ 414 0198 0F90      		pop __tmp_reg__
+ 415 019a DF91      		pop r29
+ 416 019c CF91      		pop r28
+ 417 019e 1F91      		pop r17
+ 418               	.LVL59:
+ 419 01a0 0F91      		pop r16
+ 420 01a2 FF90      		pop r15
+ 421 01a4 EF90      		pop r14
+ 422 01a6 DF90      		pop r13
+ 423 01a8 0895      		ret
+ 424               		.cfi_endproc
+ 425               	.LFE2:
+ 427               	.global	disk_readp
+ 429               	disk_readp:
+ 430               	.LFB3:
+ 148:mmc.c         **** 
+ 149:mmc.c         **** 
+ 150:mmc.c         **** 
+ 151:mmc.c         **** /*-----------------------------------------------------------------------*/
+ 152:mmc.c         **** /* Read partial sector                                                   */
+ 153:mmc.c         **** /*-----------------------------------------------------------------------*/
+ 154:mmc.c         **** 
+ 155:mmc.c         **** DRESULT disk_readp (
+ 156:mmc.c         **** 	void *dest,		/* Pointer to the destination object to put data */
+ 157:mmc.c         **** 	DWORD lba,		/* Start sector number (LBA) */
+ 158:mmc.c         **** 	WORD ofs,		/* Byte offset in the sector (0..511) */
+ 159:mmc.c         **** 	WORD cnt		/* Byte count (1..512), b15:destination flag */
+ 160:mmc.c         **** )
+ 161:mmc.c         **** {
+ 431               		.loc 1 161 0
+ 432               		.cfi_startproc
+ 433               	.LVL60:
+ 434 01aa CF92      		push r12
+ 435               	.LCFI14:
+ 436               		.cfi_def_cfa_offset 3
+ 437               		.cfi_offset 12, -2
+ 438 01ac DF92      		push r13
+ 439               	.LCFI15:
+ 440               		.cfi_def_cfa_offset 4
+ 441               		.cfi_offset 13, -3
+ 442 01ae EF92      		push r14
+ 443               	.LCFI16:
+ 444               		.cfi_def_cfa_offset 5
+ 445               		.cfi_offset 14, -4
+ 446 01b0 FF92      		push r15
+ 447               	.LCFI17:
+ 448               		.cfi_def_cfa_offset 6
+ 449               		.cfi_offset 15, -5
+ 450 01b2 0F93      		push r16
+ 451               	.LCFI18:
+ 452               		.cfi_def_cfa_offset 7
+ 453               		.cfi_offset 16, -6
+ 454 01b4 1F93      		push r17
+ 455               	.LCFI19:
+ 456               		.cfi_def_cfa_offset 8
+ 457               		.cfi_offset 17, -7
+ 458 01b6 CF93      		push r28
+ 459               	.LCFI20:
+ 460               		.cfi_def_cfa_offset 9
+ 461               		.cfi_offset 28, -8
+ 462 01b8 DF93      		push r29
+ 463               	.LCFI21:
+ 464               		.cfi_def_cfa_offset 10
+ 465               		.cfi_offset 29, -9
+ 466               	/* prologue: function */
+ 467               	/* frame size = 0 */
+ 468               	/* stack size = 8 */
+ 469               	.L__stack_usage = 8
+ 470 01ba 7C01      		movw r14,r24
+ 471 01bc 6901      		movw r12,r18
+ 162:mmc.c         **** 	DRESULT res;
+ 163:mmc.c         **** 	BYTE rc;
+ 164:mmc.c         **** 	WORD tmr;
+ 165:mmc.c         **** 
+ 166:mmc.c         **** 
+ 167:mmc.c         **** 	if (!(CardType & CT_BLOCK)) lba *= 512;		/* Convert LBA to BA if needed */
+ 472               		.loc 1 167 0
+ 473 01be 8091 0000 		lds r24,CardType
+ 474               	.LVL61:
+ 475 01c2 83FD      		sbrc r24,3
+ 476 01c4 00C0      		rjmp .L61
+ 477               		.loc 1 167 0 is_stmt 0 discriminator 1
+ 478 01c6 89E0      		ldi r24,9
+ 479               		1:
+ 480 01c8 440F      		lsl r20
+ 481 01ca 551F      		rol r21
+ 482 01cc 661F      		rol r22
+ 483 01ce 771F      		rol r23
+ 484 01d0 8A95      		dec r24
+ 485 01d2 01F4      		brne 1b
+ 486               	.LVL62:
+ 487               	.L61:
+ 168:mmc.c         **** 
+ 169:mmc.c         **** 	res = RES_ERROR;
+ 170:mmc.c         **** 	if (send_cmd(CMD17, lba) == 0) {	/* READ_SINGLE_BLOCK */
+ 488               		.loc 1 170 0 is_stmt 1
+ 489 01d4 81E5      		ldi r24,lo8(81)
+ 490 01d6 00D0      		rcall send_cmd
+ 491               	.LVL63:
+ 492 01d8 8823      		tst r24
+ 493 01da 01F0      		breq .L66
+ 494               	.L65:
+ 169:mmc.c         **** 	if (send_cmd(CMD17, lba) == 0) {	/* READ_SINGLE_BLOCK */
+ 495               		.loc 1 169 0
+ 496 01dc C1E0      		ldi r28,lo8(1)
+ 497 01de 00C0      		rjmp .L63
+ 498               	.L66:
+ 499 01e0 C0E3      		ldi r28,lo8(48)
+ 500 01e2 D5E7      		ldi r29,lo8(117)
+ 501               	.L62:
+ 502               	.LVL64:
+ 171:mmc.c         **** 		tmr = 30000;
+ 172:mmc.c         **** 		do {							/* Wait for data packet in timeout of 100ms */
+ 173:mmc.c         **** 			rc = rcv_spi();
+ 503               		.loc 1 173 0 discriminator 2
+ 504 01e4 00D0      		rcall rcv_spi
+ 505               	.LVL65:
+ 174:mmc.c         **** 		} while (rc == 0xFF && --tmr);
+ 506               		.loc 1 174 0 discriminator 2
+ 507 01e6 8F3F      		cpi r24,lo8(-1)
+ 508 01e8 01F4      		brne .L64
+ 509               	.LVL66:
+ 510 01ea 2197      		sbiw r28,1
+ 511               	.LVL67:
+ 512               		.loc 1 174 0 is_stmt 0 discriminator 1
+ 513 01ec 01F4      		brne .L62
+ 514 01ee 00C0      		rjmp .L65
+ 515               	.L64:
+ 175:mmc.c         **** 		if (rc == 0xFE) {
+ 516               		.loc 1 175 0 is_stmt 1
+ 517 01f0 8E3F      		cpi r24,lo8(-2)
+ 518 01f2 01F4      		brne .L65
+ 176:mmc.c         **** 			read_blk_part(dest, ofs, cnt);	/* Read a part of the sector */
+ 519               		.loc 1 176 0
+ 520 01f4 A801      		movw r20,r16
+ 521 01f6 B601      		movw r22,r12
+ 522 01f8 C701      		movw r24,r14
+ 523               	.LVL68:
+ 524 01fa 00D0      		rcall read_blk_part
+ 525               	.LVL69:
+ 177:mmc.c         **** 			res = RES_OK;
+ 526               		.loc 1 177 0
+ 527 01fc C0E0      		ldi r28,0
+ 528               	.LVL70:
+ 529               	.L63:
+ 530               	.LBB12:
+ 531               	.LBB13:
+  45:mmc.c         **** 	rcv_spi();
+ 532               		.loc 1 45 0
+ 533 01fe 00D0      		rcall deselect
+ 534               	.LVL71:
+  46:mmc.c         **** }
+ 535               		.loc 1 46 0
+ 536 0200 00D0      		rcall rcv_spi
+ 537               	.LVL72:
+ 538               	.LBE13:
+ 539               	.LBE12:
+ 178:mmc.c         **** 		}
+ 179:mmc.c         **** 	}
+ 180:mmc.c         **** 
+ 181:mmc.c         **** 	release_spi();
+ 182:mmc.c         **** 
+ 183:mmc.c         **** 	return res;
+ 184:mmc.c         **** }
+ 540               		.loc 1 184 0
+ 541 0202 8C2F      		mov r24,r28
+ 542               	/* epilogue start */
+ 543 0204 DF91      		pop r29
+ 544 0206 CF91      		pop r28
+ 545               	.LVL73:
+ 546 0208 1F91      		pop r17
+ 547 020a 0F91      		pop r16
+ 548               	.LVL74:
+ 549 020c FF90      		pop r15
+ 550 020e EF90      		pop r14
+ 551               	.LVL75:
+ 552 0210 DF90      		pop r13
+ 553 0212 CF90      		pop r12
+ 554               	.LVL76:
+ 555 0214 0895      		ret
+ 556               		.cfi_endproc
+ 557               	.LFE3:
+ 559               		.comm	CardType,1,1
+ 560               	.Letext0:
+ 561               		.file 2 "integer.h"
+ 562               		.file 3 "diskio.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 mmc.c
+C:\Users\Noah\AppData\Local\Temp\cc1Jf58E.s:2      *ABS*:0000003e __SP_H__
+C:\Users\Noah\AppData\Local\Temp\cc1Jf58E.s:3      *ABS*:0000003d __SP_L__
+C:\Users\Noah\AppData\Local\Temp\cc1Jf58E.s:4      *ABS*:0000003f __SREG__
+C:\Users\Noah\AppData\Local\Temp\cc1Jf58E.s:5      *ABS*:00000000 __tmp_reg__
+C:\Users\Noah\AppData\Local\Temp\cc1Jf58E.s:6      *ABS*:00000001 __zero_reg__
+C:\Users\Noah\AppData\Local\Temp\cc1Jf58E.s:11     .text:00000000 send_cmd
+C:\Users\Noah\AppData\Local\Temp\cc1Jf58E.s:150    .text:00000070 disk_initialize
+                            *COM*:00000001 CardType
+C:\Users\Noah\AppData\Local\Temp\cc1Jf58E.s:429    .text:000001aa disk_readp
+
+UNDEFINED SYMBOLS
+deselect
+rcv_spi
+select
+xmit_spi
+init_spi
+read_blk_part
+__do_clear_bss

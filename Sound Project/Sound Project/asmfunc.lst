@@ -1,0 +1,395 @@
+   1               	# 1 "asmfunc.S"
+   1               	;---------------------------------------------------------------------------;
+   0               	
+   0               	
+   2               	; USI controls and Audio output control
+   3               	;---------------------------------------------------------------------------;
+   4               	
+  10               	.list
+  11               	
+  12               	#define	_FLAGS	_SFR_IO_ADDR(GPIOR0)
+  13               	
+  14               	#ifdef MODE
+  15               	#if MODE >= 1
+  16               	#define B_DO	5
+  17               	#else
+  18               	#define B_DO	1
+  19               	#endif
+  20               	#endif
+  21               	#define B_CS	3
+  22               	
+  23               	
+  24               	
+  25               	
+  26               	;---------------------------------------------------------------------------;
+  27               	; Simple Delay
+  28               	;---------------------------------------------------------------------------;
+  29               	; void delay_ms(WORD ms);
+  30               	; void delay_us(WORD us);
+  31               	
+  32               	;.global delay_ms
+  33               	;.func delay_ms
+  34               	;delay_ms:
+  35               	;	wdr			; Reset WDT
+  36               	;	sbiw	r24, 1		; if (ms-- == 0) return;
+  37               	;	brcs	9f		; /
+  38               	;	ldi	ZL, lo8(F_CPU/4000)	; 1ms delay
+  39               	;	ldi	ZH, hi8(F_CPU/4000)	; 
+  40               	;1:	sbiw	ZL, 1		; 
+  41               	;	brne	1b		; /
+  42               	;	rjmp	delay_ms
+  43               	;9:	ret
+  44               	;.endfunc
+  45               	;
+  46               	;
+  47               	;.global delay_us
+  48               	;.func delay_us
+  49               	;delay_us:
+  50               	;	ldi	r23, 2
+  51               	;1:	dec	r23
+  52               	;	brne	1b
+  53               	;	sbiw	r24, 1
+  54               	;	brne	delay_us
+  55               	;	wdr
+  56               	;	ret
+  57               	;.endfunc
+  58               	
+  59               	
+  60               	;---------------------------------------------------------------------------;
+  61               	; Initialize USI
+  62               	;
+  63               	; void init_spi (void);
+  64               	
+  65               	.global init_spi
+  66               	.func init_spi
+  67               	init_spi:
+  68:asmfunc.S     **** 	ldi	r24, 0b00001000			; Enable only SCK and DI. DO is controlled by software
+  69:asmfunc.S     **** 	out	_SFR_IO_ADDR(USICR), r24
+  70               		;sbi	_SFR_IO_ADDR(PORTB), B_DO	; MMC DI = H
+  71               		;sbi	_SFR_IO_ADDR(PORTB), B_CS	; MMC CS = H
+  72:asmfunc.S     **** 	ret
+  73               	.endfunc
+  74               	
+  75               	;---------------------------------------------------------------------------;
+  76               	; Set USI to slave mode
+  77               	;
+  78               	; void spi_slave (void);
+  79               	
+  80               	.global spi_slave
+  81               	.func spi_slave
+  82               		spi_slave:
+  83:asmfunc.S     **** 	cbi _SFR_IO_ADDR(DDRB), 2 ; Set clock to input
+  84:asmfunc.S     **** 	ret
+  85               	.endfunc
+  86               	
+  87               	; And read it
+  88               	; only call this after master is done transmitting 
+  89               	; BYTE slave_rcv_spi (void)
+  90               	
+  91               	.global slave_rcv_spi
+  92               	.func slave_rcv_spi
+  93               		slave_rcv_spi:
+  94:asmfunc.S     **** 	nop  ;Just in case
+  95:asmfunc.S     **** 	in r24, _SFR_IO_ADDR(USIDR)
+  96:asmfunc.S     **** 	ret
+  97               	.endfunc
+  98               	
+  99               	
+ 100               	;---------------------------------------------------------------------------;
+ 101               	; Set USI to master mode
+ 102               	;
+ 103               	; void spi_master (void);
+ 104               	
+ 105               	.global spi_master
+ 106               	.func spi_master
+ 107               		spi_master:
+ 108:asmfunc.S     **** 	sbi _SFR_IO_ADDR(DDRB), 2 ; Set clock to output
+ 109:asmfunc.S     **** 	ret
+ 110               	.endfunc
+ 111               	
+ 112               	
+ 113               	;---------------------------------------------------------------------------;
+ 114               	; Control CS
+ 115               	;
+ 116               	; void select (void);
+ 117               	; void deselect (void);
+ 118               	
+ 119               	.global select
+ 120               	.func select
+ 121               	select:
+ 122               		;cbi	_SFR_IO_ADDR(PORTB), B_CS	; CS = L CS is going to be input in this program, so yeah
+ 123:asmfunc.S     **** 	ret
+ 124               	.endfunc
+ 125               	
+ 126               	.global deselect
+ 127               	.func deselect
+ 128               	deselect:
+ 129               		;sbi	_SFR_IO_ADDR(PORTB), B_CS	; CS = H
+ 130:asmfunc.S     **** 	ret
+ 131               	.endfunc
+ 132               	
+ 133               	
+ 134               	
+ 135               	;---------------------------------------------------------------------------;
+ 136               	; Receive a byte
+ 137               	;
+ 138               	; BYTE rcv_spi (void);
+ 139               	
+ 140               	.global rcv_spi
+ 141               	.func rcv_spi
+ 142               	rcv_spi:
+ 143:asmfunc.S     **** 	ldi	r24, 0b000100			;PB2(SCK)
+ 144               		.rept 16				;Toggle SCK 16 times
+ 145:asmfunc.S     **** 	out	_SFR_IO_ADDR(PINB), r24		;
+ 146:asmfunc.S     **** 	.endr					;/
+ 147:asmfunc.S     **** 	nop					;Read shift register
+ 148:asmfunc.S     **** 	in	r24, _SFR_IO_ADDR(USIDR)	;/
+ 149:asmfunc.S     **** 	ret
+ 150               	.endfunc
+ 151               	
+ 152               	
+ 153               	
+ 154               	;---------------------------------------------------------------------------;
+ 155               	; Transmit a byte
+ 156               	;
+ 157               	; void xmit_spi (BYTE);
+ 158               	
+ 159               	.global xmit_spi
+ 160               	.func xmit_spi
+ 161               	xmit_spi:
+ 162:asmfunc.S     **** 	ldi	r25, 0b000100			; PB2(SCK)
+ 163:asmfunc.S     **** 	in	r22, _SFR_IO_ADDR(PORTB)
+ 164               	
+ 165:asmfunc.S     **** 	ldi	r23, 8
+ 166:asmfunc.S     **** 1:	bst	r24, 7				;MMC DI = data bit to be sent
+ 167:asmfunc.S     **** 	bld	r22, B_DO			;
+ 168:asmfunc.S     **** 	out	_SFR_IO_ADDR(PORTB), r22	;
+ 169:asmfunc.S     **** 	lsl	r24				;/
+ 170:asmfunc.S     **** 	out	_SFR_IO_ADDR(PINB), r25		;SCK = H
+ 171:asmfunc.S     **** 	out	_SFR_IO_ADDR(PINB), r25		;SCK = L
+ 172:asmfunc.S     **** 	dec	r23				;while(--r23)
+ 173:asmfunc.S     **** 	brne	1b				;/
+ 174               	
+ 175:asmfunc.S     **** 	sbi	_SFR_IO_ADDR(PORTB), B_DO	;MMC DI = H
+ 176:asmfunc.S     **** 	ret
+ 177               	.endfunc
+ 178               	
+ 179               	
+ 180               	
+ 181               	;---------------------------------------------------------------------------;
+ 182               	; Read and forward a partial data block
+ 183               	;
+ 184               	; void read_blk_part (void*, WORD, WORD);
+ 185               	
+ 186               	.global read_blk_part
+ 187               	.func read_blk_part
+ 188               	read_blk_part:
+ 189:asmfunc.S     **** 	movw	XL, r24			;X = R25:R24 (destination memory address)
+ 190:asmfunc.S     **** 	movw	ZL, r22			;Z = R23:R22 (byte offset in the sector)
+ 191               	
+ 192:asmfunc.S     **** 	ldi	r18, lo8(514)		;R19:R18 = 514, Number of bytes to receive
+ 193:asmfunc.S     **** 	ldi	r19, hi8(514)		;/
+ 194:asmfunc.S     **** 	sub	r18, ZL			;R19:R18 -= Z
+ 195:asmfunc.S     **** 	sbc	r19, ZH			;/
+ 196:asmfunc.S     **** 	sub	r18, r20		;R19:R18 -= R21:R20
+ 197:asmfunc.S     **** 	sbc	r19, r21		;/
+ 198               	
+ 199               		; Skip leading data bytes
+ 200:asmfunc.S     **** 	ldi	r24, 0b000100		;PB2(SCK)
+ 201:asmfunc.S     **** 1:	sbiw	ZL, 1			;Skip leading data...
+ 202:asmfunc.S     **** 	brcs	2f			;
+ 203               		.rept 16			;Discard a byte on SPI
+ 204:asmfunc.S     **** 	out	_SFR_IO_ADDR(PINB), r24	;
+ 205:asmfunc.S     **** 	.endr				;/
+ 206:asmfunc.S     **** 	rjmp	1b			;
+ 207:asmfunc.S     **** 2:	sbiw	XL, 0			;Destination?
+ 208:asmfunc.S     **** 	breq	fb_wave
+ 209               	
+ 210               	fb_mem:	; Store the data bytes to the memory
+ 211:asmfunc.S     **** 	rcall	rcv_spi			;do
+ 212:asmfunc.S     **** 	st	X+, r24			; *X++ = rcv_spi()
+ 213:asmfunc.S     **** 	subi	r20, 1			;while (--r21:r20)
+ 214:asmfunc.S     **** 	sbci	r21, 0			;
+ 215:asmfunc.S     **** 	brne	fb_mem			;/
+ 216:asmfunc.S     **** 	rjmp	fb_exit
+ 217               	
+ 218               	fb_wave: ; Store the data bytes to the audio FIFO
+ 219:asmfunc.S     **** 	sbic	_FLAGS, 4		;if (16bit data) R21:R20 /= 2;
+ 220:asmfunc.S     **** 	lsr	r21			;
+ 221:asmfunc.S     **** 	sbic	_FLAGS, 4		;
+ 222:asmfunc.S     **** 	ror	r20			;/
+ 223:asmfunc.S     **** 	sbic	_FLAGS, 1		;if (Stereo data) R21:R20 /= 2;
+ 224:asmfunc.S     **** 	lsr	r21			;
+ 225:asmfunc.S     **** 	sbic	_FLAGS, 1		;
+ 226:asmfunc.S     **** 	ror	r20			;/
+ 227:asmfunc.S     **** 	lds	r22, FifoWi		;r22 = FIFO write index
+ 228               	
+ 229:asmfunc.S     **** 3:	ldi	XL, lo8(Buff)		;X = Buff + R22
+ 230:asmfunc.S     **** 	ldi	XH, hi8(Buff)		;
+ 231:asmfunc.S     **** 	add	XL, r22			;
+ 232:asmfunc.S     **** 	adc	XH, r1			;/
+ 233:asmfunc.S     **** 4:	lds	r24, FifoCt		;wait while FIFO full
+ 234:asmfunc.S     **** 	cpi	r24, 252		;
+ 235:asmfunc.S     **** 	brcc	4b			;/
+ 236               	#if MODE >= 1	/* Dual output */
+ 237:asmfunc.S     **** #if MODE >= 2	/* Hi-Res */
+ 238:asmfunc.S     **** 	rcall	rcv_spi			;Get L-ch/Mono data into Z
+ 239:asmfunc.S     **** 	clr	ZL			;
+ 240:asmfunc.S     **** 	sbis	_FLAGS, 4		;
+ 241:asmfunc.S     **** 	rjmp	6f			;
+ 242:asmfunc.S     **** 	mov	ZL, r24			;
+ 243:asmfunc.S     **** 	rcall	rcv_spi			;
+ 244:asmfunc.S     **** 	subi	r24, 0x80		;
+ 245:asmfunc.S     **** 6:	mov	ZH, r24			;/
+ 246:asmfunc.S     **** 	sbis	_FLAGS, 1		;if Mono data, no R-ch data
+ 247:asmfunc.S     **** 	rjmp	8f			;/
+ 248:asmfunc.S     **** 	rcall	rcv_spi			;Get R-ch data and mix it to Z
+ 249:asmfunc.S     **** 	clr	r25			;
+ 250:asmfunc.S     **** 	sbis	_FLAGS, 4		;
+ 251:asmfunc.S     **** 	rjmp	7f			;
+ 252:asmfunc.S     **** 	mov	r25, r24		;
+ 253:asmfunc.S     **** 	rcall	rcv_spi			;
+ 254:asmfunc.S     **** 	subi	r24, 0x80		;
+ 255:asmfunc.S     **** 7:	add	ZL, r25			;
+ 256:asmfunc.S     **** 	adc	ZH, r24			;
+ 257:asmfunc.S     **** 	ror	ZH			;
+ 258:asmfunc.S     **** 	ror	ZL			;/
+ 259:asmfunc.S     **** 8:
+ 260:asmfunc.S     **** #if MODE == 3
+ 261:asmfunc.S     **** 	mov	ZL, ZH
+ 262:asmfunc.S     **** 	com	ZL
+ 263:asmfunc.S     **** #endif
+ 264:asmfunc.S     **** #else		/* Stereo */
+ 265:asmfunc.S     **** 	sbic	_FLAGS, 4		;Get L-ch/Mono data into ZH, ZL
+ 266:asmfunc.S     **** 	rcall	rcv_spi			;
+ 267:asmfunc.S     **** 	rcall	rcv_spi			;
+ 268:asmfunc.S     **** 	sbic	_FLAGS, 4		;
+ 269:asmfunc.S     **** 	subi	r24, 0x80		;
+ 270:asmfunc.S     **** 	mov	ZL, r24			;
+ 271:asmfunc.S     **** 	mov	ZH, r24			;/
+ 272:asmfunc.S     **** 	sbis	_FLAGS, 1		;if Mono data, do not process R-ch data
+ 273:asmfunc.S     **** 	rjmp	9f			;/
+ 274:asmfunc.S     **** 	sbic	_FLAGS, 4		;Get R-ch data into ZL
+ 275:asmfunc.S     **** 	rcall	rcv_spi			;
+ 276:asmfunc.S     **** 	rcall	rcv_spi			;
+ 277:asmfunc.S     **** 	sbic	_FLAGS, 4		;
+ 278:asmfunc.S     **** 	subi	r24, 0x80		;
+ 279:asmfunc.S     **** 	mov	ZL, r24			;/
+ 280:asmfunc.S     **** #endif
+ 281:asmfunc.S     **** 9:	st	X+, ZL			;Store Z into FIFO
+ 282:asmfunc.S     **** 	st	X+, ZH			;/
+ 283:asmfunc.S     **** 	cli				;
+ 284:asmfunc.S     **** 	lds	r24, FifoCt		;
+ 285:asmfunc.S     **** 	subi	r24, -2			;
+ 286:asmfunc.S     **** 	sts	FifoCt, r24		;
+ 287:asmfunc.S     **** 	sei				;
+ 288:asmfunc.S     **** 	subi	r22, -2			;/
+ 289:asmfunc.S     **** #else		/* Single output */
+ 290:asmfunc.S     **** 	sbic	_FLAGS, 4		;Get L-ch/Mono data into ZL
+ 291:asmfunc.S     **** 	rcall	rcv_spi			;
+ 292:asmfunc.S     **** 	rcall	rcv_spi			;
+ 293:asmfunc.S     **** 	sbic	_FLAGS, 4		;
+ 294:asmfunc.S     **** 	subi	r24, 0x80		;
+ 295:asmfunc.S     **** 	mov	ZL, r24			;/
+ 296:asmfunc.S     **** 	sbis	_FLAGS, 1		;if Mono data, do not process R-ch data
+ 297:asmfunc.S     **** 	rjmp	9f			;/
+ 298:asmfunc.S     **** 	sbic	_FLAGS, 4		;Get R-ch data
+ 299:asmfunc.S     **** 	rcall	rcv_spi			;
+ 300:asmfunc.S     **** 	rcall	rcv_spi			;
+ 301:asmfunc.S     **** 	sbic	_FLAGS, 4		;
+ 302:asmfunc.S     **** 	subi	r24, 0x80		;/
+ 303:asmfunc.S     **** 	add	ZL, r24			;ZL = (ZL + R-ch) / 2
+ 304:asmfunc.S     **** 	ror	ZL			;/
+ 305:asmfunc.S     **** 9:	st	X+, ZL			;Store ZL into FIFO
+ 306:asmfunc.S     **** 	cli				;
+ 307:asmfunc.S     **** 	lds	r24, FifoCt		;
+ 308:asmfunc.S     **** 	inc	r24			;
+ 309:asmfunc.S     **** 	sts	FifoCt, r24		;
+ 310:asmfunc.S     **** 	sei				;
+ 311:asmfunc.S     **** 	inc	r22			;/
+ 312               	#endif
+ 313:asmfunc.S     **** 	subi	r20, lo8(1)		;while(--R21:R20)
+ 314:asmfunc.S     **** 	sbci	r21, hi8(1)		;
+ 315:asmfunc.S     **** 	brne	3b			;/
+ 316:asmfunc.S     **** 	sts	FifoWi, r22		;Save FIFO write index
+ 317               	
+ 318               	fb_exit:	/* Diacard trailing data bytes and CRC */
+ 319:asmfunc.S     **** 	ldi	r24, 0b000100		;PB2(SCK)
+ 320               	1:	.rept 16			;Discard a byte on SPI
+ 321:asmfunc.S     **** 	out	_SFR_IO_ADDR(PINB), r24	;
+ 322:asmfunc.S     **** 	.endr				;/
+ 323:asmfunc.S     **** 	subi	r18, lo8(1)		;Repeat r19:r18 times
+ 324:asmfunc.S     **** 	sbci	r19, hi8(1)		;
+ 325:asmfunc.S     **** 	brne	1b			;/
+ 326               	
+ 327:asmfunc.S     **** 	ret
+ 328               	.endfunc
+ 329               	
+ 330               	
+ 331               	
+ 332               	;---------------------------------------------------------------------------;
+ 333               	; Audio sampling interrupt process
+ 334               	;
+ 335               	; ISR(TIM0_COMPA_vect);
+ 336               	
+ 337               	
+ 338               	.global TIM0_COMPA_vect
+ 339               	.func TIM0_COMPA_vect
+ 340               	TIM0_COMPA_vect:
+ 341:asmfunc.S     **** 	push	r24				;Save regs.
+ 342:asmfunc.S     **** 	in	r24, _SFR_IO_ADDR(SREG)		;
+ 343:asmfunc.S     **** 	push	r24				;
+ 344:asmfunc.S     **** 	push	ZL				;
+ 345:asmfunc.S     **** 	push	ZH				;/
+ 346               	
+ 347:asmfunc.S     **** 	lds	ZL, FifoRi			;Get FIFO read index
+ 348:asmfunc.S     **** 	clr	ZH				;Z = pointer to the top of FIFO
+ 349:asmfunc.S     **** 	subi	ZL, lo8(-(Buff))		;
+ 350:asmfunc.S     **** 	sbci	ZH, hi8(-(Buff))		;/
+ 351:asmfunc.S     **** 	lds	r24, FifoCt			;Load FIFO data counter
+ 352               	
+ 353:asmfunc.S     **** #if MODE >= 1	/* Dual output */
+ 354:asmfunc.S     **** 	subi	r24, 2				;Check availability of the sampling data
+ 355:asmfunc.S     **** 	brcs	9f				;/
+ 356:asmfunc.S     **** 	sts	FifoCt, r24			;Save FIFO data counter
+ 357:asmfunc.S     **** 	ld	r24, Z+				;Get R-ch/LSB data and send it to PWM
+ 358:asmfunc.S     **** 	out	_SFR_IO_ADDR(OCR1A), r24	;/
+ 359:asmfunc.S     **** 	ld	r24, Z+				;Get L-ch/MSB data and send it to PWM
+ 360:asmfunc.S     **** 	out	_SFR_IO_ADDR(OCR1B), r24	;/
+ 361:asmfunc.S     **** #else		/* Single output */
+ 362:asmfunc.S     **** 	subi	r24, 1				;Check availability of the sampling data
+ 363:asmfunc.S     **** 	brcs	9f				;/
+ 364:asmfunc.S     **** 	sts	FifoCt, r24			;Save FIFO data counter
+ 365:asmfunc.S     **** 	ld	r24, Z+				;Send data to PWM
+ 366:asmfunc.S     **** 	out	_SFR_IO_ADDR(OCR1B), r24	;/
+ 367               	#endif
+ 368:asmfunc.S     **** 	subi	ZL, lo8(Buff)			;Save FIFO read index
+ 369:asmfunc.S     **** 	sts	FifoRi, ZL			;/
+ 370               	
+ 371:asmfunc.S     **** 9:	pop	ZH				;Restore regs.
+ 372:asmfunc.S     **** 	pop	ZL				;
+ 373:asmfunc.S     **** 	pop	r24				;
+ 374:asmfunc.S     **** 	out	_SFR_IO_ADDR(SREG), r24		;
+ 375:asmfunc.S     **** 	pop	r24				;/
+ 376:asmfunc.S     **** 	reti
+ 377               	.endfunc
+DEFINED SYMBOLS
+           asmfunc.S:67     .text:00000000 init_spi
+           asmfunc.S:82     .text:00000006 spi_slave
+           asmfunc.S:93     .text:0000000a slave_rcv_spi
+           asmfunc.S:107    .text:00000010 spi_master
+           asmfunc.S:121    .text:00000014 select
+           asmfunc.S:128    .text:00000016 deselect
+           asmfunc.S:142    .text:00000018 rcv_spi
+           asmfunc.S:161    .text:00000040 xmit_spi
+           asmfunc.S:188    .text:0000005a read_blk_part
+           asmfunc.S:218    .text:000000a2 fb_wave
+           asmfunc.S:210    .text:00000096 fb_mem
+           asmfunc.S:318    .text:00000100 fb_exit
+           asmfunc.S:340    .text:0000012a __vector_10
+
+UNDEFINED SYMBOLS
+FifoWi
+Buff
+FifoCt
+FifoRi

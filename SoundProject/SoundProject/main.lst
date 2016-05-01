@@ -1,0 +1,1254 @@
+   1               		.file	"main.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               	.global	__vector_12
+  12               	__vector_12:
+  13               	.LFB12:
+  14               		.file 1 "main.c"
+   1:main.c        **** /*----------------------------------------------------------------------------/
+   2:main.c        **** /  8-pin SD audio player R0.05d                    (C)ChaN, 2011              /
+   3:main.c        **** /-----------------------------------------------------------------------------/
+   4:main.c        **** / This project, program codes and circuit diagrams, is opened under license
+   5:main.c        **** / policy of following trems.
+   6:main.c        **** /
+   7:main.c        **** /  Copyright (C) 2010, ChaN, all right reserved.
+   8:main.c        **** /
+   9:main.c        **** / * This project is a free software and there is NO WARRANTY.
+  10:main.c        **** / * No restriction on use. You can use, modify and redistribute it for
+  11:main.c        **** /   personal, non-profit or commercial use UNDER YOUR RESPONSIBILITY.
+  12:main.c        **** / * Redistributions of source code must retain the above copyright notice.
+  13:main.c        **** /
+  14:main.c        **** /----------------------------------------------------------------------------*/
+  15:main.c        **** 
+  16:main.c        **** #include <avr/io.h>
+  17:main.c        **** #include <avr/interrupt.h>
+  18:main.c        **** #include <avr/sleep.h>
+  19:main.c        **** #include <avr/wdt.h>
+  20:main.c        **** #include <string.h>
+  21:main.c        **** #include <util/delay.h>
+  22:main.c        **** #include "pff.h"
+  23:main.c        **** #include "SPIO.h"
+  24:main.c        **** 
+  25:main.c        **** 
+  26:main.c        **** #ifndef MODE
+  27:main.c        **** #error Wrong make file.
+  28:main.c        **** #endif
+  29:main.c        **** #if   MODE == 0	/* Single output */
+  30:main.c        **** //FUSES = {0xE1, 0xDD, 0xFF};	/* Fuse bytes for mono: Low, High and Extended */
+  31:main.c        **** #else			/* Dual output */
+  32:main.c        **** //FUSES = {0xE1, 0x7D, 0xFF};	/* Fuse bytes for stereo and mono-HR: Low, High and Extended (*HVS mo
+  33:main.c        **** #endif
+  34:main.c        **** /* This is the fuse settings of this project. The fuse data will be included
+  35:main.c        **** in the output hex file with program code. However some old flash programmers
+  36:main.c        **** cannot load the fuse bits from hex file. If it is the case, remove this line
+  37:main.c        **** and use these values to program the fuse bits. */
+  38:main.c        **** 
+  39:main.c        **** 
+  40:main.c        **** #define FCC(c1,c2,c3,c4)	(((DWORD)c4<<24)+((DWORD)c3<<16)+((WORD)c2<<8)+(BYTE)c1)	/* FourCC */
+  41:main.c        **** 
+  42:main.c        **** void delay_us (WORD);	/* Defined in asmfunc.S */
+  43:main.c        **** 
+  44:main.c        **** 
+  45:main.c        **** 
+  46:main.c        **** /*---------------------------------------------------------*/
+  47:main.c        **** /* Work Area                                               */
+  48:main.c        **** /*---------------------------------------------------------*/
+  49:main.c        **** 
+  50:main.c        **** volatile BYTE FifoRi, FifoWi, FifoCt;	/* FIFO controls */
+  51:main.c        **** 
+  52:main.c        **** BYTE Buff[256];		/* Wave output FIFO */
+  53:main.c        **** 
+  54:main.c        **** FATFS Fs;			/* File system object */
+  55:main.c        **** DIR Dir;			/* Directory object */
+  56:main.c        **** FILINFO Fno;		/* File information */
+  57:main.c        **** 
+  58:main.c        **** WORD rb;			/* Return value. Put this here to avoid avr-gcc's bug */
+  59:main.c        **** 
+  60:main.c        **** 
+  61:main.c        **** 
+  62:main.c        **** /*---------------------------------------------------------*/
+  63:main.c        **** 
+  64:main.c        **** static
+  65:main.c        **** DWORD load_header (void)	/* 0:Invalid format, 1:I/O error, >=1024:Number of samples */
+  66:main.c        **** {
+  67:main.c        **** 	DWORD sz, f;
+  68:main.c        **** 	BYTE b, al = 0;
+  69:main.c        **** 
+  70:main.c        **** 
+  71:main.c        **** 	if (pf_read(Buff, 12, &rb)) return 1;	/* Load file header (12 bytes) */
+  72:main.c        **** 
+  73:main.c        **** 	if (rb != 12 || LD_DWORD(Buff+8) != FCC('W','A','V','E')) return 0;
+  74:main.c        **** 
+  75:main.c        **** 	for (;;) {
+  76:main.c        **** 		wdt_reset();
+  77:main.c        **** 		pf_read(Buff, 8, &rb);			/* Get Chunk ID and size */
+  78:main.c        **** 		if (rb != 8) return 0;
+  79:main.c        **** 		sz = LD_DWORD(&Buff[4]);		/* Chunk size */
+  80:main.c        **** 
+  81:main.c        **** 		switch (LD_DWORD(&Buff[0])) {	/* Switch by chunk ID */
+  82:main.c        **** 			case FCC('f','m','t',' ') :					/* 'fmt ' chunk */
+  83:main.c        **** 			if (sz & 1) sz++;						/* Align chunk size */
+  84:main.c        **** 			if (sz > 100 || sz < 16) return 0;		/* Check chunk size */
+  85:main.c        **** 			pf_read(Buff, sz, &rb);					/* Get content */
+  86:main.c        **** 			if (rb != sz) return 0;
+  87:main.c        **** 			if (Buff[0] != 1) return 0;				/* Check coding type (LPCM) */
+  88:main.c        **** 			b = Buff[2];
+  89:main.c        **** 			if (b != 1 && b != 2) return 0;			/* Check channels (1/2) */
+  90:main.c        **** 			GPIOR0 = al = b;						/* Save channel flag */
+  91:main.c        **** 			b = Buff[14];
+  92:main.c        **** 			if (b != 8 && b != 16) return 0;		/* Check resolution (8/16 bit) */
+  93:main.c        **** 			GPIOR0 |= b;							/* Save resolution flag */
+  94:main.c        **** 			if (b & 16) al <<= 1;
+  95:main.c        **** 			f = LD_DWORD(&Buff[4]);					/* Check sampling freqency (8k-48k) */
+  96:main.c        **** 			if (f < 8000 || f > 48000) return 4;
+  97:main.c        **** 			OCR0A = (BYTE)(F_CPU / 8 / f) - 1;		/* Set sampling interval */
+  98:main.c        **** 			break;
+  99:main.c        **** 
+ 100:main.c        **** 			case FCC('d','a','t','a') :		/* 'data' chunk */
+ 101:main.c        **** 			if (!al) return 0;							/* Check if format is valid */
+ 102:main.c        **** 			if (sz < 1024 || (sz & (al - 1))) return 0;	/* Check size */
+ 103:main.c        **** 			if (Fs.fptr & (al - 1)) return 0;			/* Check word alignment */
+ 104:main.c        **** 			return sz;									/* Start to play */
+ 105:main.c        **** 
+ 106:main.c        **** 			case FCC('D','I','S','P') :		/* 'DISP' chunk */
+ 107:main.c        **** 			case FCC('L','I','S','T') :		/* 'LIST' chunk */
+ 108:main.c        **** 			case FCC('f','a','c','t') :		/* 'fact' chunk */
+ 109:main.c        **** 			if (sz & 1) sz++;				/* Align chunk size */
+ 110:main.c        **** 			pf_lseek(Fs.fptr + sz);			/* Skip this chunk */
+ 111:main.c        **** 			break;
+ 112:main.c        **** 
+ 113:main.c        **** 			default :						/* Unknown chunk */
+ 114:main.c        **** 			return 0;
+ 115:main.c        **** 		}
+ 116:main.c        **** 	}
+ 117:main.c        **** 
+ 118:main.c        **** 	return 0;
+ 119:main.c        **** }
+ 120:main.c        **** 
+ 121:main.c        **** 
+ 122:main.c        **** 
+ 123:main.c        **** static
+ 124:main.c        **** void ramp (
+ 125:main.c        **** int dir		/* 0:Ramp-down, 1:Ramp-up */
+ 126:main.c        **** )
+ 127:main.c        **** {
+ 128:main.c        **** 	#if MODE != 3
+ 129:main.c        **** 	BYTE v, d, n;
+ 130:main.c        **** 
+ 131:main.c        **** 
+ 132:main.c        **** 	if (dir) {
+ 133:main.c        **** 		v = 0; d = 1;
+ 134:main.c        **** 		} else {
+ 135:main.c        **** 		v = 128; d = (BYTE)-1;
+ 136:main.c        **** 	}
+ 137:main.c        **** 
+ 138:main.c        **** 	n = 128;
+ 139:main.c        **** 	do {
+ 140:main.c        **** 		v += d;
+ 141:main.c        **** 		OCR1A = v; OCR1B = v;
+ 142:main.c        **** 		delay_us(100);
+ 143:main.c        **** 	} while (--n);
+ 144:main.c        **** 	#else
+ 145:main.c        **** 	dir = dir ? 128 : 0;
+ 146:main.c        **** 	OCR1A = (BYTE)dir; OCR1B = (BYTE)dir;
+ 147:main.c        **** 	#endif
+ 148:main.c        **** }
+ 149:main.c        **** 
+ 150:main.c        **** 
+ 151:main.c        **** 
+ 152:main.c        **** static
+ 153:main.c        **** FRESULT play (
+ 154:main.c        **** const char *dir,	/* Directory */
+ 155:main.c        **** const char *fn		/* File */
+ 156:main.c        **** )
+ 157:main.c        **** {
+ 158:main.c        **** 	DWORD sz;
+ 159:main.c        **** 	FRESULT res;
+ 160:main.c        **** 	BYTE sw;
+ 161:main.c        **** 	WORD btr;
+ 162:main.c        **** 
+ 163:main.c        **** 
+ 164:main.c        **** 	wdt_reset();
+ 165:main.c        **** 
+ 166:main.c        **** 	res = pf_open((char*)Buff);		/* Open sound file */
+ 167:main.c        **** 	if (res == FR_OK) {
+ 168:main.c        **** 		sz = load_header();			/* Check file format and ready to play */
+ 169:main.c        **** 		if (sz < 1024) return 255;	/* Cannot play this file */
+ 170:main.c        **** 
+ 171:main.c        **** 		FifoCt = 0; FifoRi = 0; FifoWi = 0;	/* Reset audio FIFO */
+ 172:main.c        **** 
+ 173:main.c        **** 		if (!TCCR1) {				/* Enable audio out if not enabled */
+ 174:main.c        **** 			PLLCSR = 0b00000110;	/* Select PLL clock for TC1.ck */
+ 175:main.c        **** 			GTCCR =  0b01100000;	/* Enable OC1B as PWM */
+ 176:main.c        **** 			TCCR1 = MODE ? 0b01100001 : 0b00000001;	/* Start TC1 and enable OC1A as PWM if needed */
+ 177:main.c        **** 			TCCR0A = 0b00000010;	/* Statr TC0 as interval timer at 2MHz */
+ 178:main.c        **** 			TCCR0B = 0b00000010;
+ 179:main.c        **** 			TIMSK = _BV(OCIE0A);
+ 180:main.c        **** 			ramp(1);
+ 181:main.c        **** 		}
+ 182:main.c        **** 
+ 183:main.c        **** 		pf_read(0, 512 - (Fs.fptr % 512), &rb);	/* Snip sector unaligned part */
+ 184:main.c        **** 		sz -= rb;
+ 185:main.c        **** 		sw = 1;	/* Button status flag */
+ 186:main.c        **** 		do {	/* Data transfer loop */
+ 187:main.c        **** 			wdt_reset();
+ 188:main.c        **** 
+ 189:main.c        **** 			btr = (sz > 1024) ? 1024 : (WORD)sz;/* A chunk of audio data */
+ 190:main.c        **** 			res = pf_read(0, btr, &rb);	/* Forward the data into audio FIFO */
+ 191:main.c        **** 			if (rb != 1024) break;		/* Break on error or end of data */
+ 192:main.c        **** 			sz -= rb;					/* Decrease data counter */
+ 193:main.c        **** 
+ 194:main.c        **** 			sw <<= 1;					/* Break on button down */
+ 195:main.c        **** 		} while ((PINB & 1) || ++sw != 1);
+ 196:main.c        **** 	}
+ 197:main.c        **** 	else{
+ 198:main.c        **** 		sendDiag(PLAY_FAIL);
+ 199:main.c        **** 	}
+ 200:main.c        **** 
+ 201:main.c        **** 	while (FifoCt) ;			/* Wait for audio FIFO empty */
+ 202:main.c        **** 	OCR1A = 128; OCR1B = 128;	/* Return output to center level */
+ 203:main.c        **** 
+ 204:main.c        **** 	return res;
+ 205:main.c        **** }
+ 206:main.c        **** 
+ 207:main.c        **** 
+ 208:main.c        **** 
+ 209:main.c        **** static
+ 210:main.c        **** void delay500 (void)
+ 211:main.c        **** {
+ 212:main.c        **** 	wdt_reset();
+ 213:main.c        **** 
+ 214:main.c        **** 	TCCR0B = 0; TCCR0A = 0;	/* Stop TC0 */
+ 215:main.c        **** 
+ 216:main.c        **** 	if (TCCR1) {	/* Stop TC1 if enabled */
+ 217:main.c        **** 		ramp(0);
+ 218:main.c        **** 		TCCR1 = 0; GTCCR = 0;
+ 219:main.c        **** 	}
+ 220:main.c        **** 
+ 221:main.c        **** 	WDTCR = _BV(WDE) | _BV(WDIE) | 0b101;	/* Set WDT to interrupt mode in timeout of 0.5s */
+ 222:main.c        **** 	set_sleep_mode(SLEEP_MODE_PWR_DOWN);	/* Enter power down mode */
+ 223:main.c        **** 	sleep_mode();
+ 224:main.c        **** 
+ 225:main.c        **** 	wdt_reset();
+ 226:main.c        **** 	WDTCR = _BV(WDE) | 0b110;				/* Set WDT to reset mode in timeout of 1s */
+ 227:main.c        **** }
+ 228:main.c        **** 
+ 229:main.c        **** 
+ 230:main.c        **** EMPTY_INTERRUPT(WDT_vect);
+  15               		.loc 1 230 0
+  16               		.cfi_startproc
+  17               	/* prologue: naked */
+  18               	/* frame size = 0 */
+  19               	/* stack size = 0 */
+  20               	.L__stack_usage = 0
+  21               		.loc 1 230 0
+  22               	/* #APP */
+  23               	 ;  230 "main.c" 1
+  24 0000 1895      		reti
+  25               	 ;  0 "" 2
+  26               	/* epilogue start */
+  27               	/* #NOAPP */
+  28               		.cfi_endproc
+  29               	.LFE12:
+  31               		.section	.rodata.str1.1,"aMS",@progbits,1
+  32               	.LC0:
+  33 0000 6F73 6363 		.string	"osccal"
+  33      616C 00
+  34               	.LC1:
+  35 0007 7761 7600 		.string	"wav"
+  36               	.LC2:
+  37 000b 00        		.string	""
+  38               	.LC3:
+  39 000c 2E57 4156 		.string	".WAV"
+  39      00
+  40               		.section	.text.startup,"ax",@progbits
+  41               	.global	main
+  43               	main:
+  44               	.LFB13:
+ 231:main.c        **** 
+ 232:main.c        **** 
+ 233:main.c        **** 
+ 234:main.c        **** /*-----------------------------------------------------------------------*/
+ 235:main.c        **** /* Main                                                                  */
+ 236:main.c        **** 
+ 237:main.c        **** int main (void)
+ 238:main.c        **** {
+  45               		.loc 1 238 0
+  46               		.cfi_startproc
+  47               	/* prologue: function */
+  48               	/* frame size = 0 */
+  49               	/* stack size = 0 */
+  50               	.L__stack_usage = 0
+ 239:main.c        **** 	FRESULT res;
+ 240:main.c        **** 	char *dir;
+ 241:main.c        **** 	BYTE org_osc = OSCCAL;
+  51               		.loc 1 241 0
+  52 0000 B1B6      		in r11,0x31
+  53               	.LVL0:
+ 242:main.c        **** 
+ 243:main.c        **** 
+ 244:main.c        **** 	MCUSR = 0;
+  54               		.loc 1 244 0
+  55 0002 14BE      		out 0x34,__zero_reg__
+ 245:main.c        **** 	WDTCR = _BV(WDE) | 0b110;	/* Enable WDT reset in timeout of 1s */
+  56               		.loc 1 245 0
+  57 0004 8EE0      		ldi r24,lo8(14)
+  58 0006 81BD      		out 0x21,r24
+ 246:main.c        **** 
+ 247:main.c        **** 	PORTB = 0b101001;		/* Initialize port: - - H L H L L P */
+  59               		.loc 1 247 0
+  60 0008 89E2      		ldi r24,lo8(41)
+  61 000a 88BB      		out 0x18,r24
+ 248:main.c        **** 	DDRB  = 0b111110;
+  62               		.loc 1 248 0
+  63 000c 8EE3      		ldi r24,lo8(62)
+  64 000e 87BB      		out 0x17,r24
+ 249:main.c        **** 
+ 250:main.c        **** 	sei();
+  65               		.loc 1 250 0
+  66               	/* #APP */
+  67               	 ;  250 "main.c" 1
+  68 0010 7894      		sei
+  69               	 ;  0 "" 2
+  70               	/* #NOAPP */
+  71               	.LBB12:
+  72               	.LBB13:
+  73               	.LBB14:
+  74               	.LBB15:
+  97:main.c        **** 			break;
+  75               		.loc 1 97 0
+  76 0012 30E4      		ldi r19,lo8(64)
+  77 0014 432E      		mov r4,r19
+  78 0016 32E4      		ldi r19,lo8(66)
+  79 0018 532E      		mov r5,r19
+  80 001a 3FE0      		ldi r19,lo8(15)
+  81 001c 632E      		mov r6,r19
+  82 001e 712C      		mov r7,__zero_reg__
+  83               	.LBE15:
+  84               	.LBE14:
+ 183:main.c        **** 		sz -= rb;
+  85               		.loc 1 183 0
+  86 0020 00E0      		ldi r16,0
+  87 0022 12E0      		ldi r17,lo8(2)
+  88               	.L39:
+  89               	.LBE13:
+  90               	.LBE12:
+ 251:main.c        **** 
+ 252:main.c        **** 	for (;;) {
+ 253:main.c        **** 		if (pf_mount(&Fs) == FR_OK) {	/* Initialize FS */
+  91               		.loc 1 253 0
+  92 0024 80E0      		ldi r24,lo8(Fs)
+  93 0026 90E0      		ldi r25,hi8(Fs)
+  94 0028 00D0      		rcall pf_mount
+  95               	.LVL1:
+  96 002a 8111      		cpse r24,__zero_reg__
+  97 002c 00C0      		rjmp .L3
+ 254:main.c        **** 			wdt_reset();
+  98               		.loc 1 254 0
+  99               	/* #APP */
+ 100               	 ;  254 "main.c" 1
+ 101 002e A895      		wdr
+ 102               	 ;  0 "" 2
+ 255:main.c        **** 			sendDiag(MOUNT_OK);
+ 103               		.loc 1 255 0
+ 104               	/* #NOAPP */
+ 105 0030 81E0      		ldi r24,lo8(1)
+ 106 0032 00D0      		rcall sendDiag
+ 107               	.LVL2:
+ 256:main.c        **** 			Buff[0] = 0;
+ 108               		.loc 1 256 0
+ 109 0034 1092 0000 		sts Buff,__zero_reg__
+ 257:main.c        **** 			if (!pf_open("osccal")) pf_read(Buff, 1, &rb);	/* Adjust frequency */
+ 110               		.loc 1 257 0
+ 111 0038 80E0      		ldi r24,lo8(.LC0)
+ 112 003a 90E0      		ldi r25,hi8(.LC0)
+ 113 003c 00D0      		rcall pf_open
+ 114               	.LVL3:
+ 115 003e 8111      		cpse r24,__zero_reg__
+ 116 0040 00C0      		rjmp .L4
+ 117               		.loc 1 257 0 is_stmt 0 discriminator 1
+ 118 0042 40E0      		ldi r20,lo8(rb)
+ 119 0044 50E0      		ldi r21,hi8(rb)
+ 120 0046 61E0      		ldi r22,lo8(1)
+ 121 0048 70E0      		ldi r23,0
+ 122 004a 80E0      		ldi r24,lo8(Buff)
+ 123 004c 90E0      		ldi r25,hi8(Buff)
+ 124 004e 00D0      		rcall pf_read
+ 125               	.LVL4:
+ 126               	.L4:
+ 258:main.c        **** 			OSCCAL = org_osc + Buff[0];
+ 127               		.loc 1 258 0 is_stmt 1
+ 128 0050 8091 0000 		lds r24,Buff
+ 129 0054 8B0D      		add r24,r11
+ 130 0056 81BF      		out 0x31,r24
+ 131               	.LVL5:
+ 259:main.c        **** 
+ 260:main.c        **** 			res = pf_opendir(&Dir, dir = "wav");	/* Open sound file directory */
+ 132               		.loc 1 260 0
+ 133 0058 60E0      		ldi r22,lo8(.LC1)
+ 134 005a 70E0      		ldi r23,hi8(.LC1)
+ 135 005c 80E0      		ldi r24,lo8(Dir)
+ 136 005e 90E0      		ldi r25,hi8(Dir)
+ 137 0060 00D0      		rcall pf_opendir
+ 138               	.LVL6:
+ 139 0062 982E      		mov r9,r24
+ 140               	.LVL7:
+ 261:main.c        **** 			if (res == FR_NO_PATH){
+ 141               		.loc 1 261 0
+ 142 0064 24E0      		ldi r18,lo8(4)
+ 143 0066 8213      		cpse r24,r18
+ 144 0068 00C0      		rjmp .L5
+ 145               	.LVL8:
+ 262:main.c        **** 				res = pf_opendir(&Dir, dir = "");	/* Open root directory */
+ 146               		.loc 1 262 0
+ 147 006a 60E0      		ldi r22,lo8(.LC2)
+ 148 006c 70E0      		ldi r23,hi8(.LC2)
+ 149 006e 80E0      		ldi r24,lo8(Dir)
+ 150 0070 90E0      		ldi r25,hi8(Dir)
+ 151 0072 00D0      		rcall pf_opendir
+ 152               	.LVL9:
+ 153 0074 982E      		mov r9,r24
+ 154               	.LVL10:
+ 263:main.c        **** 				sendDiag(OPEN_ROOT_DIR);
+ 155               		.loc 1 263 0
+ 156 0076 84E0      		ldi r24,lo8(4)
+ 157               	.LVL11:
+ 158               	.L75:
+ 159 0078 00D0      		rcall sendDiag
+ 160               	.LVL12:
+ 161               	.LBB26:
+ 162               	.LBB22:
+ 202:main.c        **** 
+ 163               		.loc 1 202 0
+ 164 007a D0E8      		ldi r29,lo8(-128)
+ 165 007c 00C0      		rjmp .L34
+ 166               	.LVL13:
+ 167               	.L5:
+ 168               	.LBE22:
+ 169               	.LBE26:
+ 264:main.c        **** 			}
+ 265:main.c        **** 			else{
+ 266:main.c        **** 				sendDiag(OPEN_WAV_DIR);
+ 170               		.loc 1 266 0
+ 171 007e 83E0      		ldi r24,lo8(3)
+ 172 0080 00C0      		rjmp .L75
+ 173               	.LVL14:
+ 174               	.L33:
+ 267:main.c        **** 			}
+ 268:main.c        **** 
+ 269:main.c        **** 			while (res == FR_OK) {				/* Repeat in the dir */
+ 270:main.c        **** 				res = pf_readdir(&Dir, 0);			/* Rewind dir */
+ 271:main.c        **** 				while (res == FR_OK) {				/* Play all wav files in the dir */
+ 272:main.c        **** 					wdt_reset();
+ 175               		.loc 1 272 0
+ 176               	/* #APP */
+ 177               	 ;  272 "main.c" 1
+ 178 0082 A895      		wdr
+ 179               	 ;  0 "" 2
+ 273:main.c        **** 					res = pf_readdir(&Dir, &Fno);		/* Get a dir entry */
+ 180               		.loc 1 273 0
+ 181               	/* #NOAPP */
+ 182 0084 60E0      		ldi r22,lo8(Fno)
+ 183 0086 70E0      		ldi r23,hi8(Fno)
+ 184 0088 80E0      		ldi r24,lo8(Dir)
+ 185 008a 90E0      		ldi r25,hi8(Dir)
+ 186 008c 00D0      		rcall pf_readdir
+ 187               	.LVL15:
+ 188 008e 982E      		mov r9,r24
+ 189               	.LVL16:
+ 274:main.c        **** 					if (res || !Fno.fname[0]){
+ 190               		.loc 1 274 0
+ 191 0090 8111      		cpse r24,__zero_reg__
+ 192 0092 00C0      		rjmp .L9
+ 193               		.loc 1 274 0 is_stmt 0 discriminator 1
+ 194 0094 8091 0000 		lds r24,Fno+9
+ 195 0098 8823      		tst r24
+ 196 009a 01F4      		brne .+2
+ 197 009c 00C0      		rjmp .L10
+ 275:main.c        **** 						if(res) sendDiag(DIR_ERROR);
+ 276:main.c        **** 						else sendDiag(END_OF_DIR);
+ 277:main.c        **** 						break;
+ 278:main.c        **** 					}	/* Break on error or end of dir */
+ 279:main.c        **** 					if (!(Fno.fattrib & (AM_DIR|AM_HID)) && strstr(Fno.fname, ".WAV")){
+ 198               		.loc 1 279 0 is_stmt 1
+ 199 009e 8091 0000 		lds r24,Fno+8
+ 200 00a2 8271      		andi r24,lo8(18)
+ 201 00a4 01F0      		breq .L78
+ 202               	.LVL17:
+ 203               	.L11:
+ 280:main.c        **** 						sendFilename(Fno.fname);
+ 281:main.c        **** 						wdt_reset();
+ 282:main.c        **** 						sendDiag(PLAY_SONG);
+ 283:main.c        **** 						res = play(dir, Fno.fname);		/* Play file */
+ 284:main.c        **** 					}
+ 285:main.c        **** 					sendDiag(FINISH);
+ 204               		.loc 1 285 0
+ 205 00a6 8AE0      		ldi r24,lo8(10)
+ 206 00a8 00D0      		rcall sendDiag
+ 207               	.LVL18:
+ 208               	.L8:
+ 271:main.c        **** 					wdt_reset();
+ 209               		.loc 1 271 0
+ 210 00aa 9920      		tst r9
+ 211 00ac 01F0      		breq .L33
+ 212               	.L34:
+ 269:main.c        **** 				res = pf_readdir(&Dir, 0);			/* Rewind dir */
+ 213               		.loc 1 269 0
+ 214 00ae 9110      		cpse r9,__zero_reg__
+ 215 00b0 00C0      		rjmp .L36
+ 270:main.c        **** 				while (res == FR_OK) {				/* Play all wav files in the dir */
+ 216               		.loc 1 270 0
+ 217 00b2 60E0      		ldi r22,0
+ 218 00b4 70E0      		ldi r23,0
+ 219 00b6 80E0      		ldi r24,lo8(Dir)
+ 220 00b8 90E0      		ldi r25,hi8(Dir)
+ 221 00ba 00D0      		rcall pf_readdir
+ 222               	.LVL19:
+ 223 00bc 982E      		mov r9,r24
+ 224               	.LVL20:
+ 225               	.LBB27:
+ 226               	.LBB23:
+ 174:main.c        **** 			GTCCR =  0b01100000;	/* Enable OC1B as PWM */
+ 227               		.loc 1 174 0
+ 228 00be 86E0      		ldi r24,lo8(6)
+ 229 00c0 282E      		mov r2,r24
+ 175:main.c        **** 			TCCR1 = MODE ? 0b01100001 : 0b00000001;	/* Start TC1 and enable OC1A as PWM if needed */
+ 230               		.loc 1 175 0
+ 231 00c2 90E6      		ldi r25,lo8(96)
+ 232 00c4 392E      		mov r3,r25
+ 177:main.c        **** 			TCCR0B = 0b00000010;
+ 233               		.loc 1 177 0
+ 234 00c6 C2E0      		ldi r28,lo8(2)
+ 179:main.c        **** 			ramp(1);
+ 235               		.loc 1 179 0
+ 236 00c8 20E1      		ldi r18,lo8(16)
+ 237 00ca A22E      		mov r10,r18
+ 238               	.LBE23:
+ 239               	.LBE27:
+ 271:main.c        **** 					wdt_reset();
+ 240               		.loc 1 271 0
+ 241 00cc 00C0      		rjmp .L8
+ 242               	.L78:
+ 279:main.c        **** 						sendFilename(Fno.fname);
+ 243               		.loc 1 279 0 discriminator 1
+ 244 00ce 60E0      		ldi r22,lo8(.LC3)
+ 245 00d0 70E0      		ldi r23,hi8(.LC3)
+ 246 00d2 80E0      		ldi r24,lo8(Fno+9)
+ 247 00d4 90E0      		ldi r25,hi8(Fno+9)
+ 248 00d6 00D0      		rcall strstr
+ 249               	.LVL21:
+ 250 00d8 892B      		or r24,r25
+ 251 00da 01F0      		breq .L11
+ 280:main.c        **** 						wdt_reset();
+ 252               		.loc 1 280 0
+ 253 00dc 80E0      		ldi r24,lo8(Fno+9)
+ 254 00de 90E0      		ldi r25,hi8(Fno+9)
+ 255 00e0 00D0      		rcall sendFilename
+ 256               	.LVL22:
+ 281:main.c        **** 						sendDiag(PLAY_SONG);
+ 257               		.loc 1 281 0
+ 258               	/* #APP */
+ 259               	 ;  281 "main.c" 1
+ 260 00e2 A895      		wdr
+ 261               	 ;  0 "" 2
+ 282:main.c        **** 						res = play(dir, Fno.fname);		/* Play file */
+ 262               		.loc 1 282 0
+ 263               	/* #NOAPP */
+ 264 00e4 88E0      		ldi r24,lo8(8)
+ 265 00e6 00D0      		rcall sendDiag
+ 266               	.LVL23:
+ 267               	.LBB28:
+ 268               	.LBB24:
+ 164:main.c        **** 
+ 269               		.loc 1 164 0
+ 270               	/* #APP */
+ 271               	 ;  164 "main.c" 1
+ 272 00e8 A895      		wdr
+ 273               	 ;  0 "" 2
+ 166:main.c        **** 	if (res == FR_OK) {
+ 274               		.loc 1 166 0
+ 275               	/* #NOAPP */
+ 276 00ea 80E0      		ldi r24,lo8(Buff)
+ 277 00ec 90E0      		ldi r25,hi8(Buff)
+ 278 00ee 00D0      		rcall pf_open
+ 279               	.LVL24:
+ 280 00f0 982E      		mov r9,r24
+ 281               	.LVL25:
+ 167:main.c        **** 		sz = load_header();			/* Check file format and ready to play */
+ 282               		.loc 1 167 0
+ 283 00f2 8111      		cpse r24,__zero_reg__
+ 284 00f4 00C0      		rjmp .L12
+ 285               	.LVL26:
+ 286               	.LBB18:
+ 287               	.LBB16:
+  71:main.c        **** 
+ 288               		.loc 1 71 0
+ 289 00f6 40E0      		ldi r20,lo8(rb)
+ 290 00f8 50E0      		ldi r21,hi8(rb)
+ 291 00fa 6CE0      		ldi r22,lo8(12)
+ 292 00fc 70E0      		ldi r23,0
+ 293 00fe 80E0      		ldi r24,lo8(Buff)
+ 294 0100 90E0      		ldi r25,hi8(Buff)
+ 295 0102 00D0      		rcall pf_read
+ 296               	.LVL27:
+ 297 0104 8111      		cpse r24,__zero_reg__
+ 298 0106 00C0      		rjmp .L15
+  73:main.c        **** 
+ 299               		.loc 1 73 0
+ 300 0108 8091 0000 		lds r24,rb
+ 301 010c 9091 0000 		lds r25,rb+1
+ 302 0110 0C97      		sbiw r24,12
+ 303 0112 01F0      		breq .+2
+ 304 0114 00C0      		rjmp .L15
+ 305 0116 8091 0000 		lds r24,Buff+8
+ 306 011a 9091 0000 		lds r25,Buff+8+1
+ 307 011e A091 0000 		lds r26,Buff+8+2
+ 308 0122 B091 0000 		lds r27,Buff+8+3
+ 309 0126 8735      		cpi r24,87
+ 310 0128 9144      		sbci r25,65
+ 311 012a A645      		sbci r26,86
+ 312 012c B544      		sbci r27,69
+ 313 012e 01F0      		breq .+2
+ 314 0130 00C0      		rjmp .L15
+ 315               	.LVL28:
+ 316               	.L14:
+  76:main.c        **** 		pf_read(Buff, 8, &rb);			/* Get Chunk ID and size */
+ 317               		.loc 1 76 0
+ 318               	/* #APP */
+ 319               	 ;  76 "main.c" 1
+ 320 0132 A895      		wdr
+ 321               	 ;  0 "" 2
+  77:main.c        **** 		if (rb != 8) return 0;
+ 322               		.loc 1 77 0
+ 323               	/* #NOAPP */
+ 324 0134 40E0      		ldi r20,lo8(rb)
+ 325 0136 50E0      		ldi r21,hi8(rb)
+ 326 0138 68E0      		ldi r22,lo8(8)
+ 327 013a 70E0      		ldi r23,0
+ 328 013c 80E0      		ldi r24,lo8(Buff)
+ 329 013e 90E0      		ldi r25,hi8(Buff)
+ 330 0140 00D0      		rcall pf_read
+ 331               	.LVL29:
+  78:main.c        **** 		sz = LD_DWORD(&Buff[4]);		/* Chunk size */
+ 332               		.loc 1 78 0
+ 333 0142 8091 0000 		lds r24,rb
+ 334 0146 9091 0000 		lds r25,rb+1
+ 335 014a 0897      		sbiw r24,8
+ 336 014c 01F0      		breq .+2
+ 337 014e 00C0      		rjmp .L15
+  79:main.c        **** 
+ 338               		.loc 1 79 0
+ 339 0150 C090 0000 		lds r12,Buff+4
+ 340 0154 D090 0000 		lds r13,Buff+4+1
+ 341 0158 E090 0000 		lds r14,Buff+4+2
+ 342 015c F090 0000 		lds r15,Buff+4+3
+ 343               	.LVL30:
+  81:main.c        **** 			case FCC('f','m','t',' ') :					/* 'fmt ' chunk */
+ 344               		.loc 1 81 0
+ 345 0160 8091 0000 		lds r24,Buff
+ 346 0164 9091 0000 		lds r25,Buff+1
+ 347 0168 A091 0000 		lds r26,Buff+2
+ 348 016c B091 0000 		lds r27,Buff+3
+ 349 0170 8C34      		cpi r24,76
+ 350 0172 29E4      		ldi r18,73
+ 351 0174 9207      		cpc r25,r18
+ 352 0176 23E5      		ldi r18,83
+ 353 0178 A207      		cpc r26,r18
+ 354 017a 24E5      		ldi r18,84
+ 355 017c B207      		cpc r27,r18
+ 356 017e 01F4      		brne .+2
+ 357 0180 00C0      		rjmp .L16
+ 358 0182 00F4      		brsh .L17
+ 359 0184 8636      		cpi r24,102
+ 360 0186 2DE6      		ldi r18,109
+ 361 0188 9207      		cpc r25,r18
+ 362 018a 24E7      		ldi r18,116
+ 363 018c A207      		cpc r26,r18
+ 364 018e 20E2      		ldi r18,32
+ 365 0190 B207      		cpc r27,r18
+ 366 0192 01F0      		breq .L18
+ 367 0194 8434      		cpi r24,68
+ 368 0196 9944      		sbci r25,73
+ 369 0198 A345      		sbci r26,83
+ 370 019a B045      		sbci r27,80
+ 371 019c 01F0      		breq .+2
+ 372 019e 00C0      		rjmp .L15
+ 373 01a0 00C0      		rjmp .L16
+ 374               	.L17:
+ 375 01a2 8436      		cpi r24,100
+ 376 01a4 21E6      		ldi r18,97
+ 377 01a6 9207      		cpc r25,r18
+ 378 01a8 24E7      		ldi r18,116
+ 379 01aa A207      		cpc r26,r18
+ 380 01ac 21E6      		ldi r18,97
+ 381 01ae B207      		cpc r27,r18
+ 382 01b0 01F4      		brne .+2
+ 383 01b2 00C0      		rjmp .L19
+ 384 01b4 8636      		cpi r24,102
+ 385 01b6 9146      		sbci r25,97
+ 386 01b8 A346      		sbci r26,99
+ 387 01ba B447      		sbci r27,116
+ 388 01bc 01F0      		breq .+2
+ 389 01be 00C0      		rjmp .L15
+ 390 01c0 00C0      		rjmp .L16
+ 391               	.L18:
+  83:main.c        **** 			if (sz > 100 || sz < 16) return 0;		/* Check chunk size */
+ 392               		.loc 1 83 0
+ 393 01c2 C0FE      		sbrs r12,0
+ 394 01c4 00C0      		rjmp .L20
+ 395 01c6 8FEF      		ldi r24,-1
+ 396 01c8 C81A      		sub r12,r24
+ 397 01ca D80A      		sbc r13,r24
+ 398 01cc E80A      		sbc r14,r24
+ 399 01ce F80A      		sbc r15,r24
+ 400               	.LVL31:
+ 401               	.L20:
+  84:main.c        **** 			pf_read(Buff, sz, &rb);					/* Get content */
+ 402               		.loc 1 84 0
+ 403 01d0 D701      		movw r26,r14
+ 404 01d2 C601      		movw r24,r12
+ 405 01d4 4097      		sbiw r24,16
+ 406 01d6 A109      		sbc r26,__zero_reg__
+ 407 01d8 B109      		sbc r27,__zero_reg__
+ 408 01da 8535      		cpi r24,85
+ 409 01dc 9105      		cpc r25,__zero_reg__
+ 410 01de A105      		cpc r26,__zero_reg__
+ 411 01e0 B105      		cpc r27,__zero_reg__
+ 412 01e2 00F0      		brlo .+2
+ 413 01e4 00C0      		rjmp .L15
+  85:main.c        **** 			if (rb != sz) return 0;
+ 414               		.loc 1 85 0
+ 415 01e6 40E0      		ldi r20,lo8(rb)
+ 416 01e8 50E0      		ldi r21,hi8(rb)
+ 417 01ea B601      		movw r22,r12
+ 418 01ec 80E0      		ldi r24,lo8(Buff)
+ 419 01ee 90E0      		ldi r25,hi8(Buff)
+ 420 01f0 00D0      		rcall pf_read
+ 421               	.LVL32:
+  86:main.c        **** 			if (Buff[0] != 1) return 0;				/* Check coding type (LPCM) */
+ 422               		.loc 1 86 0
+ 423 01f2 8091 0000 		lds r24,rb
+ 424 01f6 9091 0000 		lds r25,rb+1
+ 425 01fa A0E0      		ldi r26,0
+ 426 01fc B0E0      		ldi r27,0
+ 427 01fe 8C15      		cp r24,r12
+ 428 0200 9D05      		cpc r25,r13
+ 429 0202 AE05      		cpc r26,r14
+ 430 0204 BF05      		cpc r27,r15
+ 431 0206 01F0      		breq .+2
+ 432 0208 00C0      		rjmp .L15
+  87:main.c        **** 			b = Buff[2];
+ 433               		.loc 1 87 0
+ 434 020a 8091 0000 		lds r24,Buff
+ 435 020e 8130      		cpi r24,lo8(1)
+ 436 0210 01F0      		breq .+2
+ 437 0212 00C0      		rjmp .L15
+  88:main.c        **** 			if (b != 1 && b != 2) return 0;			/* Check channels (1/2) */
+ 438               		.loc 1 88 0
+ 439 0214 9090 0000 		lds r9,Buff+2
+ 440               	.LVL33:
+  89:main.c        **** 			GPIOR0 = al = b;						/* Save channel flag */
+ 441               		.loc 1 89 0
+ 442 0218 8FEF      		ldi r24,lo8(-1)
+ 443 021a 890D      		add r24,r9
+ 444 021c 8230      		cpi r24,lo8(2)
+ 445 021e 00F0      		brlo .+2
+ 446 0220 00C0      		rjmp .L15
+ 447               	.LVL34:
+  90:main.c        **** 			b = Buff[14];
+ 448               		.loc 1 90 0
+ 449 0222 91BA      		out 0x11,r9
+  91:main.c        **** 			if (b != 8 && b != 16) return 0;		/* Check resolution (8/16 bit) */
+ 450               		.loc 1 91 0
+ 451 0224 8091 0000 		lds r24,Buff+14
+ 452               	.LVL35:
+  92:main.c        **** 			GPIOR0 |= b;							/* Save resolution flag */
+ 453               		.loc 1 92 0
+ 454 0228 8830      		cpi r24,lo8(8)
+ 455 022a 01F0      		breq .L21
+ 456 022c 8031      		cpi r24,lo8(16)
+ 457 022e 01F0      		breq .+2
+ 458 0230 00C0      		rjmp .L15
+ 459               	.L21:
+  93:main.c        **** 			if (b & 16) al <<= 1;
+ 460               		.loc 1 93 0
+ 461 0232 91B3      		in r25,0x11
+ 462 0234 982B      		or r25,r24
+ 463 0236 91BB      		out 0x11,r25
+  94:main.c        **** 			f = LD_DWORD(&Buff[4]);					/* Check sampling freqency (8k-48k) */
+ 464               		.loc 1 94 0
+ 465 0238 84FD      		sbrc r24,4
+ 466 023a 990C      		lsl r9
+ 467               	.LVL36:
+ 468               	.L22:
+  95:main.c        **** 			if (f < 8000 || f > 48000) return 4;
+ 469               		.loc 1 95 0
+ 470 023c 2091 0000 		lds r18,Buff+4
+ 471 0240 3091 0000 		lds r19,Buff+4+1
+ 472 0244 4091 0000 		lds r20,Buff+4+2
+ 473 0248 5091 0000 		lds r21,Buff+4+3
+ 474               	.LVL37:
+  96:main.c        **** 			OCR0A = (BYTE)(F_CPU / 8 / f) - 1;		/* Set sampling interval */
+ 475               		.loc 1 96 0
+ 476 024c DA01      		movw r26,r20
+ 477 024e C901      		movw r24,r18
+ 478               	.LVL38:
+ 479 0250 8054      		subi r24,64
+ 480 0252 9F41      		sbci r25,31
+ 481 0254 A109      		sbc r26,__zero_reg__
+ 482 0256 B109      		sbc r27,__zero_reg__
+ 483 0258 8134      		cpi r24,65
+ 484 025a 9C49      		sbci r25,-100
+ 485 025c A105      		cpc r26,__zero_reg__
+ 486 025e B105      		cpc r27,__zero_reg__
+ 487 0260 00F0      		brlo .+2
+ 488 0262 00C0      		rjmp .L15
+  97:main.c        **** 			break;
+ 489               		.loc 1 97 0
+ 490 0264 C301      		movw r24,r6
+ 491 0266 B201      		movw r22,r4
+ 492 0268 00D0      		rcall __udivmodsi4
+ 493               	.LVL39:
+ 494 026a 2150      		subi r18,lo8(-(-1))
+ 495 026c 29BD      		out 0x29,r18
+ 496 026e 00C0      		rjmp .L14
+ 497               	.LVL40:
+ 498               	.L19:
+ 101:main.c        **** 			if (sz < 1024 || (sz & (al - 1))) return 0;	/* Check size */
+ 499               		.loc 1 101 0
+ 500 0270 9920      		tst r9
+ 501 0272 01F4      		brne .+2
+ 502 0274 00C0      		rjmp .L15
+ 102:main.c        **** 			if (Fs.fptr & (al - 1)) return 0;			/* Check word alignment */
+ 503               		.loc 1 102 0
+ 504 0276 C114      		cp r12,__zero_reg__
+ 505 0278 84E0      		ldi r24,4
+ 506 027a D806      		cpc r13,r24
+ 507 027c E104      		cpc r14,__zero_reg__
+ 508 027e F104      		cpc r15,__zero_reg__
+ 509 0280 00F4      		brsh .+2
+ 510 0282 00C0      		rjmp .L15
+ 511 0284 892D      		mov r24,r9
+ 512 0286 90E0      		ldi r25,0
+ 513 0288 0197      		sbiw r24,1
+ 514 028a AC01      		movw r20,r24
+ 515 028c 990F      		lsl r25
+ 516 028e 660B      		sbc r22,r22
+ 517 0290 770B      		sbc r23,r23
+ 518 0292 DB01      		movw r26,r22
+ 519 0294 CA01      		movw r24,r20
+ 520 0296 8C21      		and r24,r12
+ 521 0298 9D21      		and r25,r13
+ 522 029a AE21      		and r26,r14
+ 523 029c BF21      		and r27,r15
+ 524 029e 892B      		or r24,r25
+ 525 02a0 8A2B      		or r24,r26
+ 526 02a2 8B2B      		or r24,r27
+ 527 02a4 01F0      		breq .+2
+ 528 02a6 00C0      		rjmp .L15
+ 103:main.c        **** 			return sz;									/* Start to play */
+ 529               		.loc 1 103 0
+ 530 02a8 8091 0000 		lds r24,Fs+22
+ 531 02ac 9091 0000 		lds r25,Fs+22+1
+ 532 02b0 A091 0000 		lds r26,Fs+22+2
+ 533 02b4 B091 0000 		lds r27,Fs+22+3
+ 534 02b8 8423      		and r24,r20
+ 535 02ba 9523      		and r25,r21
+ 536 02bc A623      		and r26,r22
+ 537 02be B723      		and r27,r23
+ 538 02c0 892B      		or r24,r25
+ 539 02c2 8A2B      		or r24,r26
+ 540 02c4 8B2B      		or r24,r27
+ 541 02c6 01F0      		breq .+2
+ 542 02c8 00C0      		rjmp .L15
+ 543               	.LBE16:
+ 544               	.LBE18:
+ 171:main.c        **** 
+ 545               		.loc 1 171 0
+ 546 02ca 1092 0000 		sts FifoCt,__zero_reg__
+ 547 02ce 1092 0000 		sts FifoRi,__zero_reg__
+ 548 02d2 1092 0000 		sts FifoWi,__zero_reg__
+ 173:main.c        **** 			PLLCSR = 0b00000110;	/* Select PLL clock for TC1.ck */
+ 549               		.loc 1 173 0
+ 550 02d6 80B7      		in r24,0x30
+ 551 02d8 8823      		tst r24
+ 552 02da 01F0      		breq .L24
+ 553               	.LVL41:
+ 554               	.L28:
+ 183:main.c        **** 		sz -= rb;
+ 555               		.loc 1 183 0
+ 556 02dc 8091 0000 		lds r24,Fs+22
+ 557 02e0 9091 0000 		lds r25,Fs+22+1
+ 558 02e4 9170      		andi r25,1
+ 559 02e6 B801      		movw r22,r16
+ 560 02e8 681B      		sub r22,r24
+ 561 02ea 790B      		sbc r23,r25
+ 562 02ec 40E0      		ldi r20,lo8(rb)
+ 563 02ee 50E0      		ldi r21,hi8(rb)
+ 564 02f0 80E0      		ldi r24,0
+ 565 02f2 90E0      		ldi r25,0
+ 566 02f4 00D0      		rcall pf_read
+ 567               	.LVL42:
+ 184:main.c        **** 		sw = 1;	/* Button status flag */
+ 568               		.loc 1 184 0
+ 569 02f6 8091 0000 		lds r24,rb
+ 570 02fa 9091 0000 		lds r25,rb+1
+ 571 02fe C81A      		sub r12,r24
+ 572 0300 D90A      		sbc r13,r25
+ 573 0302 E108      		sbc r14,__zero_reg__
+ 574 0304 F108      		sbc r15,__zero_reg__
+ 575               	.LVL43:
+ 185:main.c        **** 		do {	/* Data transfer loop */
+ 576               		.loc 1 185 0
+ 577 0306 8824      		clr r8
+ 578 0308 8394      		inc r8
+ 579 030a 00C0      		rjmp .L25
+ 580               	.LVL44:
+ 581               	.L16:
+ 582               	.LBB19:
+ 583               	.LBB17:
+ 109:main.c        **** 			pf_lseek(Fs.fptr + sz);			/* Skip this chunk */
+ 584               		.loc 1 109 0
+ 585 030c C0FE      		sbrs r12,0
+ 586 030e 00C0      		rjmp .L26
+ 587 0310 2FEF      		ldi r18,-1
+ 588 0312 C21A      		sub r12,r18
+ 589 0314 D20A      		sbc r13,r18
+ 590 0316 E20A      		sbc r14,r18
+ 591 0318 F20A      		sbc r15,r18
+ 592               	.LVL45:
+ 593               	.L26:
+ 110:main.c        **** 			break;
+ 594               		.loc 1 110 0
+ 595 031a 8091 0000 		lds r24,Fs+22
+ 596 031e 9091 0000 		lds r25,Fs+22+1
+ 597 0322 A091 0000 		lds r26,Fs+22+2
+ 598 0326 B091 0000 		lds r27,Fs+22+3
+ 599 032a BC01      		movw r22,r24
+ 600 032c CD01      		movw r24,r26
+ 601 032e 6C0D      		add r22,r12
+ 602 0330 7D1D      		adc r23,r13
+ 603 0332 8E1D      		adc r24,r14
+ 604 0334 9F1D      		adc r25,r15
+ 605 0336 00D0      		rcall pf_lseek
+ 606               	.LVL46:
+ 607 0338 00C0      		rjmp .L14
+ 608               	.L24:
+ 609               	.LBE17:
+ 610               	.LBE19:
+ 174:main.c        **** 			GTCCR =  0b01100000;	/* Enable OC1B as PWM */
+ 611               		.loc 1 174 0
+ 612 033a 27BC      		out 0x27,r2
+ 175:main.c        **** 			TCCR1 = MODE ? 0b01100001 : 0b00000001;	/* Start TC1 and enable OC1A as PWM if needed */
+ 613               		.loc 1 175 0
+ 614 033c 3CBC      		out 0x2c,r3
+ 176:main.c        **** 			TCCR0A = 0b00000010;	/* Statr TC0 as interval timer at 2MHz */
+ 615               		.loc 1 176 0
+ 616 033e 61E0      		ldi r22,lo8(1)
+ 617 0340 60BF      		out 0x30,r22
+ 177:main.c        **** 			TCCR0B = 0b00000010;
+ 618               		.loc 1 177 0
+ 619 0342 CABD      		out 0x2a,r28
+ 178:main.c        **** 			TIMSK = _BV(OCIE0A);
+ 620               		.loc 1 178 0
+ 621 0344 C3BF      		out 0x33,r28
+ 179:main.c        **** 			ramp(1);
+ 622               		.loc 1 179 0
+ 623 0346 A9BE      		out 0x39,r10
+ 624               	.LVL47:
+ 625 0348 912C      		mov r9,__zero_reg__
+ 626               	.LVL48:
+ 627               	.L27:
+ 628               	.LBB20:
+ 629               	.LBB21:
+ 140:main.c        **** 		OCR1A = v; OCR1B = v;
+ 630               		.loc 1 140 0
+ 631 034a 9394      		inc r9
+ 632               	.LVL49:
+ 141:main.c        **** 		delay_us(100);
+ 633               		.loc 1 141 0
+ 634 034c 9EBC      		out 0x2e,r9
+ 635 034e 9BBC      		out 0x2b,r9
+ 142:main.c        **** 	} while (--n);
+ 636               		.loc 1 142 0
+ 637 0350 84E6      		ldi r24,lo8(100)
+ 638 0352 90E0      		ldi r25,0
+ 639 0354 00D0      		rcall delay_us
+ 640               	.LVL50:
+ 143:main.c        **** 	#else
+ 641               		.loc 1 143 0
+ 642 0356 80E8      		ldi r24,lo8(-128)
+ 643 0358 9812      		cpse r9,r24
+ 644 035a 00C0      		rjmp .L27
+ 645 035c 00C0      		rjmp .L28
+ 646               	.LVL51:
+ 647               	.L41:
+ 648               	.LBE21:
+ 649               	.LBE20:
+ 189:main.c        **** 			res = pf_read(0, btr, &rb);	/* Forward the data into audio FIFO */
+ 650               		.loc 1 189 0
+ 651 035e 60E0      		ldi r22,0
+ 652 0360 74E0      		ldi r23,lo8(4)
+ 653               	.L29:
+ 654               	.LVL52:
+ 190:main.c        **** 			if (rb != 1024) break;		/* Break on error or end of data */
+ 655               		.loc 1 190 0
+ 656 0362 40E0      		ldi r20,lo8(rb)
+ 657 0364 50E0      		ldi r21,hi8(rb)
+ 658 0366 80E0      		ldi r24,0
+ 659 0368 90E0      		ldi r25,0
+ 660 036a 00D0      		rcall pf_read
+ 661               	.LVL53:
+ 662 036c 982E      		mov r9,r24
+ 663               	.LVL54:
+ 191:main.c        **** 			sz -= rb;					/* Decrease data counter */
+ 664               		.loc 1 191 0
+ 665 036e 2091 0000 		lds r18,rb
+ 666 0372 3091 0000 		lds r19,rb+1
+ 667 0376 2115      		cp r18,__zero_reg__
+ 668 0378 3440      		sbci r19,4
+ 669 037a 01F4      		brne .L32
+ 192:main.c        **** 
+ 670               		.loc 1 192 0
+ 671 037c 84E0      		ldi r24,4
+ 672 037e D81A      		sub r13,r24
+ 673 0380 E108      		sbc r14,__zero_reg__
+ 674 0382 F108      		sbc r15,__zero_reg__
+ 675               	.LVL55:
+ 194:main.c        **** 		} while ((PINB & 1) || ++sw != 1);
+ 676               		.loc 1 194 0
+ 677 0384 880C      		lsl r8
+ 678               	.LVL56:
+ 195:main.c        **** 	}
+ 679               		.loc 1 195 0
+ 680 0386 B09B      		sbis 0x16,0
+ 681 0388 00C0      		rjmp .L79
+ 682               	.LVL57:
+ 683               	.L25:
+ 187:main.c        **** 
+ 684               		.loc 1 187 0
+ 685               	/* #APP */
+ 686               	 ;  187 "main.c" 1
+ 687 038a A895      		wdr
+ 688               	 ;  0 "" 2
+ 189:main.c        **** 			res = pf_read(0, btr, &rb);	/* Forward the data into audio FIFO */
+ 689               		.loc 1 189 0
+ 690               	/* #NOAPP */
+ 691 038c 21E0      		ldi r18,1
+ 692 038e C216      		cp r12,r18
+ 693 0390 24E0      		ldi r18,4
+ 694 0392 D206      		cpc r13,r18
+ 695 0394 E104      		cpc r14,__zero_reg__
+ 696 0396 F104      		cpc r15,__zero_reg__
+ 697 0398 00F4      		brsh .L41
+ 698 039a B601      		movw r22,r12
+ 699 039c 00C0      		rjmp .L29
+ 700               	.LVL58:
+ 701               	.L79:
+ 195:main.c        **** 	}
+ 702               		.loc 1 195 0
+ 703 039e 8394      		inc r8
+ 704               	.LVL59:
+ 705 03a0 21E0      		ldi r18,lo8(1)
+ 706 03a2 8212      		cpse r8,r18
+ 707 03a4 00C0      		rjmp .L25
+ 708 03a6 00C0      		rjmp .L32
+ 709               	.LVL60:
+ 710               	.L12:
+ 198:main.c        **** 	}
+ 711               		.loc 1 198 0
+ 712 03a8 89E0      		ldi r24,lo8(9)
+ 713 03aa 00D0      		rcall sendDiag
+ 714               	.LVL61:
+ 715               	.L32:
+ 201:main.c        **** 	OCR1A = 128; OCR1B = 128;	/* Return output to center level */
+ 716               		.loc 1 201 0
+ 717 03ac 8091 0000 		lds r24,FifoCt
+ 718 03b0 8111      		cpse r24,__zero_reg__
+ 719 03b2 00C0      		rjmp .L32
+ 202:main.c        **** 
+ 720               		.loc 1 202 0
+ 721 03b4 DEBD      		out 0x2e,r29
+ 722 03b6 DBBD      		out 0x2b,r29
+ 723 03b8 00C0      		rjmp .L11
+ 724               	.LVL62:
+ 725               	.L3:
+ 726               	.LBE24:
+ 727               	.LBE28:
+ 286:main.c        **** 				}
+ 287:main.c        **** 			}
+ 288:main.c        **** 		}
+ 289:main.c        **** 		else{
+ 290:main.c        **** 			sendDiag(MOUNT_FAIL);
+ 728               		.loc 1 290 0
+ 729 03ba 82E0      		ldi r24,lo8(2)
+ 730 03bc 00D0      		rcall sendDiag
+ 731               	.LVL63:
+ 732               	.L36:
+ 733               	.LBB29:
+ 734               	.LBB30:
+ 212:main.c        **** 
+ 735               		.loc 1 212 0
+ 736               	/* #APP */
+ 737               	 ;  212 "main.c" 1
+ 738 03be A895      		wdr
+ 739               	 ;  0 "" 2
+ 214:main.c        **** 
+ 740               		.loc 1 214 0
+ 741               	/* #NOAPP */
+ 742 03c0 13BE      		out 0x33,__zero_reg__
+ 743 03c2 1ABC      		out 0x2a,__zero_reg__
+ 216:main.c        **** 		ramp(0);
+ 744               		.loc 1 216 0
+ 745 03c4 80B7      		in r24,0x30
+ 746 03c6 8823      		tst r24
+ 747 03c8 01F0      		breq .L37
+ 748 03ca C0E8      		ldi r28,lo8(-128)
+ 749               	.L38:
+ 750               	.LVL64:
+ 751               	.LBB31:
+ 752               	.LBB32:
+ 140:main.c        **** 		OCR1A = v; OCR1B = v;
+ 753               		.loc 1 140 0
+ 754 03cc C150      		subi r28,lo8(-(-1))
+ 755               	.LVL65:
+ 141:main.c        **** 		delay_us(100);
+ 756               		.loc 1 141 0
+ 757 03ce CEBD      		out 0x2e,r28
+ 758 03d0 CBBD      		out 0x2b,r28
+ 142:main.c        **** 	} while (--n);
+ 759               		.loc 1 142 0
+ 760 03d2 84E6      		ldi r24,lo8(100)
+ 761 03d4 90E0      		ldi r25,0
+ 762 03d6 00D0      		rcall delay_us
+ 763               	.LVL66:
+ 143:main.c        **** 	#else
+ 764               		.loc 1 143 0
+ 765 03d8 C111      		cpse r28,__zero_reg__
+ 766 03da 00C0      		rjmp .L38
+ 767               	.LBE32:
+ 768               	.LBE31:
+ 218:main.c        **** 	}
+ 769               		.loc 1 218 0
+ 770 03dc 10BE      		out 0x30,__zero_reg__
+ 771 03de 1CBC      		out 0x2c,__zero_reg__
+ 772               	.LVL67:
+ 773               	.L37:
+ 221:main.c        **** 	set_sleep_mode(SLEEP_MODE_PWR_DOWN);	/* Enter power down mode */
+ 774               		.loc 1 221 0
+ 775 03e0 8DE4      		ldi r24,lo8(77)
+ 776 03e2 81BD      		out 0x21,r24
+ 222:main.c        **** 	sleep_mode();
+ 777               		.loc 1 222 0
+ 778 03e4 85B7      		in r24,0x35
+ 779 03e6 877E      		andi r24,lo8(-25)
+ 780 03e8 8061      		ori r24,lo8(16)
+ 781 03ea 85BF      		out 0x35,r24
+ 223:main.c        **** 
+ 782               		.loc 1 223 0
+ 783 03ec 85B7      		in r24,0x35
+ 784 03ee 8062      		ori r24,lo8(32)
+ 785 03f0 85BF      		out 0x35,r24
+ 786               	/* #APP */
+ 787               	 ;  223 "main.c" 1
+ 788 03f2 8895      		sleep
+ 789               		
+ 790               	 ;  0 "" 2
+ 791               	/* #NOAPP */
+ 792 03f4 85B7      		in r24,0x35
+ 793 03f6 8F7D      		andi r24,lo8(-33)
+ 794 03f8 85BF      		out 0x35,r24
+ 225:main.c        **** 	WDTCR = _BV(WDE) | 0b110;				/* Set WDT to reset mode in timeout of 1s */
+ 795               		.loc 1 225 0
+ 796               	/* #APP */
+ 797               	 ;  225 "main.c" 1
+ 798 03fa A895      		wdr
+ 799               	 ;  0 "" 2
+ 226:main.c        **** }
+ 800               		.loc 1 226 0
+ 801               	/* #NOAPP */
+ 802 03fc 8EE0      		ldi r24,lo8(14)
+ 803 03fe 81BD      		out 0x21,r24
+ 804 0400 00C0      		rjmp .L39
+ 805               	.LVL68:
+ 806               	.L9:
+ 807               	.LBE30:
+ 808               	.LBE29:
+ 275:main.c        **** 						else sendDiag(END_OF_DIR);
+ 809               		.loc 1 275 0
+ 810 0402 8CE0      		ldi r24,lo8(12)
+ 811 0404 00C0      		rjmp .L76
+ 812               	.L10:
+ 276:main.c        **** 						break;
+ 813               		.loc 1 276 0
+ 814 0406 8DE0      		ldi r24,lo8(13)
+ 815               	.L76:
+ 816 0408 00D0      		rcall sendDiag
+ 817               	.LVL69:
+ 818 040a 00C0      		rjmp .L34
+ 819               	.LVL70:
+ 820               	.L15:
+ 821               	.LBB33:
+ 822               	.LBB25:
+ 169:main.c        **** 
+ 823               		.loc 1 169 0
+ 824 040c 9924      		clr r9
+ 825 040e 9A94      		dec r9
+ 826 0410 00C0      		rjmp .L11
+ 827               	.LBE25:
+ 828               	.LBE33:
+ 829               		.cfi_endproc
+ 830               	.LFE13:
+ 832               		.comm	rb,2,1
+ 833               		.comm	Fno,22,1
+ 834               		.comm	Dir,16,1
+ 835               		.comm	Fs,42,1
+ 836               		.comm	Buff,256,1
+ 837               		.comm	FifoCt,1,1
+ 838               		.comm	FifoWi,1,1
+ 839               		.comm	FifoRi,1,1
+ 840               		.text
+ 841               	.Letext0:
+ 842               		.file 2 "c:\\program files (x86)\\atmel\\studio\\7.0\\toolchain\\avr8\\avr8-gnu-toolchain\\avr\\in
+ 843               		.file 3 "integer.h"
+ 844               		.file 4 "pff.h"
+ 845               		.file 5 "SPIO.h"
+ 846               		.file 6 "c:\\program files (x86)\\atmel\\studio\\7.0\\toolchain\\avr8\\avr8-gnu-toolchain\\avr\\in
+DEFINED SYMBOLS
+                            *ABS*:00000000 main.c
+C:\Users\Noah\AppData\Local\Temp\ccbdox6T.s:2      *ABS*:0000003e __SP_H__
+C:\Users\Noah\AppData\Local\Temp\ccbdox6T.s:3      *ABS*:0000003d __SP_L__
+C:\Users\Noah\AppData\Local\Temp\ccbdox6T.s:4      *ABS*:0000003f __SREG__
+C:\Users\Noah\AppData\Local\Temp\ccbdox6T.s:5      *ABS*:00000000 __tmp_reg__
+C:\Users\Noah\AppData\Local\Temp\ccbdox6T.s:6      *ABS*:00000001 __zero_reg__
+C:\Users\Noah\AppData\Local\Temp\ccbdox6T.s:12     .text:00000000 __vector_12
+C:\Users\Noah\AppData\Local\Temp\ccbdox6T.s:43     .text.startup:00000000 main
+                            *COM*:0000002a Fs
+                            *COM*:00000100 Buff
+                            *COM*:00000002 rb
+                            *COM*:00000010 Dir
+                            *COM*:00000016 Fno
+                            *COM*:00000001 FifoCt
+                            *COM*:00000001 FifoRi
+                            *COM*:00000001 FifoWi
+
+UNDEFINED SYMBOLS
+pf_mount
+sendDiag
+pf_open
+pf_read
+pf_opendir
+pf_readdir
+strstr
+sendFilename
+__udivmodsi4
+pf_lseek
+delay_us
+__do_copy_data
+__do_clear_bss

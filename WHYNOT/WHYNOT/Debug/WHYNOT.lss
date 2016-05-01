@@ -1,0 +1,813 @@
+
+WHYNOT.elf:     file format elf32-avr
+
+Sections:
+Idx Name          Size      VMA       LMA       File off  Algn
+  0 .text         0000041a  00000000  00000000  00000074  2**1
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+  1 .data         00000000  00800060  00800060  0000048e  2**0
+                  CONTENTS, ALLOC, LOAD, DATA
+  2 .bss          00000014  00800060  00800060  0000048e  2**0
+                  ALLOC
+  3 .comment      00000030  00000000  00000000  0000048e  2**0
+                  CONTENTS, READONLY
+  4 .note.gnu.avr.deviceinfo 0000003c  00000000  00000000  000004c0  2**2
+                  CONTENTS, READONLY
+  5 .debug_aranges 000000c8  00000000  00000000  000004fc  2**0
+                  CONTENTS, READONLY, DEBUGGING
+  6 .debug_info   00000a21  00000000  00000000  000005c4  2**0
+                  CONTENTS, READONLY, DEBUGGING
+  7 .debug_abbrev 000004fb  00000000  00000000  00000fe5  2**0
+                  CONTENTS, READONLY, DEBUGGING
+  8 .debug_line   0000045a  00000000  00000000  000014e0  2**0
+                  CONTENTS, READONLY, DEBUGGING
+  9 .debug_frame  00000274  00000000  00000000  0000193c  2**2
+                  CONTENTS, READONLY, DEBUGGING
+ 10 .debug_str    0000048f  00000000  00000000  00001bb0  2**0
+                  CONTENTS, READONLY, DEBUGGING
+ 11 .debug_loc    000005eb  00000000  00000000  0000203f  2**0
+                  CONTENTS, READONLY, DEBUGGING
+ 12 .debug_ranges 00000098  00000000  00000000  0000262a  2**0
+                  CONTENTS, READONLY, DEBUGGING
+
+Disassembly of section .text:
+
+00000000 <__vectors>:
+   0:	0f c0       	rjmp	.+30     	; 0x20 <__ctors_end>
+   2:	28 c0       	rjmp	.+80     	; 0x54 <__bad_interrupt>
+   4:	54 c1       	rjmp	.+680    	; 0x2ae <__vector_2>
+   6:	26 c0       	rjmp	.+76     	; 0x54 <__bad_interrupt>
+   8:	25 c0       	rjmp	.+74     	; 0x54 <__bad_interrupt>
+   a:	24 c0       	rjmp	.+72     	; 0x54 <__bad_interrupt>
+   c:	23 c0       	rjmp	.+70     	; 0x54 <__bad_interrupt>
+   e:	22 c0       	rjmp	.+68     	; 0x54 <__bad_interrupt>
+  10:	21 c0       	rjmp	.+66     	; 0x54 <__bad_interrupt>
+  12:	20 c0       	rjmp	.+64     	; 0x54 <__bad_interrupt>
+  14:	46 c0       	rjmp	.+140    	; 0xa2 <__vector_10>
+  16:	1e c0       	rjmp	.+60     	; 0x54 <__bad_interrupt>
+  18:	1d c0       	rjmp	.+58     	; 0x54 <__bad_interrupt>
+  1a:	1c c0       	rjmp	.+56     	; 0x54 <__bad_interrupt>
+  1c:	9a c1       	rjmp	.+820    	; 0x352 <__vector_14>
+
+0000001e <__ctors_start>:
+  1e:	ff 01       	movw	r30, r30
+
+00000020 <__ctors_end>:
+  20:	11 24       	eor	r1, r1
+  22:	1f be       	out	0x3f, r1	; 63
+  24:	cf e5       	ldi	r28, 0x5F	; 95
+  26:	d2 e0       	ldi	r29, 0x02	; 2
+  28:	de bf       	out	0x3e, r29	; 62
+  2a:	cd bf       	out	0x3d, r28	; 61
+
+0000002c <__do_clear_bss>:
+  2c:	20 e0       	ldi	r18, 0x00	; 0
+  2e:	a0 e6       	ldi	r26, 0x60	; 96
+  30:	b0 e0       	ldi	r27, 0x00	; 0
+  32:	01 c0       	rjmp	.+2      	; 0x36 <.do_clear_bss_start>
+
+00000034 <.do_clear_bss_loop>:
+  34:	1d 92       	st	X+, r1
+
+00000036 <.do_clear_bss_start>:
+  36:	a4 37       	cpi	r26, 0x74	; 116
+  38:	b2 07       	cpc	r27, r18
+  3a:	e1 f7       	brne	.-8      	; 0x34 <.do_clear_bss_loop>
+
+0000003c <__do_global_ctors>:
+  3c:	10 e0       	ldi	r17, 0x00	; 0
+  3e:	c0 e1       	ldi	r28, 0x10	; 16
+  40:	d0 e0       	ldi	r29, 0x00	; 0
+  42:	03 c0       	rjmp	.+6      	; 0x4a <__SREG__+0xb>
+  44:	21 97       	sbiw	r28, 0x01	; 1
+  46:	fe 01       	movw	r30, r28
+  48:	e0 d1       	rcall	.+960    	; 0x40a <__tablejump2__>
+  4a:	cf 30       	cpi	r28, 0x0F	; 15
+  4c:	d1 07       	cpc	r29, r17
+  4e:	d1 f7       	brne	.-12     	; 0x44 <__SREG__+0x5>
+  50:	f2 d0       	rcall	.+484    	; 0x236 <main>
+  52:	e1 c1       	rjmp	.+962    	; 0x416 <_exit>
+
+00000054 <__bad_interrupt>:
+  54:	d5 cf       	rjmp	.-86     	; 0x0 <__vectors>
+
+00000056 <_ZN6IRrecvC1Ei>:
+#include "IRremoteInt.h"
+
+//+=============================================================================
+IRrecv::IRrecv (int recvpin)
+{
+	irparams.recvpin = recvpin;
+  56:	60 93 61 00 	sts	0x0061, r22
+  5a:	08 95       	ret
+
+0000005c <_ZN6IRrecv10enableIRInEv>:
+	//cli();
+	// Setup pulse clock timer interrupt
+	// Prescale /8 (16M/8 = 0.5 microseconds per tick)
+	// Therefore, the timer interval can range from 0.5 to 128 microseconds
+	// Depending on the reset value (255 to 0)
+	TIMER_CONFIG_NORMAL();
+  5c:	82 e0       	ldi	r24, 0x02	; 2
+  5e:	8a bd       	out	0x2a, r24	; 42
+  60:	83 bf       	out	0x33, r24	; 51
+  62:	94 e6       	ldi	r25, 0x64	; 100
+  64:	99 bd       	out	0x29, r25	; 41
+  66:	12 be       	out	0x32, r1	; 50
+
+	// Timer2 Overflow Interrupt Enable
+	TIMER_ENABLE_INTR;
+  68:	99 b7       	in	r25, 0x39	; 57
+  6a:	90 61       	ori	r25, 0x10	; 16
+  6c:	99 bf       	out	0x39, r25	; 57
+	TIMER_RESET;
+
+	//sei();  // enable interrupts
+
+	// Initialize state machine variables
+	irparams.rcvstate = STATE_IDLE;
+  6e:	e0 e6       	ldi	r30, 0x60	; 96
+  70:	f0 e0       	ldi	r31, 0x00	; 0
+  72:	80 83       	st	Z, r24
+	irparams.rawlen = 0;
+  74:	12 82       	std	Z+2, r1	; 0x02
+  76:	08 95       	ret
+
+00000078 <_ZN6IRrecv8onFinishEPFvmhE>:
+}
+//+=============================================================================
+// Pass through finished decoded data to something that transmits it
+//
+void IRrecv::onFinish(void (*function)(uint32_t, uint8_t)){
+	irparams.onFinishPtr = function;
+  78:	70 93 6a 00 	sts	0x006A, r23
+  7c:	60 93 69 00 	sts	0x0069, r22
+  80:	08 95       	ret
+
+00000082 <_Z11decodePulsej>:
+//LOOK AT MY COMMENTS!
+uint8_t decodePulse(unsigned int pulseLength) { //decode function specific to Lastertag implementation
+	if (pulseLength > IR_BURST_UPPER) {
+		return 2;
+	}
+	else if (pulseLength > IR_BURST_HEADER) {
+  82:	89 32       	cpi	r24, 0x29	; 41
+  84:	91 05       	cpc	r25, r1
+  86:	38 f4       	brcc	.+14     	; 0x96 <_Z11decodePulsej+0x14>
+		return 2;
+	}
+	else if (pulseLength > IR_BURST_ONE) {
+  88:	85 31       	cpi	r24, 0x15	; 21
+  8a:	91 05       	cpc	r25, r1
+  8c:	30 f4       	brcc	.+12     	; 0x9a <_Z11decodePulsej+0x18>
+		return 1;
+	}
+	else if (pulseLength > IR_BURST_ZERO) {
+  8e:	09 97       	sbiw	r24, 0x09	; 9
+  90:	30 f4       	brcc	.+12     	; 0x9e <_Z11decodePulsej+0x1c>
+		return 0;
+	}
+	else {
+		return 2;
+  92:	82 e0       	ldi	r24, 0x02	; 2
+  94:	08 95       	ret
+uint8_t decodePulse(unsigned int pulseLength) { //decode function specific to Lastertag implementation
+	if (pulseLength > IR_BURST_UPPER) {
+		return 2;
+	}
+	else if (pulseLength > IR_BURST_HEADER) {
+		return 2;
+  96:	82 e0       	ldi	r24, 0x02	; 2
+  98:	08 95       	ret
+	}
+	else if (pulseLength > IR_BURST_ONE) {
+		return 1;
+  9a:	81 e0       	ldi	r24, 0x01	; 1
+  9c:	08 95       	ret
+	}
+	else if (pulseLength > IR_BURST_ZERO) {
+		return 0;
+  9e:	80 e0       	ldi	r24, 0x00	; 0
+	}
+	else {
+		return 2;
+	}
+}
+  a0:	08 95       	ret
+
+000000a2 <__vector_10>:
+//   Ready is set; State switches to IDLE; Timing of SPACE continues.
+// As soon as first MARK arrives:
+//   Gap width is recorded; Ready is cleared; New logging starts
+//
+ISR (TIMER_INTR_NAME)
+{
+  a2:	1f 92       	push	r1
+  a4:	0f 92       	push	r0
+  a6:	0f b6       	in	r0, 0x3f	; 63
+  a8:	0f 92       	push	r0
+  aa:	11 24       	eor	r1, r1
+  ac:	2f 93       	push	r18
+  ae:	3f 93       	push	r19
+  b0:	4f 93       	push	r20
+  b2:	5f 93       	push	r21
+  b4:	6f 93       	push	r22
+  b6:	7f 93       	push	r23
+  b8:	8f 93       	push	r24
+  ba:	9f 93       	push	r25
+  bc:	af 93       	push	r26
+  be:	bf 93       	push	r27
+  c0:	ef 93       	push	r30
+  c2:	ff 93       	push	r31
+	TIMER_RESET;
+
+	// Read if IR Receiver -> SPACE [xmt LED off] or a MARK [xmt LED on]
+	// digitalRead() is very slow. Optimisation is possible, but makes the code unportable
+	bool irdata = (PINB & (1 << irparams.recvpin)); //and I did it anyway
+  c4:	86 b3       	in	r24, 0x16	; 22
+  c6:	e0 e6       	ldi	r30, 0x60	; 96
+  c8:	f0 e0       	ldi	r31, 0x00	; 0
+  ca:	21 81       	ldd	r18, Z+1	; 0x01
+  cc:	90 e0       	ldi	r25, 0x00	; 0
+  ce:	02 c0       	rjmp	.+4      	; 0xd4 <__vector_10+0x32>
+  d0:	95 95       	asr	r25
+  d2:	87 95       	ror	r24
+  d4:	2a 95       	dec	r18
+  d6:	e2 f7       	brpl	.-8      	; 0xd0 <__vector_10+0x2e>
+  d8:	81 70       	andi	r24, 0x01	; 1
+	irparams.timer++;  // One more 50uS tick
+  da:	23 81       	ldd	r18, Z+3	; 0x03
+  dc:	34 81       	ldd	r19, Z+4	; 0x04
+  de:	2f 5f       	subi	r18, 0xFF	; 255
+  e0:	3f 4f       	sbci	r19, 0xFF	; 255
+  e2:	34 83       	std	Z+4, r19	; 0x04
+  e4:	23 83       	std	Z+3, r18	; 0x03
+	if (irparams.rawlen >= RAWBUF)  irparams.rcvstate = STATE_OVERFLOW ;  // Buffer overflow
+  e6:	92 81       	ldd	r25, Z+2	; 0x02
+  e8:	95 36       	cpi	r25, 0x65	; 101
+  ea:	18 f0       	brcs	.+6      	; 0xf2 <__vector_10+0x50>
+  ec:	96 e0       	ldi	r25, 0x06	; 6
+  ee:	90 93 60 00 	sts	0x0060, r25
+
+	switch(irparams.rcvstate) {
+  f2:	90 91 60 00 	lds	r25, 0x0060
+  f6:	93 30       	cpi	r25, 0x03	; 3
+  f8:	e1 f0       	breq	.+56     	; 0x132 <__vector_10+0x90>
+  fa:	94 30       	cpi	r25, 0x04	; 4
+  fc:	09 f4       	brne	.+2      	; 0x100 <__vector_10+0x5e>
+  fe:	52 c0       	rjmp	.+164    	; 0x1a4 <__vector_10+0x102>
+ 100:	92 30       	cpi	r25, 0x02	; 2
+ 102:	09 f0       	breq	.+2      	; 0x106 <__vector_10+0x64>
+ 104:	63 c0       	rjmp	.+198    	; 0x1cc <__vector_10+0x12a>
+		//......................................................................
+		case STATE_IDLE: // In the middle of a gap
+			if (irdata == MARK) {
+ 106:	81 11       	cpse	r24, r1
+ 108:	71 c0       	rjmp	.+226    	; 0x1ec <__vector_10+0x14a>
+				if (irparams.timer < GAP_TICKS)  {  // Not big enough to be a gap.
+ 10a:	80 91 63 00 	lds	r24, 0x0063
+ 10e:	90 91 64 00 	lds	r25, 0x0064
+ 112:	84 36       	cpi	r24, 0x64	; 100
+ 114:	91 05       	cpc	r25, r1
+ 116:	28 f4       	brcc	.+10     	; 0x122 <__vector_10+0x80>
+					irparams.timer = 0;
+ 118:	10 92 64 00 	sts	0x0064, r1
+ 11c:	10 92 63 00 	sts	0x0063, r1
+ 120:	65 c0       	rjmp	.+202    	; 0x1ec <__vector_10+0x14a>
+
+				} else {
+					// Gap just ended; Record duration; Start recording transmission
+					irparams.rawlen                    = 0;
+ 122:	e0 e6       	ldi	r30, 0x60	; 96
+ 124:	f0 e0       	ldi	r31, 0x00	; 0
+ 126:	12 82       	std	Z+2, r1	; 0x02
+					irparams.timer                     = 0;
+ 128:	14 82       	std	Z+4, r1	; 0x04
+ 12a:	13 82       	std	Z+3, r1	; 0x03
+					irparams.rcvstate                  = STATE_MARK;
+ 12c:	83 e0       	ldi	r24, 0x03	; 3
+ 12e:	80 83       	st	Z, r24
+ 130:	5d c0       	rjmp	.+186    	; 0x1ec <__vector_10+0x14a>
+				}
+			}
+			break;
+		//......................................................................
+		case STATE_MARK:  // Timing Mark
+			if (irdata == SPACE) {   // Mark ended; Record time
+ 132:	88 23       	and	r24, r24
+ 134:	09 f4       	brne	.+2      	; 0x138 <__vector_10+0x96>
+ 136:	5a c0       	rjmp	.+180    	; 0x1ec <__vector_10+0x14a>
+				if(decodePulse(irparams.timer) == 1) irparams.rawbuf |= (1 << irparams.rawlen); //add one if received one
+ 138:	80 91 63 00 	lds	r24, 0x0063
+ 13c:	90 91 64 00 	lds	r25, 0x0064
+ 140:	a0 df       	rcall	.-192    	; 0x82 <_Z11decodePulsej>
+ 142:	81 30       	cpi	r24, 0x01	; 1
+ 144:	e1 f4       	brne	.+56     	; 0x17e <__vector_10+0xdc>
+ 146:	e0 e6       	ldi	r30, 0x60	; 96
+ 148:	f0 e0       	ldi	r31, 0x00	; 0
+ 14a:	82 81       	ldd	r24, Z+2	; 0x02
+ 14c:	45 81       	ldd	r20, Z+5	; 0x05
+ 14e:	56 81       	ldd	r21, Z+6	; 0x06
+ 150:	67 81       	ldd	r22, Z+7	; 0x07
+ 152:	70 85       	ldd	r23, Z+8	; 0x08
+ 154:	21 e0       	ldi	r18, 0x01	; 1
+ 156:	30 e0       	ldi	r19, 0x00	; 0
+ 158:	d9 01       	movw	r26, r18
+ 15a:	02 c0       	rjmp	.+4      	; 0x160 <__vector_10+0xbe>
+ 15c:	aa 0f       	add	r26, r26
+ 15e:	bb 1f       	adc	r27, r27
+ 160:	8a 95       	dec	r24
+ 162:	e2 f7       	brpl	.-8      	; 0x15c <__vector_10+0xba>
+ 164:	cd 01       	movw	r24, r26
+ 166:	09 2e       	mov	r0, r25
+ 168:	00 0c       	add	r0, r0
+ 16a:	aa 0b       	sbc	r26, r26
+ 16c:	bb 0b       	sbc	r27, r27
+ 16e:	84 2b       	or	r24, r20
+ 170:	95 2b       	or	r25, r21
+ 172:	a6 2b       	or	r26, r22
+ 174:	b7 2b       	or	r27, r23
+ 176:	85 83       	std	Z+5, r24	; 0x05
+ 178:	96 83       	std	Z+6, r25	; 0x06
+ 17a:	a7 83       	std	Z+7, r26	; 0x07
+ 17c:	b0 87       	std	Z+8, r27	; 0x08
+				if(decodePulse(irparams.timer) != 2) irparams.rawlen++; //don't add new value unless real signal received
+ 17e:	80 91 63 00 	lds	r24, 0x0063
+ 182:	90 91 64 00 	lds	r25, 0x0064
+ 186:	7d df       	rcall	.-262    	; 0x82 <_Z11decodePulsej>
+ 188:	82 30       	cpi	r24, 0x02	; 2
+ 18a:	29 f0       	breq	.+10     	; 0x196 <__vector_10+0xf4>
+ 18c:	e0 e6       	ldi	r30, 0x60	; 96
+ 18e:	f0 e0       	ldi	r31, 0x00	; 0
+ 190:	82 81       	ldd	r24, Z+2	; 0x02
+ 192:	8f 5f       	subi	r24, 0xFF	; 255
+ 194:	82 83       	std	Z+2, r24	; 0x02
+				irparams.timer                     = 0;
+ 196:	e0 e6       	ldi	r30, 0x60	; 96
+ 198:	f0 e0       	ldi	r31, 0x00	; 0
+ 19a:	14 82       	std	Z+4, r1	; 0x04
+ 19c:	13 82       	std	Z+3, r1	; 0x03
+				irparams.rcvstate                  = STATE_SPACE;
+ 19e:	84 e0       	ldi	r24, 0x04	; 4
+ 1a0:	80 83       	st	Z, r24
+ 1a2:	24 c0       	rjmp	.+72     	; 0x1ec <__vector_10+0x14a>
+			}
+			break;
+		//......................................................................
+		case STATE_SPACE:  // Timing Space
+			if (irdata == MARK) {  // Space just ended
+ 1a4:	81 11       	cpse	r24, r1
+ 1a6:	07 c0       	rjmp	.+14     	; 0x1b6 <__vector_10+0x114>
+				irparams.timer                     = 0;
+ 1a8:	e0 e6       	ldi	r30, 0x60	; 96
+ 1aa:	f0 e0       	ldi	r31, 0x00	; 0
+ 1ac:	14 82       	std	Z+4, r1	; 0x04
+ 1ae:	13 82       	std	Z+3, r1	; 0x03
+				irparams.rcvstate                  = STATE_MARK;
+ 1b0:	83 e0       	ldi	r24, 0x03	; 3
+ 1b2:	80 83       	st	Z, r24
+ 1b4:	1b c0       	rjmp	.+54     	; 0x1ec <__vector_10+0x14a>
+
+			} else if (irparams.timer > GAP_TICKS) {  // Space
+ 1b6:	80 91 63 00 	lds	r24, 0x0063
+ 1ba:	90 91 64 00 	lds	r25, 0x0064
+ 1be:	85 36       	cpi	r24, 0x65	; 101
+ 1c0:	91 05       	cpc	r25, r1
+ 1c2:	a0 f0       	brcs	.+40     	; 0x1ec <__vector_10+0x14a>
+					// A long Space, indicates gap between codes
+					// Flag the current code as ready for processing
+					// Switch to STOP
+					// Don't reset timer; keep counting Space width
+					irparams.rcvstate = STATE_STOP;
+ 1c4:	85 e0       	ldi	r24, 0x05	; 5
+ 1c6:	80 93 60 00 	sts	0x0060, r24
+ 1ca:	10 c0       	rjmp	.+32     	; 0x1ec <__vector_10+0x14a>
+			}
+			break;
+		//......................................................................
+		default:  // Waiting; Measuring Gap; overflow
+			irparams.onFinishPtr(irparams.rawbuf, irparams.rawlen);
+ 1cc:	a0 e6       	ldi	r26, 0x60	; 96
+ 1ce:	b0 e0       	ldi	r27, 0x00	; 0
+ 1d0:	19 96       	adiw	r26, 0x09	; 9
+ 1d2:	ed 91       	ld	r30, X+
+ 1d4:	fc 91       	ld	r31, X
+ 1d6:	1a 97       	sbiw	r26, 0x0a	; 10
+ 1d8:	12 96       	adiw	r26, 0x02	; 2
+ 1da:	4c 91       	ld	r20, X
+ 1dc:	12 97       	sbiw	r26, 0x02	; 2
+ 1de:	15 96       	adiw	r26, 0x05	; 5
+ 1e0:	6d 91       	ld	r22, X+
+ 1e2:	7d 91       	ld	r23, X+
+ 1e4:	8d 91       	ld	r24, X+
+ 1e6:	9c 91       	ld	r25, X
+ 1e8:	18 97       	sbiw	r26, 0x08	; 8
+ 1ea:	09 95       	icall
+		 	break;
+	}
+}
+ 1ec:	ff 91       	pop	r31
+ 1ee:	ef 91       	pop	r30
+ 1f0:	bf 91       	pop	r27
+ 1f2:	af 91       	pop	r26
+ 1f4:	9f 91       	pop	r25
+ 1f6:	8f 91       	pop	r24
+ 1f8:	7f 91       	pop	r23
+ 1fa:	6f 91       	pop	r22
+ 1fc:	5f 91       	pop	r21
+ 1fe:	4f 91       	pop	r20
+ 200:	3f 91       	pop	r19
+ 202:	2f 91       	pop	r18
+ 204:	0f 90       	pop	r0
+ 206:	0f be       	out	0x3f, r0	; 63
+ 208:	0f 90       	pop	r0
+ 20a:	1f 90       	pop	r1
+ 20c:	18 95       	reti
+
+0000020e <_Z10onFinishIRmh>:
+	}
+}
+
+void onFinishIR(uint32_t packet, uint8_t packetLength){
+	//disable IR recieving
+	TIMER_DISABLE_INTR;
+ 20e:	29 b7       	in	r18, 0x39	; 57
+ 210:	2f 7e       	andi	r18, 0xEF	; 239
+ 212:	29 bf       	out	0x39, r18	; 57
+	//copy the packet data
+	packetStore = packet;
+ 214:	60 93 6f 00 	sts	0x006F, r22
+ 218:	70 93 70 00 	sts	0x0070, r23
+ 21c:	80 93 71 00 	sts	0x0071, r24
+ 220:	90 93 72 00 	sts	0x0072, r25
+	packetLen = packetLength;
+ 224:	50 e0       	ldi	r21, 0x00	; 0
+ 226:	50 93 6e 00 	sts	0x006E, r21
+ 22a:	40 93 6d 00 	sts	0x006D, r20
+	//and reset keepAwake
+	IRAwake = false;
+ 22e:	10 92 6c 00 	sts	0x006C, r1
+	//and of course, blink an LED
+	PORTB |= (1 << MOSI);
+ 232:	c0 9a       	sbi	0x18, 0	; 24
+ 234:	08 95       	ret
+
+00000236 <main>:
+
+volatile usi_states usiState = idle;
+
+int main(void)
+{
+	cli();
+ 236:	f8 94       	cli
+
+	//inputs
+	DDRB |= ~((1 << CS) | (1 << CLK)) | (1 << IR_PIN); //(1 << MOSI) |
+ 238:	87 b3       	in	r24, 0x17	; 23
+ 23a:	8b 6e       	ori	r24, 0xEB	; 235
+ 23c:	87 bb       	out	0x17, r24	; 23
+	//and pullups
+	//PORTB |= (1 << MOSI) | (1 << CS) | (1 << CLK); 
+
+	//set this to call the onFinish function when IR is done
+	ir.onFinish(onFinishIR); 
+ 23e:	67 e0       	ldi	r22, 0x07	; 7
+ 240:	71 e0       	ldi	r23, 0x01	; 1
+ 242:	83 e7       	ldi	r24, 0x73	; 115
+ 244:	90 e0       	ldi	r25, 0x00	; 0
+ 246:	18 df       	rcall	.-464    	; 0x78 <_ZN6IRrecv8onFinishEPFvmhE>
+	
+	//start up the IR thing, then turn off the interrupt
+	ir.enableIRIn();
+ 248:	83 e7       	ldi	r24, 0x73	; 115
+ 24a:	90 e0       	ldi	r25, 0x00	; 0
+ 24c:	07 df       	rcall	.-498    	; 0x5c <_ZN6IRrecv10enableIRInEv>
+	TIMER_DISABLE_INTR; 
+ 24e:	89 b7       	in	r24, 0x39	; 57
+ 250:	8f 7e       	andi	r24, 0xEF	; 239
+ 252:	89 bf       	out	0x39, r24	; 57
+
+	//set up all the pin change interrupts
+	ENABLE_IR_PIN_INTR;
+ 254:	ab 9a       	sbi	0x15, 3	; 21
+	ENABLE_CS_PIN_INTR;
+ 256:	ac 9a       	sbi	0x15, 4	; 21
+	ENABLE_GLOBAL_PIN_INTR; 
+ 258:	8b b7       	in	r24, 0x3b	; 59
+ 25a:	80 62       	ori	r24, 0x20	; 32
+ 25c:	8b bf       	out	0x3b, r24	; 59
+
+	//Enable the USI Bus
+	ENABLE_USI; 
+ 25e:	6b 9a       	sbi	0x0d, 3	; 13
+	
+	sei();
+ 260:	78 94       	sei
+	
+	//setup sleep mode
+	set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+ 262:	85 b7       	in	r24, 0x35	; 53
+ 264:	87 7e       	andi	r24, 0xE7	; 231
+ 266:	80 61       	ori	r24, 0x10	; 16
+ 268:	85 bf       	out	0x35, r24	; 53
+	sleep_enable();
+ 26a:	85 b7       	in	r24, 0x35	; 53
+ 26c:	80 62       	ori	r24, 0x20	; 32
+ 26e:	85 bf       	out	0x35, r24	; 53
+
+	//BlinkyMcBlinkFace
+	PORTB |= (1 << MOSI);
+ 270:	c0 9a       	sbi	0x18, 0	; 24
+	#else
+		//round up by default
+		__ticks_dc = (uint32_t)(ceil(fabs(__tmp)));
+	#endif
+
+	__builtin_avr_delay_cycles(__ticks_dc);
+ 272:	2f e7       	ldi	r18, 0x7F	; 127
+ 274:	8a e1       	ldi	r24, 0x1A	; 26
+ 276:	96 e0       	ldi	r25, 0x06	; 6
+ 278:	21 50       	subi	r18, 0x01	; 1
+ 27a:	80 40       	sbci	r24, 0x00	; 0
+ 27c:	90 40       	sbci	r25, 0x00	; 0
+ 27e:	e1 f7       	brne	.-8      	; 0x278 <__stack+0x19>
+ 280:	00 c0       	rjmp	.+0      	; 0x282 <__stack+0x23>
+ 282:	00 00       	nop
+	_delay_ms(250);
+	PORTB &= ~(1 << MOSI);
+ 284:	c0 98       	cbi	0x18, 0	; 24
+ 286:	2f ef       	ldi	r18, 0xFF	; 255
+ 288:	80 e7       	ldi	r24, 0x70	; 112
+ 28a:	92 e0       	ldi	r25, 0x02	; 2
+ 28c:	21 50       	subi	r18, 0x01	; 1
+ 28e:	80 40       	sbci	r24, 0x00	; 0
+ 290:	90 40       	sbci	r25, 0x00	; 0
+ 292:	e1 f7       	brne	.-8      	; 0x28c <__stack+0x2d>
+ 294:	00 c0       	rjmp	.+0      	; 0x296 <__stack+0x37>
+ 296:	00 00       	nop
+ 298:	01 c0       	rjmp	.+2      	; 0x29c <__stack+0x3d>
+	_delay_ms(100);
+
+	for(;;){
+		//while nothing is happening, sleep the cpu
+		while(!IRAwake && usiState == idle)
+			sleep_cpu();
+ 29a:	88 95       	sleep
+	PORTB &= ~(1 << MOSI);
+	_delay_ms(100);
+
+	for(;;){
+		//while nothing is happening, sleep the cpu
+		while(!IRAwake && usiState == idle)
+ 29c:	80 91 6c 00 	lds	r24, 0x006C
+ 2a0:	81 11       	cpse	r24, r1
+ 2a2:	fc cf       	rjmp	.-8      	; 0x29c <__stack+0x3d>
+ 2a4:	80 91 6b 00 	lds	r24, 0x006B
+ 2a8:	81 11       	cpse	r24, r1
+ 2aa:	f8 cf       	rjmp	.-16     	; 0x29c <__stack+0x3d>
+ 2ac:	f6 cf       	rjmp	.-20     	; 0x29a <__stack+0x3b>
+
+000002ae <__vector_2>:
+	PORTB |= (1 << MOSI);
+}
+
+//ISR sleep wakeup and IR/USI start
+ISR(PCINT0_vect)
+{
+ 2ae:	1f 92       	push	r1
+ 2b0:	0f 92       	push	r0
+ 2b2:	0f b6       	in	r0, 0x3f	; 63
+ 2b4:	0f 92       	push	r0
+ 2b6:	11 24       	eor	r1, r1
+ 2b8:	2f 93       	push	r18
+ 2ba:	3f 93       	push	r19
+ 2bc:	4f 93       	push	r20
+ 2be:	5f 93       	push	r21
+ 2c0:	6f 93       	push	r22
+ 2c2:	7f 93       	push	r23
+ 2c4:	8f 93       	push	r24
+ 2c6:	9f 93       	push	r25
+ 2c8:	af 93       	push	r26
+ 2ca:	bf 93       	push	r27
+ 2cc:	ef 93       	push	r30
+ 2ce:	ff 93       	push	r31
+	if(PINB & (1 << CS) && usiState == idle){
+ 2d0:	b4 9b       	sbis	0x16, 4	; 22
+ 2d2:	19 c0       	rjmp	.+50     	; 0x306 <__vector_2+0x58>
+ 2d4:	80 91 6b 00 	lds	r24, 0x006B
+ 2d8:	88 23       	and	r24, r24
+ 2da:	c1 f0       	breq	.+48     	; 0x30c <__vector_2+0x5e>
+ 2dc:	14 c0       	rjmp	.+40     	; 0x306 <__vector_2+0x58>
+		CLEAR_USI_STATUS;
+		//Enable USI output
+		ENABLE_USI_OUT;
+		//and start sending packetLen
+		if(packetLen == 0) {
+			USIDR = NO_PACKET;
+ 2de:	8e e0       	ldi	r24, 0x0E	; 14
+ 2e0:	8f b9       	out	0x0f, r24	; 15
+			usiState = finish;
+ 2e2:	82 e0       	ldi	r24, 0x02	; 2
+ 2e4:	80 93 6b 00 	sts	0x006B, r24
+ 2e8:	23 c0       	rjmp	.+70     	; 0x330 <__vector_2+0x82>
+		}
+		else {
+			USIDR = (uint8_t)packetLen;
+ 2ea:	80 91 6d 00 	lds	r24, 0x006D
+ 2ee:	90 91 6e 00 	lds	r25, 0x006E
+ 2f2:	8f b9       	out	0x0f, r24	; 15
+			usiState = transmit;
+ 2f4:	81 e0       	ldi	r24, 0x01	; 1
+ 2f6:	80 93 6b 00 	sts	0x006B, r24
+ 2fa:	1a c0       	rjmp	.+52     	; 0x330 <__vector_2+0x82>
+		}
+	}
+	else if((PINB & (1 << IR_PIN)) && !IRAwake){
+ 2fc:	80 91 6c 00 	lds	r24, 0x006C
+ 300:	88 23       	and	r24, r24
+ 302:	79 f0       	breq	.+30     	; 0x322 <__vector_2+0x74>
+ 304:	15 c0       	rjmp	.+42     	; 0x330 <__vector_2+0x82>
+ 306:	b3 99       	sbic	0x16, 3	; 22
+ 308:	f9 cf       	rjmp	.-14     	; 0x2fc <__vector_2+0x4e>
+ 30a:	12 c0       	rjmp	.+36     	; 0x330 <__vector_2+0x82>
+//ISR sleep wakeup and IR/USI start
+ISR(PCINT0_vect)
+{
+	if(PINB & (1 << CS) && usiState == idle){
+		//Enable USI ovf. interrupt
+		ENABLE_USI_INTR;
+ 30c:	6e 9a       	sbi	0x0d, 6	; 13
+		//Reset USI bus
+		CLEAR_USI_STATUS;
+ 30e:	80 e4       	ldi	r24, 0x40	; 64
+ 310:	8e b9       	out	0x0e, r24	; 14
+		//Enable USI output
+		ENABLE_USI_OUT;
+ 312:	6c 9a       	sbi	0x0d, 4	; 13
+		//and start sending packetLen
+		if(packetLen == 0) {
+ 314:	80 91 6d 00 	lds	r24, 0x006D
+ 318:	90 91 6e 00 	lds	r25, 0x006E
+ 31c:	89 2b       	or	r24, r25
+ 31e:	f9 f2       	breq	.-66     	; 0x2de <__vector_2+0x30>
+ 320:	e4 cf       	rjmp	.-56     	; 0x2ea <__vector_2+0x3c>
+			usiState = transmit;
+		}
+	}
+	else if((PINB & (1 << IR_PIN)) && !IRAwake){
+		//disable IR start detection
+		DISABLE_IR_PIN_INTR;
+ 322:	ab 98       	cbi	0x15, 3	; 21
+		//IR recieveing enable
+		ir.enableIRIn();
+ 324:	83 e7       	ldi	r24, 0x73	; 115
+ 326:	90 e0       	ldi	r25, 0x00	; 0
+ 328:	99 de       	rcall	.-718    	; 0x5c <_ZN6IRrecv10enableIRInEv>
+		//and sleep disable
+		IRAwake = true;
+ 32a:	81 e0       	ldi	r24, 0x01	; 1
+ 32c:	80 93 6c 00 	sts	0x006C, r24
+	}
+}
+ 330:	ff 91       	pop	r31
+ 332:	ef 91       	pop	r30
+ 334:	bf 91       	pop	r27
+ 336:	af 91       	pop	r26
+ 338:	9f 91       	pop	r25
+ 33a:	8f 91       	pop	r24
+ 33c:	7f 91       	pop	r23
+ 33e:	6f 91       	pop	r22
+ 340:	5f 91       	pop	r21
+ 342:	4f 91       	pop	r20
+ 344:	3f 91       	pop	r19
+ 346:	2f 91       	pop	r18
+ 348:	0f 90       	pop	r0
+ 34a:	0f be       	out	0x3f, r0	; 63
+ 34c:	0f 90       	pop	r0
+ 34e:	1f 90       	pop	r1
+ 350:	18 95       	reti
+
+00000352 <__vector_14>:
+
+//ISR to handle USI transmission
+ISR(USI_OVF_vect){
+ 352:	1f 92       	push	r1
+ 354:	0f 92       	push	r0
+ 356:	0f b6       	in	r0, 0x3f	; 63
+ 358:	0f 92       	push	r0
+ 35a:	11 24       	eor	r1, r1
+ 35c:	0f 93       	push	r16
+ 35e:	1f 93       	push	r17
+ 360:	2f 93       	push	r18
+ 362:	3f 93       	push	r19
+ 364:	4f 93       	push	r20
+ 366:	5f 93       	push	r21
+ 368:	6f 93       	push	r22
+ 36a:	7f 93       	push	r23
+ 36c:	8f 93       	push	r24
+ 36e:	9f 93       	push	r25
+ 370:	af 93       	push	r26
+ 372:	bf 93       	push	r27
+	//Reset USI
+	CLEAR_USI_STATUS;
+ 374:	80 e4       	ldi	r24, 0x40	; 64
+ 376:	8e b9       	out	0x0e, r24	; 14
+	switch(usiState){
+ 378:	80 91 6b 00 	lds	r24, 0x006B
+ 37c:	81 30       	cpi	r24, 0x01	; 1
+ 37e:	19 f0       	breq	.+6      	; 0x386 <__vector_14+0x34>
+ 380:	82 30       	cpi	r24, 0x02	; 2
+ 382:	39 f1       	breq	.+78     	; 0x3d2 <__vector_14+0x80>
+ 384:	2b c0       	rjmp	.+86     	; 0x3dc <__vector_14+0x8a>
+		case transmit: 
+			//transmit the first 8 bits of the packet, MSB first
+			USIDR = (uint8_t)(packetStore >> (packetLen -= 8)); 
+ 386:	40 91 6f 00 	lds	r20, 0x006F
+ 38a:	50 91 70 00 	lds	r21, 0x0070
+ 38e:	60 91 71 00 	lds	r22, 0x0071
+ 392:	70 91 72 00 	lds	r23, 0x0072
+ 396:	80 91 6d 00 	lds	r24, 0x006D
+ 39a:	90 91 6e 00 	lds	r25, 0x006E
+ 39e:	08 97       	sbiw	r24, 0x08	; 8
+ 3a0:	90 93 6e 00 	sts	0x006E, r25
+ 3a4:	80 93 6d 00 	sts	0x006D, r24
+ 3a8:	8a 01       	movw	r16, r20
+ 3aa:	9b 01       	movw	r18, r22
+ 3ac:	04 c0       	rjmp	.+8      	; 0x3b6 <__vector_14+0x64>
+ 3ae:	36 95       	lsr	r19
+ 3b0:	27 95       	ror	r18
+ 3b2:	17 95       	ror	r17
+ 3b4:	07 95       	ror	r16
+ 3b6:	8a 95       	dec	r24
+ 3b8:	d2 f7       	brpl	.-12     	; 0x3ae <__vector_14+0x5c>
+ 3ba:	0f b9       	out	0x0f, r16	; 15
+			//set state machine for next 8 bits, if such bits exist, else finish up
+			if(packetLen <= 0) usiState = finish;
+ 3bc:	80 91 6d 00 	lds	r24, 0x006D
+ 3c0:	90 91 6e 00 	lds	r25, 0x006E
+ 3c4:	18 16       	cp	r1, r24
+ 3c6:	19 06       	cpc	r1, r25
+ 3c8:	4c f0       	brlt	.+18     	; 0x3dc <__vector_14+0x8a>
+ 3ca:	82 e0       	ldi	r24, 0x02	; 2
+ 3cc:	80 93 6b 00 	sts	0x006B, r24
+ 3d0:	05 c0       	rjmp	.+10     	; 0x3dc <__vector_14+0x8a>
+			break;
+		case finish: 
+			//Reset USI flags for next signal
+			DISABLE_USI_OUT;
+ 3d2:	6c 98       	cbi	0x0d, 4	; 13
+			DISABLE_USI_INTR;
+ 3d4:	6e 98       	cbi	0x0d, 6	; 13
+			ENABLE_CS_PIN_INTR;
+ 3d6:	ac 9a       	sbi	0x15, 4	; 21
+			//reset state machine, enabling sleep
+			usiState = idle;
+ 3d8:	10 92 6b 00 	sts	0x006B, r1
+			break;
+	}
+}
+ 3dc:	bf 91       	pop	r27
+ 3de:	af 91       	pop	r26
+ 3e0:	9f 91       	pop	r25
+ 3e2:	8f 91       	pop	r24
+ 3e4:	7f 91       	pop	r23
+ 3e6:	6f 91       	pop	r22
+ 3e8:	5f 91       	pop	r21
+ 3ea:	4f 91       	pop	r20
+ 3ec:	3f 91       	pop	r19
+ 3ee:	2f 91       	pop	r18
+ 3f0:	1f 91       	pop	r17
+ 3f2:	0f 91       	pop	r16
+ 3f4:	0f 90       	pop	r0
+ 3f6:	0f be       	out	0x3f, r0	; 63
+ 3f8:	0f 90       	pop	r0
+ 3fa:	1f 90       	pop	r1
+ 3fc:	18 95       	reti
+
+000003fe <_GLOBAL__sub_I_ir>:
+#define DISABLE_USI_INTR USICR &= ~(1 << USIOIE)
+//reset USI bus with both of these
+#define CLEAR_USI_DR USIDR = 0
+#define CLEAR_USI_STATUS USISR = (1 << USIOIF) 
+
+IRrecv ir(IR_PIN);
+ 3fe:	63 e0       	ldi	r22, 0x03	; 3
+ 400:	70 e0       	ldi	r23, 0x00	; 0
+ 402:	83 e7       	ldi	r24, 0x73	; 115
+ 404:	90 e0       	ldi	r25, 0x00	; 0
+ 406:	27 de       	rcall	.-946    	; 0x56 <_ZN6IRrecvC1Ei>
+ 408:	08 95       	ret
+
+0000040a <__tablejump2__>:
+ 40a:	ee 0f       	add	r30, r30
+ 40c:	ff 1f       	adc	r31, r31
+ 40e:	05 90       	lpm	r0, Z+
+ 410:	f4 91       	lpm	r31, Z
+ 412:	e0 2d       	mov	r30, r0
+ 414:	09 94       	ijmp
+
+00000416 <_exit>:
+ 416:	f8 94       	cli
+
+00000418 <__stop_program>:
+ 418:	ff cf       	rjmp	.-2      	; 0x418 <__stop_program>

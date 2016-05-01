@@ -1,0 +1,2303 @@
+   1               		.file	"main.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               	.global	__vector_12
+  12               	__vector_12:
+  13               	.LFB12:
+  14               		.file 1 "main.c"
+   1:main.c        **** /*----------------------------------------------------------------------------/
+   2:main.c        **** /  8-pin SD audio player R0.05d                    (C)ChaN, 2011              /
+   3:main.c        **** /-----------------------------------------------------------------------------/
+   4:main.c        **** / This project, program codes and circuit diagrams, is opened under license
+   5:main.c        **** / policy of following trems.
+   6:main.c        **** /
+   7:main.c        **** /  Copyright (C) 2010, ChaN, all right reserved.
+   8:main.c        **** /
+   9:main.c        **** / * This project is a free software and there is NO WARRANTY.
+  10:main.c        **** / * No restriction on use. You can use, modify and redistribute it for
+  11:main.c        **** /   personal, non-profit or commercial use UNDER YOUR RESPONSIBILITY.
+  12:main.c        **** / * Redistributions of source code must retain the above copyright notice.
+  13:main.c        **** /
+  14:main.c        **** /----------------------------------------------------------------------------*/
+  15:main.c        **** 
+  16:main.c        **** #include <avr/io.h>
+  17:main.c        **** #include <avr/interrupt.h>
+  18:main.c        **** #include <avr/sleep.h>
+  19:main.c        **** #include <avr/wdt.h>
+  20:main.c        **** #include <string.h>
+  21:main.c        **** #include <util/delay.h>
+  22:main.c        **** #include <stdbool.h>
+  23:main.c        **** #include "pff.h"
+  24:main.c        **** #include "mmc.h"
+  25:main.c        **** 
+  26:main.c        **** #define CS PB3
+  27:main.c        **** #define ACK 0x0e
+  28:main.c        **** 
+  29:main.c        **** //setup pin change interrupt
+  30:main.c        **** #define SETUP_PIN_CHANGE PCMSK |= (1 << CS)
+  31:main.c        **** //enable pin change interrupt
+  32:main.c        **** #define ENABLE_PIN_INTR GIMSK |= 0b00100000
+  33:main.c        **** #define DISABLE_PIN_INTR GIMSK &= 0b11011111
+  34:main.c        **** 
+  35:main.c        **** #define delay_us(a) _delay_us(a)
+  36:main.c        **** #define delay_ms(a) _delay_ms(a)
+  37:main.c        **** 
+  38:main.c        **** #ifndef MODE
+  39:main.c        **** #error Wrong make file.
+  40:main.c        **** #endif
+  41:main.c        **** #if   MODE == 0	/* Single output */
+  42:main.c        **** //FUSES = {0xE1, 0xDD, 0xFF};	/* Fuse bytes for mono: Low, High and Extended */
+  43:main.c        **** #else			/* Dual output */
+  44:main.c        **** //FUSES = {0xE1, 0x7D, 0xFF};	/* Fuse bytes for stereo and mono-HR: Low, High and Extended (*HVS mo
+  45:main.c        **** #endif
+  46:main.c        **** /* This is the fuse settings of this project. The fuse data will be included
+  47:main.c        **** in the output hex file with program code. However some old flash programmers
+  48:main.c        **** cannot load the fuse bits from hex file. If it is the case, remove this line
+  49:main.c        **** and use these values to program the fuse bits. */
+  50:main.c        **** 
+  51:main.c        **** 
+  52:main.c        **** #define FCC(c1,c2,c3,c4)	(((DWORD)c4<<24)+((DWORD)c3<<16)+((WORD)c2<<8)+(BYTE)c1)	/* FourCC */
+  53:main.c        **** 
+  54:main.c        **** //void delay_us (WORD);	/* Defined in asmfunc.S */
+  55:main.c        **** 
+  56:main.c        **** 
+  57:main.c        **** 
+  58:main.c        **** /*---------------------------------------------------------*/
+  59:main.c        **** /* Work Area                                               */
+  60:main.c        **** /*---------------------------------------------------------*/
+  61:main.c        **** 
+  62:main.c        **** volatile BYTE FifoRi, FifoWi, FifoCt;	/* FIFO controls */
+  63:main.c        **** 
+  64:main.c        **** BYTE Buff[256];		/* Wave output FIFO */
+  65:main.c        **** 
+  66:main.c        **** FATFS Fs;			/* File system object */
+  67:main.c        **** DIR Dir;			/* Directory object */
+  68:main.c        **** FILINFO Fno;		/* File information */
+  69:main.c        **** 
+  70:main.c        **** WORD rb;			/* Return value. Put this here to avoid avr-gcc's bug */
+  71:main.c        **** 
+  72:main.c        **** volatile char fileName[16];
+  73:main.c        **** volatile bool newFile;
+  74:main.c        **** /*---------------------------------------------------------*/
+  75:main.c        **** 
+  76:main.c        **** static char filenameRef[3][16] ={
+  77:main.c        **** 	 {'b','e','e','p','.','w','a','v'},
+  78:main.c        **** 	 {'p','e','w','.','w','a','v'},
+  79:main.c        **** 	 {'d','e','a','d','.','w','a','v'}
+  80:main.c        **** };
+  81:main.c        **** 
+  82:main.c        **** static
+  83:main.c        **** DWORD load_header (void)	/* 0:Invalid format, 1:I/O error, >=1024:Number of samples */
+  84:main.c        **** {
+  85:main.c        **** 	DWORD sz, f;
+  86:main.c        **** 	BYTE b, al = 0;
+  87:main.c        **** 
+  88:main.c        **** 
+  89:main.c        **** 	if (pf_read(Buff, 12, &rb)) return 1;	/* Load file header (12 bytes) */
+  90:main.c        **** 
+  91:main.c        **** 	if (rb != 12 || LD_DWORD(Buff+8) != FCC('W','A','V','E')) return 0;
+  92:main.c        **** 
+  93:main.c        **** 	for (;;) {
+  94:main.c        **** 		wdt_reset();
+  95:main.c        **** 		pf_read(Buff, 8, &rb);			/* Get Chunk ID and size */
+  96:main.c        **** 		if (rb != 8) return 0;
+  97:main.c        **** 		sz = LD_DWORD(&Buff[4]);		/* Chunk size */
+  98:main.c        **** 
+  99:main.c        **** 		switch (LD_DWORD(&Buff[0])) {	/* Switch by chunk ID */
+ 100:main.c        **** 		case FCC('f','m','t',' ') :					/* 'fmt ' chunk */
+ 101:main.c        **** 			if (sz & 1) sz++;						/* Align chunk size */
+ 102:main.c        **** 			if (sz > 100 || sz < 16) return 0;		/* Check chunk size */
+ 103:main.c        **** 			pf_read(Buff, sz, &rb);					/* Get content */
+ 104:main.c        **** 			if (rb != sz) return 0;
+ 105:main.c        **** 			if (Buff[0] != 1) return 0;				/* Check coding type (LPCM) */
+ 106:main.c        **** 			b = Buff[2];
+ 107:main.c        **** 			if (b != 1 && b != 2) return 0;			/* Check channels (1/2) */
+ 108:main.c        **** 			GPIOR0 = al = b;						/* Save channel flag */
+ 109:main.c        **** 			b = Buff[14];
+ 110:main.c        **** 			if (b != 8 && b != 16) return 0;		/* Check resolution (8/16 bit) */
+ 111:main.c        **** 			GPIOR0 |= b;							/* Save resolution flag */
+ 112:main.c        **** 			if (b & 16) al <<= 1;
+ 113:main.c        **** 			f = LD_DWORD(&Buff[4]);					/* Check sampling freqency (8k-48k) */
+ 114:main.c        **** 			if (f < 8000 || f > 48000) return 4;
+ 115:main.c        **** 			OCR0A = (BYTE)(F_CPU / 8 / f) - 1;		/* Set sampling interval */
+ 116:main.c        **** 			break;
+ 117:main.c        **** 
+ 118:main.c        **** 		case FCC('d','a','t','a') :		/* 'data' chunk */
+ 119:main.c        **** 			if (!al) return 0;							/* Check if format is valid */
+ 120:main.c        **** 			if (sz < 1024 || (sz & (al - 1))) return 0;	/* Check size */
+ 121:main.c        **** 			if (Fs.fptr & (al - 1)) return 0;			/* Check word alignment */
+ 122:main.c        **** 			return sz;									/* Start to play */
+ 123:main.c        **** 
+ 124:main.c        **** 		case FCC('D','I','S','P') :		/* 'DISP' chunk */
+ 125:main.c        **** 		case FCC('L','I','S','T') :		/* 'LIST' chunk */
+ 126:main.c        **** 		case FCC('f','a','c','t') :		/* 'fact' chunk */
+ 127:main.c        **** 			if (sz & 1) sz++;				/* Align chunk size */
+ 128:main.c        **** 			pf_lseek(Fs.fptr + sz);			/* Skip this chunk */
+ 129:main.c        **** 			break;
+ 130:main.c        **** 
+ 131:main.c        **** 		default :						/* Unknown chunk */
+ 132:main.c        **** 			return 0;
+ 133:main.c        **** 		}
+ 134:main.c        **** 	}
+ 135:main.c        **** 
+ 136:main.c        **** 	return 0;
+ 137:main.c        **** }
+ 138:main.c        **** 
+ 139:main.c        **** 
+ 140:main.c        **** 
+ 141:main.c        **** static
+ 142:main.c        **** void ramp (
+ 143:main.c        **** 	int dir		/* 0:Ramp-down, 1:Ramp-up */
+ 144:main.c        **** )
+ 145:main.c        **** {
+ 146:main.c        **** #if MODE != 3
+ 147:main.c        **** 	BYTE v, d, n;
+ 148:main.c        **** 
+ 149:main.c        **** 
+ 150:main.c        **** 	if (dir) {
+ 151:main.c        **** 		v = 0; d = 1;
+ 152:main.c        **** 	} else {
+ 153:main.c        **** 		v = 128; d = (BYTE)-1;
+ 154:main.c        **** 	}
+ 155:main.c        **** 
+ 156:main.c        **** 	n = 128;
+ 157:main.c        **** 	do {
+ 158:main.c        **** 		v += d;
+ 159:main.c        **** 		OCR1A = v; OCR1B = v;
+ 160:main.c        **** 		delay_us(100);
+ 161:main.c        **** 	} while (--n);
+ 162:main.c        **** #else
+ 163:main.c        **** 	dir = dir ? 128 : 0;
+ 164:main.c        **** 	OCR1A = (BYTE)dir; OCR1B = (BYTE)dir;
+ 165:main.c        **** #endif
+ 166:main.c        **** }
+ 167:main.c        **** 
+ 168:main.c        **** 
+ 169:main.c        **** 
+ 170:main.c        **** static
+ 171:main.c        **** FRESULT play (
+ 172:main.c        **** 	const char *dir,	/* Directory */
+ 173:main.c        **** 	const char *fn		/* File */
+ 174:main.c        **** )
+ 175:main.c        **** {
+ 176:main.c        **** 	DWORD sz;
+ 177:main.c        **** 	FRESULT res;
+ 178:main.c        **** 	BYTE sw;
+ 179:main.c        **** 	WORD btr;
+ 180:main.c        **** 
+ 181:main.c        **** 
+ 182:main.c        **** 	wdt_reset();
+ 183:main.c        **** 
+ 184:main.c        **** 	res = pf_open((char*)Buff);		/* Open sound file */
+ 185:main.c        **** 	if (res == FR_OK) {
+ 186:main.c        **** 		sz = load_header();			/* Check file format and ready to play */
+ 187:main.c        **** 		if (sz < 1024) return 255;	/* Cannot play this file */
+ 188:main.c        **** 
+ 189:main.c        **** 		FifoCt = 0; FifoRi = 0; FifoWi = 0;	/* Reset audio FIFO */
+ 190:main.c        **** 
+ 191:main.c        **** 		if (!TCCR1) {				/* Enable audio out if not enabled */
+ 192:main.c        **** 			PLLCSR = 0b00000110;	/* Select PLL clock for TC1.ck */
+ 193:main.c        **** 			GTCCR =  0b01100000;	/* Enable OC1B as PWM */
+ 194:main.c        **** 			TCCR1 = MODE ? 0b01100001 : 0b00000001;	/* Start TC1 and enable OC1A as PWM if needed */
+ 195:main.c        **** 			TCCR0A = 0b00000010;	/* Statr TC0 as interval timer at 2MHz */
+ 196:main.c        **** 			TCCR0B = 0b00000010;
+ 197:main.c        **** 			TIMSK = _BV(OCIE0A);
+ 198:main.c        **** 			ramp(1);
+ 199:main.c        **** 		}
+ 200:main.c        **** 
+ 201:main.c        **** 		pf_read(0, 512 - (Fs.fptr % 512), &rb);	/* Snip sector unaligned part */
+ 202:main.c        **** 		sz -= rb;
+ 203:main.c        **** 		sw = 1;	/* Button status flag */
+ 204:main.c        **** 		do {	/* Data transfer loop */
+ 205:main.c        **** 			wdt_reset();
+ 206:main.c        **** 
+ 207:main.c        **** 			btr = (sz > 1024) ? 1024 : (WORD)sz;/* A chunk of audio data */
+ 208:main.c        **** 			res = pf_read(0, btr, &rb);	/* Forward the data into audio FIFO */
+ 209:main.c        **** 			if (rb != 1024) break;		/* Break on error or end of data */
+ 210:main.c        **** 			sz -= rb;					/* Decrease data counter */
+ 211:main.c        **** 
+ 212:main.c        **** 			sw <<= 1;					/* Break on button down */
+ 213:main.c        **** 		} while (!newFile || ++sw != 1); //break on filename change
+ 214:main.c        **** 	}
+ 215:main.c        **** 
+ 216:main.c        **** 	while (FifoCt) ;			/* Wait for audio FIFO empty */
+ 217:main.c        **** 	OCR1A = 128; OCR1B = 128;	/* Return output to center level */
+ 218:main.c        **** 
+ 219:main.c        **** 	return res;
+ 220:main.c        **** }
+ 221:main.c        **** 
+ 222:main.c        **** 
+ 223:main.c        **** 
+ 224:main.c        **** static
+ 225:main.c        **** void delay500 (void)
+ 226:main.c        **** {
+ 227:main.c        **** 	wdt_reset();
+ 228:main.c        **** 
+ 229:main.c        **** 	TCCR0B = 0; TCCR0A = 0;	/* Stop TC0 */
+ 230:main.c        **** 
+ 231:main.c        **** 	if (TCCR1) {	/* Stop TC1 if enabled */
+ 232:main.c        **** 		ramp(0);
+ 233:main.c        **** 		TCCR1 = 0; GTCCR = 0;
+ 234:main.c        **** 	}
+ 235:main.c        **** 
+ 236:main.c        **** 	WDTCR = _BV(WDE) | _BV(WDIE) | 0b101;	/* Set WDT to interrupt mode in timeout of 0.5s */
+ 237:main.c        **** 	sleep_mode();
+ 238:main.c        **** 
+ 239:main.c        **** 	wdt_reset();
+ 240:main.c        **** 	WDTCR = _BV(WDE) | 0b110;				/* Set WDT to reset mode in timeout of 1s */
+ 241:main.c        **** }
+ 242:main.c        **** 
+ 243:main.c        **** 
+ 244:main.c        **** EMPTY_INTERRUPT(WDT_vect);
+  15               		.loc 1 244 0
+  16               		.cfi_startproc
+  17               	/* prologue: naked */
+  18               	/* frame size = 0 */
+  19               	/* stack size = 0 */
+  20               	.L__stack_usage = 0
+  21               		.loc 1 244 0
+  22               	/* #APP */
+  23               	 ;  244 "main.c" 1
+  24 0000 1895      		reti
+  25               	 ;  0 "" 2
+  26               	/* epilogue start */
+  27               	/* #NOAPP */
+  28               		.cfi_endproc
+  29               	.LFE12:
+  31               		.section	.rodata.str1.1,"aMS",@progbits,1
+  32               	.LC0:
+  33 0000 6F73 6363 		.string	"osccal"
+  33      616C 00
+  34               	.LC1:
+  35 0007 736F 756E 		.string	"sounds"
+  35      6473 00
+  36               	.LC2:
+  37 000e 00        		.string	""
+  38               		.section	.text.startup,"ax",@progbits
+  39               	.global	main
+  41               	main:
+  42               	.LFB13:
+ 245:main.c        **** 
+ 246:main.c        **** 
+ 247:main.c        **** 
+ 248:main.c        **** /*-----------------------------------------------------------------------*/
+ 249:main.c        **** /* Main                                                                  */
+ 250:main.c        **** 
+ 251:main.c        **** int main (void)
+ 252:main.c        **** {
+  43               		.loc 1 252 0
+  44               		.cfi_startproc
+  45               	/* prologue: function */
+  46               	/* frame size = 0 */
+  47               	/* stack size = 0 */
+  48               	.L__stack_usage = 0
+ 253:main.c        **** 	FRESULT res;
+ 254:main.c        **** 	char *dir;
+ 255:main.c        **** 	BYTE org_osc = OSCCAL;
+  49               		.loc 1 255 0
+  50 0000 C1B7      		in r28,0x31
+  51               	.LVL0:
+ 256:main.c        **** 
+ 257:main.c        **** 	cli();
+  52               		.loc 1 257 0
+  53               	/* #APP */
+  54               	 ;  257 "main.c" 1
+  55 0002 F894      		cli
+  56               	 ;  0 "" 2
+ 258:main.c        **** 	MCUSR = 0; //Clear any reset status flags
+  57               		.loc 1 258 0
+  58               	/* #NOAPP */
+  59 0004 14BE      		out 0x34,__zero_reg__
+  60               	.LVL1:
+  61               	.LBB45:
+  62               	.LBB46:
+  63               		.file 2 "c:\\program files (x86)\\atmel\\studio\\7.0\\toolchain\\avr8\\avr8-gnu-toolchain\\avr\\in
+   1:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** /* Copyright (c) 2002, 2004 Marek Michalkiewicz
+   2:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    Copyright (c) 2005, 2006, 2007 Eric B. Weddington
+   3:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    All rights reserved.
+   4:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+   5:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    Redistribution and use in source and binary forms, with or without
+   6:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    modification, are permitted provided that the following conditions are met:
+   7:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+   8:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    * Redistributions of source code must retain the above copyright
+   9:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****      notice, this list of conditions and the following disclaimer.
+  10:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  11:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    * Redistributions in binary form must reproduce the above copyright
+  12:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****      notice, this list of conditions and the following disclaimer in
+  13:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****      the documentation and/or other materials provided with the
+  14:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****      distribution.
+  15:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  16:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    * Neither the name of the copyright holders nor the names of
+  17:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****      contributors may be used to endorse or promote products derived
+  18:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****      from this software without specific prior written permission.
+  19:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  20:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  21:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  22:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  23:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****   ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+  24:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****   LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  25:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****   CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  26:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****   SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  27:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  28:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****   CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  29:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  30:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****   POSSIBILITY OF SUCH DAMAGE. */
+  31:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  32:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** /* $Id$ */
+  33:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  34:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** /*
+  35:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    avr/wdt.h - macros for AVR watchdog timer
+  36:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****  */
+  37:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  38:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #ifndef _AVR_WDT_H_
+  39:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #define _AVR_WDT_H_
+  40:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  41:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #include <avr/io.h>
+  42:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #include <stdint.h>
+  43:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  44:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** /** \file */
+  45:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** /** \defgroup avr_watchdog <avr/wdt.h>: Watchdog timer handling
+  46:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     \code #include <avr/wdt.h> \endcode
+  47:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  48:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     This header file declares the interface to some inline macros
+  49:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     handling the watchdog timer present in many AVR devices.  In order
+  50:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     to prevent the watchdog timer configuration from being
+  51:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     accidentally altered by a crashing application, a special timed
+  52:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     sequence is required in order to change it.  The macros within
+  53:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     this header file handle the required sequence automatically
+  54:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     before changing any value.  Interrupts will be disabled during
+  55:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     the manipulation.
+  56:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  57:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     \note Depending on the fuse configuration of the particular
+  58:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     device, further restrictions might apply, in particular it might
+  59:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     be disallowed to turn off the watchdog timer.
+  60:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  61:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     Note that for newer devices (ATmega88 and newer, effectively any
+  62:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     AVR that has the option to also generate interrupts), the watchdog
+  63:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     timer remains active even after a system reset (except a power-on
+  64:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     condition), using the fastest prescaler value (approximately 15
+  65:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     ms).  It is therefore required to turn off the watchdog early
+  66:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     during program startup, the datasheet recommends a sequence like
+  67:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     the following:
+  68:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  69:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     \code
+  70:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     #include <stdint.h>
+  71:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     #include <avr/wdt.h>
+  72:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  73:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     uint8_t mcusr_mirror __attribute__ ((section (".noinit")));
+  74:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  75:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     void get_mcusr(void) \
+  76:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       __attribute__((naked)) \
+  77:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       __attribute__((section(".init3")));
+  78:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     void get_mcusr(void)
+  79:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     {
+  80:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       mcusr_mirror = MCUSR;
+  81:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       MCUSR = 0;
+  82:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       wdt_disable();
+  83:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     }
+  84:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     \endcode
+  85:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  86:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     Saving the value of MCUSR in \c mcusr_mirror is only needed if the
+  87:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     application later wants to examine the reset source, but in particular, 
+  88:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     clearing the watchdog reset flag before disabling the
+  89:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     watchdog is required, according to the datasheet.
+  90:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** */
+  91:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  92:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** /**
+  93:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    \ingroup avr_watchdog
+  94:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    Reset the watchdog timer.  When the watchdog timer is enabled,
+  95:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    a call to this instruction is required before the timer expires,
+  96:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    otherwise a watchdog-initiated device reset will occur. 
+  97:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** */
+  98:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  99:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #define wdt_reset() __asm__ __volatile__ ("wdr")
+ 100:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 101:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 102:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #if defined(WDP3)
+ 103:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** # define _WD_PS3_MASK       _BV(WDP3)
+ 104:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #else
+ 105:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** # define _WD_PS3_MASK       0x00
+ 106:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #endif
+ 107:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 108:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #if defined(WDTCSR)
+ 109:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #  define _WD_CONTROL_REG     WDTCSR
+ 110:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #elif defined(WDTCR)
+ 111:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #  define _WD_CONTROL_REG     WDTCR
+ 112:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #else
+ 113:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #  define _WD_CONTROL_REG     WDT
+ 114:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #endif
+ 115:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 116:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #if defined(WDTOE)
+ 117:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #define _WD_CHANGE_BIT      WDTOE
+ 118:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #else
+ 119:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #define _WD_CHANGE_BIT      WDCE
+ 120:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #endif
+ 121:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 122:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 123:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** /**
+ 124:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    \ingroup avr_watchdog
+ 125:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    Enable the watchdog timer, configuring it for expiry after
+ 126:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    \c timeout (which is a combination of the \c WDP0 through
+ 127:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    \c WDP2 bits to write into the \c WDTCR register; For those devices 
+ 128:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    that have a \c WDTCSR register, it uses the combination of the \c WDP0 
+ 129:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    through \c WDP3 bits).
+ 130:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 131:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    See also the symbolic constants \c WDTO_15MS et al.
+ 132:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** */
+ 133:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 134:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 135:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #if defined(__AVR_XMEGA__)
+ 136:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 137:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #if defined (WDT_CTRLA) && !defined(RAMPD)
+ 138:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 139:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #define wdt_enable(timeout) \
+ 140:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** do { \
+ 141:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** uint8_t temp; \
+ 142:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** __asm__ __volatile__ ( \
+ 143:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	"wdr"									"\n\t" \
+ 144:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	"out %[ccp_reg], %[ioreg_cen_mask]"		"\n\t" \
+ 145:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	"lds %[tmp], %[wdt_reg]"				"\n\t" \
+ 146:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	"sbr %[tmp], %[wdt_enable_timeout]"		"\n\t" \
+ 147:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	"sts %[wdt_reg], %[tmp]"				"\n\t" \
+ 148:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	"1:lds %[tmp], %[wdt_status_reg]"		"\n\t" \
+ 149:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	"sbrc %[tmp], %[wdt_syncbusy_bit]"		"\n\t" \
+ 150:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	"rjmp 1b"								"\n\t" \
+ 151:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	: [tmp]					"=r" (temp) \
+ 152:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	: [ccp_reg]				"I"  (_SFR_IO_ADDR(CCP)), \
+ 153:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	  [ioreg_cen_mask]		"r"  ((uint8_t)CCP_IOREG_gc), \
+ 154:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	  [wdt_reg]				"n"  (_SFR_MEM_ADDR(WDT_CTRLA)), \
+ 155:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	  [wdt_enable_timeout]	"M"  (timeout), \
+ 156:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	  [wdt_status_reg]		"n"  (_SFR_MEM_ADDR(WDT_STATUS)), \
+ 157:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	  [wdt_syncbusy_bit]	"I"  (WDT_SYNCBUSY_bm) \
+ 158:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** ); \
+ 159:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** } while(0)
+ 160:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 161:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #define wdt_disable() \
+ 162:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** do { \
+ 163:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** uint8_t temp; \
+ 164:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** __asm__ __volatile__ (  \
+ 165:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	"wdr"								"\n\t" \
+ 166:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	"out %[ccp_reg], %[ioreg_cen_mask]" "\n\t" \
+ 167:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	"lds %[tmp], %[wdt_reg]"			"\n\t" \
+ 168:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	"cbr %[tmp], %[timeout_mask]"       "\n\t" \
+ 169:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	"sts %[wdt_reg], %[tmp]"			"\n\t" \
+ 170:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     : [tmp]            "=r" (temp) \
+ 171:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     : [ccp_reg]        "I" (_SFR_IO_ADDR(CCP)),       \
+ 172:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [ioreg_cen_mask] "r" ((uint8_t)CCP_IOREG_gc),   \
+ 173:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [wdt_reg]        "n" (_SFR_MEM_ADDR(WDT_CTRLA)),\
+ 174:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [timeout_mask]   "I" (WDT_PERIOD_gm) \
+ 175:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** ); \
+ 176:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** } while(0)
+ 177:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 178:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #else // defined (WDT_CTRLA) && !defined(RAMPD)
+ 179:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 180:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** /*
+ 181:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    wdt_enable(timeout) for xmega devices
+ 182:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** ** write signature (CCP_IOREG_gc) that enables change of protected I/O
+ 183:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    registers to the CCP register
+ 184:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** ** At the same time,
+ 185:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    1) set WDT change enable (WDT_CEN_bm)
+ 186:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    2) enable WDT (WDT_ENABLE_bm)
+ 187:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    3) set timeout (timeout)
+ 188:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** ** Synchronization starts when ENABLE bit of WDT is set. So, wait till it
+ 189:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    finishes (SYNCBUSY of STATUS register is automatically cleared after the
+ 190:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    sync is finished).
+ 191:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** */
+ 192:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #define wdt_enable(timeout) \
+ 193:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** do { \
+ 194:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** uint8_t temp; \
+ 195:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** __asm__ __volatile__ (         \
+ 196:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "in __tmp_reg__, %[rampd]"              "\n\t" \
+ 197:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "out %[rampd], __zero_reg__"            "\n\t" \
+ 198:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "out %[ccp_reg], %[ioreg_cen_mask]"     "\n\t" \
+ 199:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "sts %[wdt_reg], %[wdt_enable_timeout]" "\n\t" \
+ 200:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "1:lds %[tmp], %[wdt_status_reg]"       "\n\t" \
+ 201:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "sbrc %[tmp], %[wdt_syncbusy_bit]"      "\n\t" \
+ 202:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "rjmp 1b"                               "\n\t" \
+ 203:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "out %[rampd], __tmp_reg__"             "\n\t" \
+ 204:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     : [tmp]                "=r" (temp) \
+ 205:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     : [rampd]              "I" (_SFR_IO_ADDR(RAMPD)),      \
+ 206:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [ccp_reg]            "I" (_SFR_IO_ADDR(CCP)),        \
+ 207:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [ioreg_cen_mask]     "r" ((uint8_t)CCP_IOREG_gc),     \
+ 208:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [wdt_reg]            "n" (_SFR_MEM_ADDR(WDT_CTRL)),   \
+ 209:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [wdt_enable_timeout] "r" ((uint8_t)(WDT_CEN_bm | WDT_ENABLE_bm | timeout)), \
+ 210:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [wdt_status_reg]     "n" (_SFR_MEM_ADDR(WDT_STATUS)), \
+ 211:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [wdt_syncbusy_bit]   "I" (WDT_SYNCBUSY_bm)            \
+ 212:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     : "r0" \
+ 213:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** ); \
+ 214:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** } while(0)
+ 215:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 216:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #define wdt_disable() \
+ 217:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** __asm__ __volatile__ (  \
+ 218:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "in __tmp_reg__, %[rampd]"          "\n\t" \
+ 219:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "out %[rampd], __zero_reg__"        "\n\t" \
+ 220:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "out %[ccp_reg], %[ioreg_cen_mask]" "\n\t" \
+ 221:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "sts %[wdt_reg], %[disable_mask]"   "\n\t" \
+ 222:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "out %[rampd], __tmp_reg__"         "\n\t" \
+ 223:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     : \
+ 224:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     : [rampd]             "I" (_SFR_IO_ADDR(RAMPD)),    \
+ 225:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [ccp_reg]           "I" (_SFR_IO_ADDR(CCP)),      \
+ 226:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [ioreg_cen_mask]    "r" ((uint8_t)CCP_IOREG_gc),   \
+ 227:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [wdt_reg]           "n" (_SFR_MEM_ADDR(WDT_CTRL)), \
+ 228:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [disable_mask]      "r" ((uint8_t)((~WDT_ENABLE_bm) | WDT_CEN_bm)) \
+ 229:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     : "r0" \
+ 230:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** );
+ 231:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 232:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #endif // defined (WDT_CTRLA) && !defined(RAMPD)
+ 233:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 234:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #elif defined(__AVR_TINY__)
+ 235:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 236:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #define wdt_enable(value) \
+ 237:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** __asm__ __volatile__ ( \
+ 238:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "in __tmp_reg__,__SREG__" "\n\t"  \
+ 239:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "cli" "\n\t"  \
+ 240:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "wdr" "\n\t"  \
+ 241:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "out %[CCPADDRESS],%[SIGNATURE]" "\n\t"  \
+ 242:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "out %[WDTREG],%[WDVALUE]" "\n\t"  \
+ 243:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "out __SREG__,__tmp_reg__" "\n\t"  \
+ 244:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     : /* no outputs */  \
+ 245:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     : [CCPADDRESS] "I" (_SFR_IO_ADDR(CCP)),  \
+ 246:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [SIGNATURE] "r" ((uint8_t)0xD8), \
+ 247:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [WDTREG] "I" (_SFR_IO_ADDR(_WD_CONTROL_REG)), \
+ 248:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [WDVALUE] "r" ((uint8_t)((value & 0x08 ? _WD_PS3_MASK : 0x00) \
+ 249:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       | _BV(WDE) | (value & 0x07) )) \
+ 250:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     : "r16" \
+ 251:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** )
+ 252:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 253:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #define wdt_disable() \
+ 254:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** do { \
+ 255:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** uint8_t temp_wd; \
+ 256:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** __asm__ __volatile__ ( \
+ 257:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "in __tmp_reg__,__SREG__" "\n\t"  \
+ 258:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "cli" "\n\t"  \
+ 259:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "wdr" "\n\t"  \
+ 260:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "out %[CCPADDRESS],%[SIGNATURE]" "\n\t"  \
+ 261:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "in  %[TEMP_WD],%[WDTREG]" "\n\t" \
+ 262:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "cbr %[TEMP_WD],%[WDVALUE]" "\n\t" \
+ 263:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "out %[WDTREG],%[TEMP_WD]" "\n\t" \
+ 264:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "out __SREG__,__tmp_reg__" "\n\t" \
+ 265:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     : /*no output */ \
+ 266:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     : [CCPADDRESS] "I" (_SFR_IO_ADDR(CCP)), \
+ 267:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [SIGNATURE] "r" ((uint8_t)0xD8), \
+ 268:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [WDTREG] "I" (_SFR_IO_ADDR(_WD_CONTROL_REG)), \
+ 269:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [TEMP_WD] "d" (temp_wd), \
+ 270:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [WDVALUE] "n" (1 << WDE) \
+ 271:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     : "r16" \
+ 272:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** ); \
+ 273:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** }while(0)
+ 274:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 275:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #elif defined(CCP)
+ 276:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 277:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** static __inline__
+ 278:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** __attribute__ ((__always_inline__))
+ 279:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** void wdt_enable (const uint8_t value)
+ 280:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** {
+ 281:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	if (!_SFR_IO_REG_P (CCP) && !_SFR_IO_REG_P (_WD_CONTROL_REG))
+ 282:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	{
+ 283:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 		__asm__ __volatile__ (
+ 284:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"in __tmp_reg__,__SREG__" "\n\t"
+ 285:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"cli" "\n\t"
+ 286:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"wdr" "\n\t"
+ 287:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"sts %[CCPADDRESS],%[SIGNATURE]" "\n\t"
+ 288:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"sts %[WDTREG],%[WDVALUE]" "\n\t"
+ 289:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"out __SREG__,__tmp_reg__" "\n\t"
+ 290:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			: /* no outputs */
+ 291:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			: [CCPADDRESS] "n" (_SFR_MEM_ADDR(CCP)),
+ 292:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			[SIGNATURE] "r" ((uint8_t)0xD8),
+ 293:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			[WDTREG] "n" (_SFR_MEM_ADDR(_WD_CONTROL_REG)),
+ 294:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			[WDVALUE] "r" ((uint8_t)((value & 0x08 ? _WD_PS3_MASK : 0x00)
+ 295:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				| _BV(WDE) | (value & 0x07) ))
+ 296:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			: "r0"
+ 297:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			);
+ 298:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	}
+ 299:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	else if (!_SFR_IO_REG_P (CCP) && _SFR_IO_REG_P (_WD_CONTROL_REG))
+ 300:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	{
+ 301:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 		__asm__ __volatile__ (
+ 302:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"in __tmp_reg__,__SREG__" "\n\t"
+ 303:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"cli" "\n\t"
+ 304:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"wdr" "\n\t"
+ 305:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"sts %[CCPADDRESS],%[SIGNATURE]" "\n\t"
+ 306:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"out %[WDTREG],%[WDVALUE]" "\n\t"
+ 307:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"out __SREG__,__tmp_reg__" "\n\t"
+ 308:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			: /* no outputs */
+ 309:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			: [CCPADDRESS] "n" (_SFR_MEM_ADDR(CCP)),
+ 310:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			[SIGNATURE] "r" ((uint8_t)0xD8),
+ 311:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			[WDTREG] "I" (_SFR_IO_ADDR(_WD_CONTROL_REG)),
+ 312:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			[WDVALUE] "r" ((uint8_t)((value & 0x08 ? _WD_PS3_MASK : 0x00)
+ 313:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				| _BV(WDE) | (value & 0x07) ))
+ 314:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			: "r0"
+ 315:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			);
+ 316:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	}
+ 317:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	else if (_SFR_IO_REG_P (CCP) && !_SFR_IO_REG_P (_WD_CONTROL_REG))
+ 318:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	{
+ 319:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 		__asm__ __volatile__ (
+ 320:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"in __tmp_reg__,__SREG__" "\n\t"
+ 321:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"cli" "\n\t"
+ 322:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"wdr" "\n\t"
+ 323:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"out %[CCPADDRESS],%[SIGNATURE]" "\n\t"
+ 324:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"sts %[WDTREG],%[WDVALUE]" "\n\t"
+ 325:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"out __SREG__,__tmp_reg__" "\n\t"
+ 326:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			: /* no outputs */
+ 327:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			: [CCPADDRESS] "I" (_SFR_IO_ADDR(CCP)),
+ 328:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			[SIGNATURE] "r" ((uint8_t)0xD8),
+ 329:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			[WDTREG] "n" (_SFR_MEM_ADDR(_WD_CONTROL_REG)),
+ 330:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			[WDVALUE] "r" ((uint8_t)((value & 0x08 ? _WD_PS3_MASK : 0x00)
+ 331:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				| _BV(WDE) | (value & 0x07) ))
+ 332:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			: "r0"
+ 333:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			);
+ 334:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	}
+ 335:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	else
+ 336:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****  	{
+ 337:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 		__asm__ __volatile__ (
+ 338:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"in __tmp_reg__,__SREG__" "\n\t"
+ 339:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"cli" "\n\t"
+ 340:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"wdr" "\n\t"
+ 341:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"out %[CCPADDRESS],%[SIGNATURE]" "\n\t"
+ 342:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"out %[WDTREG],%[WDVALUE]" "\n\t"
+ 343:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"out __SREG__,__tmp_reg__" "\n\t"
+ 344:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			: /* no outputs */
+ 345:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			: [CCPADDRESS] "I" (_SFR_IO_ADDR(CCP)),
+ 346:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			[SIGNATURE] "r" ((uint8_t)0xD8),
+ 347:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			[WDTREG] "I" (_SFR_IO_ADDR(_WD_CONTROL_REG)),
+ 348:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			[WDVALUE] "r" ((uint8_t)((value & 0x08 ? _WD_PS3_MASK : 0x00)
+ 349:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				| _BV(WDE) | (value & 0x07) ))
+ 350:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			: "r0"
+ 351:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			);
+ 352:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	}
+ 353:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** }
+ 354:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 355:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** static __inline__
+ 356:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** __attribute__ ((__always_inline__))
+ 357:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** void wdt_disable (void)
+ 358:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** {
+ 359:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	if (!_SFR_IO_REG_P (CCP) && !_SFR_IO_REG_P(_WD_CONTROL_REG))
+ 360:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	{
+ 361:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****         uint8_t temp_wd;
+ 362:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****         __asm__ __volatile__ (
+ 363:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"in __tmp_reg__,__SREG__" "\n\t"
+ 364:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"cli" "\n\t"
+ 365:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"wdr" "\n\t"
+ 366:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"sts %[CCPADDRESS],%[SIGNATURE]" "\n\t"
+ 367:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"lds %[TEMP_WD],%[WDTREG]" "\n\t"
+ 368:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"cbr %[TEMP_WD],%[WDVALUE]" "\n\t"
+ 369:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"sts %[WDTREG],%[TEMP_WD]" "\n\t"
+ 370:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"out __SREG__,__tmp_reg__" "\n\t"
+ 371:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: /*no output */
+ 372:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: [CCPADDRESS] "n" (_SFR_MEM_ADDR(CCP)),
+ 373:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[SIGNATURE] "r" ((uint8_t)0xD8),
+ 374:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[WDTREG] "n" (_SFR_MEM_ADDR(_WD_CONTROL_REG)),
+ 375:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[TEMP_WD] "d" (temp_wd),
+ 376:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[WDVALUE] "n" (1 << WDE)
+ 377:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: "r0"
+ 378:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				);
+ 379:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	}
+ 380:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	else if (!_SFR_IO_REG_P (CCP) && _SFR_IO_REG_P(_WD_CONTROL_REG))
+ 381:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	{
+ 382:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****         uint8_t temp_wd;
+ 383:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****         __asm__ __volatile__ (
+ 384:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"in __tmp_reg__,__SREG__" "\n\t"
+ 385:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"cli" "\n\t"
+ 386:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"wdr" "\n\t"
+ 387:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"sts %[CCPADDRESS],%[SIGNATURE]" "\n\t"
+ 388:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"in %[TEMP_WD],%[WDTREG]" "\n\t"
+ 389:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"cbr %[TEMP_WD],%[WDVALUE]" "\n\t"
+ 390:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"out %[WDTREG],%[TEMP_WD]" "\n\t"
+ 391:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"out __SREG__,__tmp_reg__" "\n\t"
+ 392:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: /*no output */
+ 393:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: [CCPADDRESS] "n" (_SFR_MEM_ADDR(CCP)),
+ 394:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[SIGNATURE] "r" ((uint8_t)0xD8),
+ 395:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[WDTREG] "I" (_SFR_IO_ADDR(_WD_CONTROL_REG)),
+ 396:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[TEMP_WD] "d" (temp_wd),
+ 397:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[WDVALUE] "n" (1 << WDE)
+ 398:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: "r0"
+ 399:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				);
+ 400:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	}
+ 401:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	else if (_SFR_IO_REG_P (CCP) && !_SFR_IO_REG_P(_WD_CONTROL_REG))
+ 402:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	{
+ 403:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****         uint8_t temp_wd;
+ 404:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****         __asm__ __volatile__ (
+ 405:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"in __tmp_reg__,__SREG__" "\n\t"
+ 406:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"cli" "\n\t"
+ 407:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"wdr" "\n\t"
+ 408:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"out %[CCPADDRESS],%[SIGNATURE]" "\n\t"
+ 409:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"lds %[TEMP_WD],%[WDTREG]" "\n\t"
+ 410:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"cbr %[TEMP_WD],%[WDVALUE]" "\n\t"
+ 411:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"sts %[WDTREG],%[TEMP_WD]" "\n\t"
+ 412:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"out __SREG__,__tmp_reg__" "\n\t"
+ 413:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: /*no output */
+ 414:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: [CCPADDRESS] "I" (_SFR_IO_ADDR(CCP)),
+ 415:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[SIGNATURE] "r" ((uint8_t)0xD8),
+ 416:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[WDTREG] "n" (_SFR_MEM_ADDR(_WD_CONTROL_REG)),
+ 417:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[TEMP_WD] "d" (temp_wd),
+ 418:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[WDVALUE] "n" (1 << WDE)
+ 419:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: "r0"
+ 420:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				);
+ 421:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	}
+ 422:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	else
+ 423:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	{
+ 424:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****         uint8_t temp_wd;
+ 425:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****         __asm__ __volatile__ (
+ 426:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"in __tmp_reg__,__SREG__" "\n\t"
+ 427:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"cli" "\n\t"
+ 428:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"wdr" "\n\t"
+ 429:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"out %[CCPADDRESS],%[SIGNATURE]" "\n\t"
+ 430:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"in %[TEMP_WD],%[WDTREG]" "\n\t"
+ 431:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"cbr %[TEMP_WD],%[WDVALUE]" "\n\t"
+ 432:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"out %[WDTREG],%[TEMP_WD]" "\n\t"
+ 433:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"out __SREG__,__tmp_reg__" "\n\t"
+ 434:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: /*no output */
+ 435:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: [CCPADDRESS] "I" (_SFR_IO_ADDR(CCP)),
+ 436:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[SIGNATURE] "r" ((uint8_t)0xD8),
+ 437:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[WDTREG] "I" (_SFR_IO_ADDR(_WD_CONTROL_REG)),
+ 438:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[TEMP_WD] "d" (temp_wd),
+ 439:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[WDVALUE] "n" (1 << WDE)
+ 440:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: "r0"
+ 441:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				);
+ 442:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	}
+ 443:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** }
+ 444:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 445:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #else
+ 446:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 447:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** static __inline__
+ 448:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** __attribute__ ((__always_inline__))
+ 449:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** void wdt_enable (const uint8_t value)
+ 450:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** {
+ 451:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	if (_SFR_IO_REG_P (_WD_CONTROL_REG))
+ 452:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	{
+ 453:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 		__asm__ __volatile__ (
+  64               		.loc 2 453 0
+  65 0006 9FE0      		ldi r25,lo8(15)
+  66 0008 88E1      		ldi r24,lo8(24)
+  67               	/* #APP */
+  68               	 ;  453 "c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\
+  69 000a 0FB6      		in __tmp_reg__,__SREG__
+  70 000c F894      		cli
+  71 000e A895      		wdr
+  72 0010 81BD      		out 33, r24
+  73 0012 0FBE      		out __SREG__,__tmp_reg__
+  74 0014 91BD      		out 33, r25
+  75               	 	
+  76               	 ;  0 "" 2
+  77               	/* #NOAPP */
+  78               	.LBE46:
+  79               	.LBE45:
+ 259:main.c        **** 	wdt_enable(WDTO_2S);
+ 260:main.c        **** 
+ 261:main.c        **** 	PORTB = 0b101001;		/* Initialize port: - - H L H L L P */
+  80               		.loc 1 261 0
+  81 0016 89E2      		ldi r24,lo8(41)
+  82 0018 88BB      		out 0x18,r24
+ 262:main.c        **** 	DDRB  = 0b111110 & ~(1 << CS);
+  83               		.loc 1 262 0
+  84 001a 86E3      		ldi r24,lo8(54)
+  85 001c 87BB      		out 0x17,r24
+ 263:main.c        **** 	
+ 264:main.c        **** 	SETUP_PIN_CHANGE;
+  86               		.loc 1 264 0
+  87 001e AB9A      		sbi 0x15,3
+ 265:main.c        **** 	DISABLE_PIN_INTR;
+  88               		.loc 1 265 0
+  89 0020 9BB7      		in r25,0x3b
+  90 0022 9F7D      		andi r25,lo8(-33)
+  91 0024 9BBF      		out 0x3b,r25
+ 266:main.c        **** 	
+ 267:main.c        **** 	set_sleep_mode(SLEEP_MODE_PWR_DOWN);	//set power down mode
+  92               		.loc 1 267 0
+  93 0026 85B7      		in r24,0x35
+  94 0028 877E      		andi r24,lo8(-25)
+  95 002a 8061      		ori r24,lo8(16)
+  96 002c 85BF      		out 0x35,r24
+ 268:main.c        **** 
+ 269:main.c        **** 	init_spi();
+  97               		.loc 1 269 0
+  98 002e 00D0      		rcall init_spi
+  99               	.LVL2:
+ 270:main.c        **** 	spi_slave();
+ 100               		.loc 1 270 0
+ 101 0030 00D0      		rcall spi_slave
+ 102               	.LVL3:
+ 271:main.c        **** 
+ 272:main.c        **** 	sei();
+ 103               		.loc 1 272 0
+ 104               	/* #APP */
+ 105               	 ;  272 "main.c" 1
+ 106 0032 7894      		sei
+ 107               	 ;  0 "" 2
+ 273:main.c        **** 
+ 274:main.c        **** 	PORTB |= 1 << PB1;
+ 108               		.loc 1 274 0
+ 109               	/* #NOAPP */
+ 110 0034 C19A      		sbi 0x18,1
+ 111               	.LVL4:
+ 112               	.LBB47:
+ 113               	.LBB48:
+ 114               		.file 3 "c:\\program files (x86)\\atmel\\studio\\7.0\\toolchain\\avr8\\avr8-gnu-toolchain\\avr\\in
+   1:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** /* Copyright (c) 2002, Marek Michalkiewicz
+   2:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    Copyright (c) 2004,2005,2007 Joerg Wunsch
+   3:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    Copyright (c) 2007  Florin-Viorel Petrov
+   4:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    All rights reserved.
+   5:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+   6:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    Redistribution and use in source and binary forms, with or without
+   7:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    modification, are permitted provided that the following conditions are met:
+   8:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+   9:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    * Redistributions of source code must retain the above copyright
+  10:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****      notice, this list of conditions and the following disclaimer.
+  11:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  12:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    * Redistributions in binary form must reproduce the above copyright
+  13:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****      notice, this list of conditions and the following disclaimer in
+  14:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****      the documentation and/or other materials provided with the
+  15:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****      distribution.
+  16:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  17:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    * Neither the name of the copyright holders nor the names of
+  18:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****      contributors may be used to endorse or promote products derived
+  19:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****      from this software without specific prior written permission.
+  20:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  21:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  22:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  23:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  24:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+  25:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  26:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  27:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  28:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  29:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  30:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  31:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   POSSIBILITY OF SUCH DAMAGE. */
+  32:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  33:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** /* $Id$ */
+  34:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  35:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #ifndef _UTIL_DELAY_H_
+  36:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #define _UTIL_DELAY_H_ 1
+  37:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  38:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #ifndef __HAS_DELAY_CYCLES
+  39:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #define __HAS_DELAY_CYCLES 1
+  40:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #endif
+  41:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  42:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #include <inttypes.h>
+  43:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #include <util/delay_basic.h>
+  44:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #include <math.h>
+  45:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  46:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** /** \file */
+  47:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** /** \defgroup util_delay <util/delay.h>: Convenience functions for busy-wait delay loops
+  48:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     \code
+  49:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     #define F_CPU 1000000UL  // 1 MHz
+  50:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     //#define F_CPU 14.7456E6
+  51:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     #include <util/delay.h>
+  52:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     \endcode
+  53:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  54:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     \note As an alternative method, it is possible to pass the
+  55:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     F_CPU macro down to the compiler from the Makefile.
+  56:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     Obviously, in that case, no \c \#define statement should be
+  57:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     used.
+  58:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  59:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     The functions in this header file are wrappers around the basic
+  60:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     busy-wait functions from <util/delay_basic.h>.  They are meant as
+  61:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     convenience functions where actual time values can be specified
+  62:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     rather than a number of cycles to wait for.  The idea behind is
+  63:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     that compile-time constant expressions will be eliminated by
+  64:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     compiler optimization so floating-point expressions can be used
+  65:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     to calculate the number of delay cycles needed based on the CPU
+  66:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     frequency passed by the macro F_CPU.
+  67:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  68:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     \note In order for these functions to work as intended, compiler
+  69:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     optimizations <em>must</em> be enabled, and the delay time
+  70:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     <em>must</em> be an expression that is a known constant at
+  71:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     compile-time.  If these requirements are not met, the resulting
+  72:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     delay will be much longer (and basically unpredictable), and
+  73:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     applications that otherwise do not use floating-point calculations
+  74:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     will experience severe code bloat by the floating-point library
+  75:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     routines linked into the application.
+  76:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  77:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     The functions available allow the specification of microsecond, and
+  78:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     millisecond delays directly, using the application-supplied macro
+  79:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     F_CPU as the CPU clock frequency (in Hertz).
+  80:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  81:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** */
+  82:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  83:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #if !defined(__DOXYGEN__)
+  84:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** static inline void _delay_us(double __us) __attribute__((always_inline));
+  85:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** static inline void _delay_ms(double __ms) __attribute__((always_inline));
+  86:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #endif
+  87:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  88:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #ifndef F_CPU
+  89:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** /* prevent compiler error by supplying a default */
+  90:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** # warning "F_CPU not defined for <util/delay.h>"
+  91:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** # define F_CPU 1000000UL
+  92:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #endif
+  93:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  94:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #ifndef __OPTIMIZE__
+  95:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** # warning "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed"
+  96:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #endif
+  97:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  98:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #if __HAS_DELAY_CYCLES && defined(__OPTIMIZE__) && \
+  99:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   !defined(__DELAY_BACKWARD_COMPATIBLE__) &&	   \
+ 100:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   __STDC_HOSTED__
+ 101:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #  include <math.h>
+ 102:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #endif
+ 103:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 104:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** /**
+ 105:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    \ingroup util_delay
+ 106:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 107:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    Perform a delay of \c __ms milliseconds, using _delay_loop_2().
+ 108:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 109:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    The macro F_CPU is supposed to be defined to a
+ 110:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    constant defining the CPU clock frequency (in Hertz).
+ 111:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 112:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    The maximal possible delay is 262.14 ms / F_CPU in MHz.
+ 113:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 114:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    When the user request delay which exceed the maximum possible one,
+ 115:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    _delay_ms() provides a decreased resolution functionality. In this
+ 116:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    mode _delay_ms() will work with a resolution of 1/10 ms, providing
+ 117:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    delays up to 6.5535 seconds (independent from CPU frequency).  The
+ 118:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    user will not be informed about decreased resolution.
+ 119:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 120:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    If the avr-gcc toolchain has __builtin_avr_delay_cycles(unsigned long)
+ 121:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    support, maximal possible delay is 4294967.295 ms/ F_CPU in MHz. For
+ 122:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    values greater than the maximal possible delay, overflows results in
+ 123:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    no delay i.e., 0ms.
+ 124:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 125:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    Conversion of __us into clock cycles may not always result in integer.
+ 126:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    By default, the clock cycles rounded up to next integer. This ensures that
+ 127:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    the user gets atleast __us microseconds of delay.
+ 128:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 129:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    Alternatively, user can define __DELAY_ROUND_DOWN__ and __DELAY_ROUND_CLOSEST__
+ 130:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    to round down and round to closest integer.
+ 131:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 132:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    Note: The new implementation of _delay_ms(double __ms) with 
+ 133:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     __builtin_avr_delay_cycles(unsigned long) support is not backward compatible. 
+ 134:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    User can define __DELAY_BACKWARD_COMPATIBLE__ to get a backward compatible delay.
+ 135:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    Also, the backward compatible
+ 136:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    algorithm will be chosen if the code is compiled in a <em>freestanding
+ 137:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    environment</em> (GCC option \c -ffreestanding), as the math functions
+ 138:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    required for rounding are not available to the compiler then.
+ 139:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 140:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****  */
+ 141:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** void
+ 142:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** _delay_ms(double __ms)
+ 143:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** {
+ 144:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	double __tmp ; 
+ 145:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #if __HAS_DELAY_CYCLES && defined(__OPTIMIZE__) && \
+ 146:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   !defined(__DELAY_BACKWARD_COMPATIBLE__) &&	   \
+ 147:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   __STDC_HOSTED__
+ 148:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	uint32_t __ticks_dc;
+ 149:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	extern void __builtin_avr_delay_cycles(unsigned long);
+ 150:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	__tmp = ((F_CPU) / 1e3) * __ms;
+ 151:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 152:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	#if defined(__DELAY_ROUND_DOWN__)
+ 153:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 		__ticks_dc = (uint32_t)fabs(__tmp);
+ 154:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 155:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	#elif defined(__DELAY_ROUND_CLOSEST__)
+ 156:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 		__ticks_dc = (uint32_t)(fabs(__tmp)+0.5);
+ 157:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 158:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	#else
+ 159:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 		//round up by default
+ 160:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 		__ticks_dc = (uint32_t)(ceil(fabs(__tmp)));
+ 161:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	#endif
+ 162:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 163:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	__builtin_avr_delay_cycles(__ticks_dc);
+ 115               		.loc 3 163 0
+ 116 0036 2FEF      		ldi r18,lo8(799999)
+ 117 0038 64E3      		ldi r22,hi8(799999)
+ 118 003a 8CE0      		ldi r24,hlo8(799999)
+ 119 003c 2150      	1:	subi r18,1
+ 120 003e 6040      		sbci r22,0
+ 121 0040 8040      		sbci r24,0
+ 122 0042 01F4      		brne 1b
+ 123 0044 00C0      		rjmp .
+ 124 0046 0000      		nop
+ 125               	.LBE48:
+ 126               	.LBE47:
+ 275:main.c        **** 	delay_ms(500);
+ 276:main.c        **** 	PORTB &= ~(1 << PB1);
+ 127               		.loc 1 276 0
+ 128 0048 C198      		cbi 0x18,1
+ 129               	.L3:
+ 277:main.c        **** 
+ 278:main.c        **** 	while(PINB & (1 << CS)) wdt_reset(); //wait until main board is ready
+ 130               		.loc 1 278 0 discriminator 1
+ 131 004a B39B      		sbis 0x16,3
+ 132 004c 00C0      		rjmp .L80
+ 133               		.loc 1 278 0 is_stmt 0 discriminator 2
+ 134               	/* #APP */
+ 135               	 ;  278 "main.c" 1
+ 136 004e A895      		wdr
+ 137               	 ;  0 "" 2
+ 138               	/* #NOAPP */
+ 139 0050 00C0      		rjmp .L3
+ 140               	.L80:
+ 279:main.c        **** 	PORTB |= 1 << PB1; //Flash an LED 
+ 141               		.loc 1 279 0 is_stmt 1
+ 142 0052 C19A      		sbi 0x18,1
+ 143               	.L5:
+ 280:main.c        **** 	while(!(PINB & (1 << CS))) wdt_reset(); //wait for transmission to finish
+ 144               		.loc 1 280 0 discriminator 1
+ 145 0054 B399      		sbic 0x16,3
+ 146 0056 00C0      		rjmp .L81
+ 147               		.loc 1 280 0 is_stmt 0 discriminator 2
+ 148               	/* #APP */
+ 149               	 ;  280 "main.c" 1
+ 150 0058 A895      		wdr
+ 151               	 ;  0 "" 2
+ 152               	/* #NOAPP */
+ 153 005a 00C0      		rjmp .L5
+ 154               	.L81:
+ 281:main.c        **** 
+ 282:main.c        **** 	PORTB &= ~(1 << PB1);
+ 155               		.loc 1 282 0 is_stmt 1
+ 156 005c C198      		cbi 0x18,1
+ 157               	.LVL5:
+ 158               	.LBB49:
+ 159               	.LBB50:
+ 160               		.loc 3 163 0
+ 161 005e 9FEF      		ldi r25,lo8(799999)
+ 162 0060 E4E3      		ldi r30,hi8(799999)
+ 163 0062 FCE0      		ldi r31,hlo8(799999)
+ 164 0064 9150      	1:	subi r25,1
+ 165 0066 E040      		sbci r30,0
+ 166 0068 F040      		sbci r31,0
+ 167 006a 01F4      		brne 1b
+ 168 006c 00C0      		rjmp .
+ 169 006e 0000      		nop
+ 170               	.LBE50:
+ 171               	.LBE49:
+ 283:main.c        **** 	delay_ms(500);
+ 284:main.c        **** 	PORTB |= (1 << PB1);
+ 172               		.loc 1 284 0
+ 173 0070 C19A      		sbi 0x18,1
+ 285:main.c        **** 	wdt_reset();
+ 174               		.loc 1 285 0
+ 175               	/* #APP */
+ 176               	 ;  285 "main.c" 1
+ 177 0072 A895      		wdr
+ 178               	 ;  0 "" 2
+ 286:main.c        **** 	if(slave_rcv_spi() == 0xAA) //short blink for correct response
+ 179               		.loc 1 286 0
+ 180               	/* #NOAPP */
+ 181 0074 00D0      		rcall slave_rcv_spi
+ 182               	.LVL6:
+ 183 0076 8A3A      		cpi r24,lo8(-86)
+ 184 0078 01F4      		brne .L7
+ 185               	.LVL7:
+ 186               	.LBB51:
+ 187               	.LBB52:
+ 188               		.loc 3 163 0
+ 189 007a 2FE7      		ldi r18,lo8(239999)
+ 190 007c 69EA      		ldi r22,hi8(239999)
+ 191 007e 83E0      		ldi r24,hlo8(239999)
+ 192 0080 2150      	1:	subi r18,1
+ 193 0082 6040      		sbci r22,0
+ 194 0084 8040      		sbci r24,0
+ 195 0086 01F4      		brne 1b
+ 196 0088 00C0      		rjmp .L78
+ 197               	.LVL8:
+ 198               	.L7:
+ 199               	.LBE52:
+ 200               	.LBE51:
+ 287:main.c        **** 		delay_ms(150);
+ 288:main.c        **** 	else if(slave_rcv_spi() == 0x55) //long blink for incorrect bit order, but correct response
+ 201               		.loc 1 288 0
+ 202 008a 00D0      		rcall slave_rcv_spi
+ 203               	.LVL9:
+ 204 008c 8535      		cpi r24,lo8(85)
+ 205 008e 01F4      		brne .L8
+ 206               	.LVL10:
+ 207               	.LBB53:
+ 208               	.LBB54:
+ 209               		.loc 3 163 0
+ 210 0090 9FEF      		ldi r25,lo8(799999)
+ 211 0092 E4E3      		ldi r30,hi8(799999)
+ 212 0094 FCE0      		ldi r31,hlo8(799999)
+ 213 0096 9150      	1:	subi r25,1
+ 214 0098 E040      		sbci r30,0
+ 215 009a F040      		sbci r31,0
+ 216 009c 01F4      		brne 1b
+ 217               	.LVL11:
+ 218               	.L78:
+ 219 009e 00C0      		rjmp .
+ 220 00a0 0000      		nop
+ 221               	.L8:
+ 222               	.LBE54:
+ 223               	.LBE53:
+ 289:main.c        **** 		delay_ms(500);
+ 290:main.c        **** 	wdt_reset();
+ 224               		.loc 1 290 0
+ 225               	/* #APP */
+ 226               	 ;  290 "main.c" 1
+ 227 00a2 A895      		wdr
+ 228               	 ;  0 "" 2
+ 291:main.c        **** 	PORTB &= ~(1 << PB1); //no blink for incorrect response
+ 229               		.loc 1 291 0
+ 230               	/* #NOAPP */
+ 231 00a4 C198      		cbi 0x18,1
+ 292:main.c        **** 
+ 293:main.c        **** 	spi_master();
+ 232               		.loc 1 293 0
+ 233 00a6 00D0      		rcall spi_master
+ 234               	.LVL12:
+ 294:main.c        **** 	
+ 295:main.c        **** 	//setup sdcard
+ 296:main.c        **** 	if(pf_mount(&Fs) == FR_OK){
+ 235               		.loc 1 296 0
+ 236 00a8 80E0      		ldi r24,lo8(Fs)
+ 237 00aa 90E0      		ldi r25,hi8(Fs)
+ 238 00ac 00D0      		rcall pf_mount
+ 239               	.LVL13:
+ 240 00ae 8111      		cpse r24,__zero_reg__
+ 241 00b0 00C0      		rjmp .L9
+ 297:main.c        **** 		Buff[0] = 0;
+ 242               		.loc 1 297 0
+ 243 00b2 1092 0000 		sts Buff,__zero_reg__
+ 298:main.c        **** 		if (!pf_open("osccal")) pf_read(Buff, 1, &rb);	/* Adjust frequency */
+ 244               		.loc 1 298 0
+ 245 00b6 80E0      		ldi r24,lo8(.LC0)
+ 246 00b8 90E0      		ldi r25,hi8(.LC0)
+ 247 00ba 00D0      		rcall pf_open
+ 248               	.LVL14:
+ 249 00bc 8111      		cpse r24,__zero_reg__
+ 250 00be 00C0      		rjmp .L10
+ 251               		.loc 1 298 0 is_stmt 0 discriminator 1
+ 252 00c0 40E0      		ldi r20,lo8(rb)
+ 253 00c2 50E0      		ldi r21,hi8(rb)
+ 254 00c4 61E0      		ldi r22,lo8(1)
+ 255 00c6 70E0      		ldi r23,0
+ 256 00c8 80E0      		ldi r24,lo8(Buff)
+ 257 00ca 90E0      		ldi r25,hi8(Buff)
+ 258 00cc 00D0      		rcall pf_read
+ 259               	.LVL15:
+ 260               	.L10:
+ 299:main.c        **** 		OSCCAL = org_osc + Buff[0];
+ 261               		.loc 1 299 0 is_stmt 1
+ 262 00ce 8091 0000 		lds r24,Buff
+ 263 00d2 8C0F      		add r24,r28
+ 264 00d4 81BF      		out 0x31,r24
+ 265               	.LVL16:
+ 300:main.c        **** 
+ 301:main.c        **** 		res = pf_opendir(&Dir, dir = "sounds");	/* Open sound file directory */
+ 266               		.loc 1 301 0
+ 267 00d6 60E0      		ldi r22,lo8(.LC1)
+ 268 00d8 70E0      		ldi r23,hi8(.LC1)
+ 269 00da 80E0      		ldi r24,lo8(Dir)
+ 270 00dc 90E0      		ldi r25,hi8(Dir)
+ 271 00de 00D0      		rcall pf_opendir
+ 272               	.LVL17:
+ 273 00e0 382E      		mov r3,r24
+ 274               	.LVL18:
+ 302:main.c        **** 		if (res == FR_NO_PATH)
+ 275               		.loc 1 302 0
+ 276 00e2 24E0      		ldi r18,lo8(4)
+ 277 00e4 8213      		cpse r24,r18
+ 278 00e6 00C0      		rjmp .L9
+ 279               	.LVL19:
+ 303:main.c        **** 		res = pf_opendir(&Dir, dir = "");	/* Open root directory */
+ 280               		.loc 1 303 0
+ 281 00e8 60E0      		ldi r22,lo8(.LC2)
+ 282 00ea 70E0      		ldi r23,hi8(.LC2)
+ 283 00ec 80E0      		ldi r24,lo8(Dir)
+ 284 00ee 90E0      		ldi r25,hi8(Dir)
+ 285 00f0 00D0      		rcall pf_opendir
+ 286               	.LVL20:
+ 287 00f2 382E      		mov r3,r24
+ 288               	.LVL21:
+ 289               	.L9:
+ 304:main.c        **** 	}
+ 305:main.c        **** 
+ 306:main.c        **** 	ENABLE_PIN_INTR; //ready up
+ 290               		.loc 1 306 0
+ 291 00f4 8BB7      		in r24,0x3b
+ 292 00f6 8062      		ori r24,lo8(32)
+ 293 00f8 8BBF      		out 0x3b,r24
+ 294 00fa C0E8      		ldi r28,lo8(-128)
+ 295               	.LVL22:
+ 296               	.LBB55:
+ 297               	.LBB56:
+ 298               		.loc 2 453 0
+ 299 00fc D8E1      		ldi r29,lo8(24)
+ 300 00fe 8FE0      		ldi r24,lo8(15)
+ 301 0100 982E      		mov r9,r24
+ 302               	.LBE56:
+ 303               	.LBE55:
+ 307:main.c        **** 	
+ 308:main.c        **** 	for (;;) {
+ 309:main.c        **** 		TCCR0B = 0; TCCR0A = 0;	/* Stop TC0 */
+ 310:main.c        **** 		if (TCCR1) {	/* Stop TC1 if enabled */
+ 311:main.c        **** 			ramp(0);
+ 312:main.c        **** 			TCCR1 = 0; GTCCR = 0;
+ 313:main.c        **** 		}
+ 314:main.c        **** 		wdt_disable();
+ 315:main.c        **** 		sleep_enable();
+ 316:main.c        **** 		while(!newFile) sleep_cpu(); //Sleep until interrupt changes filename
+ 317:main.c        **** 		wdt_enable(WDTO_2S);
+ 318:main.c        **** 		
+ 319:main.c        **** 		while (res == FR_OK) {				/* Play until find file */
+ 320:main.c        **** 			wdt_reset();
+ 321:main.c        **** 			res = pf_readdir(&Dir, &Fno);		/* Get a dir entry */
+ 322:main.c        **** 			if (res || !Fno.fname[0]) break;	/* Break on error or end of dir */
+ 323:main.c        **** 			if (!(Fno.fattrib & (AM_DIR|AM_HID)) && Fno.fname == fileName){ //check if equal to requested fi
+ 304               		.loc 1 323 0
+ 305 0102 00E0      		ldi r16,lo8(Fno+9)
+ 306 0104 10E0      		ldi r17,hi8(Fno+9)
+ 307               	.LBB58:
+ 308               	.LBB59:
+ 309               	.LBB60:
+ 310               	.LBB61:
+ 115:main.c        **** 			break;
+ 311               		.loc 1 115 0
+ 312 0106 90E4      		ldi r25,lo8(64)
+ 313 0108 492E      		mov r4,r25
+ 314 010a 92E4      		ldi r25,lo8(66)
+ 315 010c 592E      		mov r5,r25
+ 316 010e 9FE0      		ldi r25,lo8(15)
+ 317 0110 692E      		mov r6,r25
+ 318 0112 712C      		mov r7,__zero_reg__
+ 319               	.LBE61:
+ 320               	.LBE60:
+ 201:main.c        **** 		sz -= rb;
+ 321               		.loc 1 201 0
+ 322 0114 A12C      		mov r10,__zero_reg__
+ 323 0116 22E0      		ldi r18,lo8(2)
+ 324 0118 B22E      		mov r11,r18
+ 325               	.LVL23:
+ 326               	.L16:
+ 327               	.LBE59:
+ 328               	.LBE58:
+ 309:main.c        **** 		if (TCCR1) {	/* Stop TC1 if enabled */
+ 329               		.loc 1 309 0
+ 330 011a 13BE      		out 0x33,__zero_reg__
+ 331 011c 1ABC      		out 0x2a,__zero_reg__
+ 310:main.c        **** 			ramp(0);
+ 332               		.loc 1 310 0
+ 333 011e 80B7      		in r24,0x30
+ 334 0120 8823      		tst r24
+ 335 0122 01F0      		breq .L12
+ 336 0124 80E8      		ldi r24,lo8(-128)
+ 337               	.L13:
+ 338               	.LVL24:
+ 339               	.LBB71:
+ 340               	.LBB72:
+ 158:main.c        **** 		OCR1A = v; OCR1B = v;
+ 341               		.loc 1 158 0
+ 342 0126 8150      		subi r24,lo8(-(-1))
+ 343               	.LVL25:
+ 159:main.c        **** 		delay_us(100);
+ 344               		.loc 1 159 0
+ 345 0128 8EBD      		out 0x2e,r24
+ 346 012a 8BBD      		out 0x2b,r24
+ 347               	.LVL26:
+ 348               	.LBB73:
+ 349               	.LBB74:
+ 164:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 165:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #else
+ 166:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	uint16_t __ticks;
+ 167:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	__tmp = ((F_CPU) / 4e3) * __ms;
+ 168:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	if (__tmp < 1.0)
+ 169:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 		__ticks = 1;
+ 170:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	else if (__tmp > 65535)
+ 171:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	{
+ 172:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 		//	__ticks = requested delay in 1/10 ms
+ 173:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 		__ticks = (uint16_t) (__ms * 10.0);
+ 174:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 		while(__ticks)
+ 175:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 		{
+ 176:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 			// wait 1/10 ms
+ 177:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 			_delay_loop_2(((F_CPU) / 4e3) / 10);
+ 178:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 			__ticks --;
+ 179:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 		}
+ 180:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 		return;
+ 181:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	}
+ 182:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	else
+ 183:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 		__ticks = (uint16_t)__tmp;
+ 184:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	_delay_loop_2(__ticks);
+ 185:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #endif
+ 186:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** }
+ 187:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 188:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** /**
+ 189:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    \ingroup util_delay
+ 190:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 191:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    Perform a delay of \c __us microseconds, using _delay_loop_1().
+ 192:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 193:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    The macro F_CPU is supposed to be defined to a
+ 194:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    constant defining the CPU clock frequency (in Hertz).
+ 195:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 196:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    The maximal possible delay is 768 us / F_CPU in MHz.
+ 197:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 198:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    If the user requests a delay greater than the maximal possible one,
+ 199:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    _delay_us() will automatically call _delay_ms() instead.  The user
+ 200:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    will not be informed about this case.
+ 201:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 202:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    If the avr-gcc toolchain has __builtin_avr_delay_cycles(unsigned long)
+ 203:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    support, maximal possible delay is 4294967.295 us/ F_CPU in MHz. For
+ 204:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    values greater than the maximal possible delay, overflow results in
+ 205:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    no delay i.e., 0us.
+ 206:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   
+ 207:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    Conversion of __us into clock cycles may not always result in integer.
+ 208:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    By default, the clock cycles rounded up to next integer. This ensures that
+ 209:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    the user gets atleast __us microseconds of delay.
+ 210:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 211:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    Alternatively, user can define __DELAY_ROUND_DOWN__ and __DELAY_ROUND_CLOSEST__
+ 212:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    to round down and round to closest integer.
+ 213:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****  
+ 214:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    Note: The new implementation of _delay_us(double __us) with 
+ 215:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****     __builtin_avr_delay_cycles(unsigned long) support is not backward compatible.
+ 216:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    User can define __DELAY_BACKWARD_COMPATIBLE__ to get a backward compatible delay.
+ 217:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    Also, the backward compatible
+ 218:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    algorithm will be chosen if the code is compiled in a <em>freestanding
+ 219:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    environment</em> (GCC option \c -ffreestanding), as the math functions
+ 220:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****    required for rounding are not available to the compiler then.
+ 221:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 222:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****  */
+ 223:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** void
+ 224:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** _delay_us(double __us)
+ 225:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** {
+ 226:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	double __tmp ; 
+ 227:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** #if __HAS_DELAY_CYCLES && defined(__OPTIMIZE__) && \
+ 228:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   !defined(__DELAY_BACKWARD_COMPATIBLE__) &&	   \
+ 229:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h ****   __STDC_HOSTED__
+ 230:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	uint32_t __ticks_dc;
+ 231:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	extern void __builtin_avr_delay_cycles(unsigned long);
+ 232:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	__tmp = ((F_CPU) / 1e6) * __us;
+ 233:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 234:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	#if defined(__DELAY_ROUND_DOWN__)
+ 235:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 		__ticks_dc = (uint32_t)fabs(__tmp);
+ 236:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 237:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	#elif defined(__DELAY_ROUND_CLOSEST__)
+ 238:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 		__ticks_dc = (uint32_t)(fabs(__tmp)+0.5);
+ 239:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 240:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	#else
+ 241:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 		//round up by default
+ 242:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 		__ticks_dc = (uint32_t)(ceil(fabs(__tmp)));
+ 243:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	#endif
+ 244:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 245:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h **** 	__builtin_avr_delay_cycles(__ticks_dc);
+ 350               		.loc 3 245 0
+ 351 012c E7EC      		ldi r30,lo8(199)
+ 352 012e F0E0      		ldi r31,hi8(199)
+ 353 0130 3197      	1:	sbiw r30,1
+ 354 0132 01F4      		brne 1b
+ 355 0134 00C0      		rjmp .
+ 356 0136 0000      		nop
+ 357               	.LVL27:
+ 358               	.LBE74:
+ 359               	.LBE73:
+ 161:main.c        **** #else
+ 360               		.loc 1 161 0
+ 361 0138 8111      		cpse r24,__zero_reg__
+ 362 013a 00C0      		rjmp .L13
+ 363               	.LBE72:
+ 364               	.LBE71:
+ 312:main.c        **** 		}
+ 365               		.loc 1 312 0
+ 366 013c 10BE      		out 0x30,__zero_reg__
+ 367 013e 1CBC      		out 0x2c,__zero_reg__
+ 368               	.LVL28:
+ 369               	.L12:
+ 370               	.LBB75:
+ 371               	.LBB76:
+ 454:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"in __tmp_reg__,__SREG__" "\n\t"
+ 455:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"cli" "\n\t"
+ 456:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"wdr" "\n\t"
+ 457:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"out %0, %1" "\n\t"
+ 458:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"out __SREG__,__tmp_reg__" "\n\t"
+ 459:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"out %0, %2" "\n \t"
+ 460:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: /* no outputs */
+ 461:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: "I" (_SFR_IO_ADDR(_WD_CONTROL_REG)),
+ 462:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"r" ((uint8_t)(_BV(_WD_CHANGE_BIT) | _BV(WDE))),
+ 463:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"r" ((uint8_t) ((value & 0x08 ? _WD_PS3_MASK : 0x00) |
+ 464:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 						_BV(WDE) | (value & 0x07)) )
+ 465:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: "r0"
+ 466:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 		);
+ 467:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	}
+ 468:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	else
+ 469:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	{
+ 470:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 		__asm__ __volatile__ (
+ 471:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"in __tmp_reg__,__SREG__" "\n\t"
+ 472:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"cli" "\n\t"
+ 473:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"wdr" "\n\t"
+ 474:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"sts %0, %1" "\n\t"
+ 475:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"out __SREG__,__tmp_reg__" "\n\t"
+ 476:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"sts %0, %2" "\n \t"
+ 477:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: /* no outputs */
+ 478:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: "n" (_SFR_MEM_ADDR(_WD_CONTROL_REG)),
+ 479:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"r" ((uint8_t)(_BV(_WD_CHANGE_BIT) | _BV(WDE))),
+ 480:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"r" ((uint8_t) ((value & 0x08 ? _WD_PS3_MASK : 0x00) |
+ 481:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 						_BV(WDE) | (value & 0x07)) )
+ 482:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: "r0"
+ 483:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 		);
+ 484:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	}
+ 485:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** }
+ 486:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 487:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** static __inline__
+ 488:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** __attribute__ ((__always_inline__))
+ 489:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** void wdt_disable (void)
+ 490:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** {
+ 491:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	if (_SFR_IO_REG_P (_WD_CONTROL_REG))
+ 492:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	{
+ 493:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h ****         uint8_t register temp_reg;
+ 494:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 		__asm__ __volatile__ (
+ 372               		.loc 2 494 0
+ 373               	/* #APP */
+ 374               	 ;  494 "c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\
+ 375 0140 0FB6      		in __tmp_reg__,__SREG__
+ 376 0142 F894      		cli
+ 377 0144 A895      		wdr
+ 378 0146 81B5      		in  r24,33
+ 379 0148 8861      		ori r24,24
+ 380 014a 81BD      		out 33,r24
+ 381 014c 11BC      		out 33,__zero_reg__
+ 382 014e 0FBE      		out __SREG__,__tmp_reg__
+ 383               		
+ 384               	 ;  0 "" 2
+ 385               	.LVL29:
+ 386               	/* #NOAPP */
+ 387               	.LBE76:
+ 388               	.LBE75:
+ 315:main.c        **** 		while(!newFile) sleep_cpu(); //Sleep until interrupt changes filename
+ 389               		.loc 1 315 0
+ 390 0150 85B7      		in r24,0x35
+ 391 0152 8062      		ori r24,lo8(32)
+ 392 0154 85BF      		out 0x35,r24
+ 393               	.L14:
+ 316:main.c        **** 		wdt_enable(WDTO_2S);
+ 394               		.loc 1 316 0 discriminator 1
+ 395 0156 8091 0000 		lds r24,newFile
+ 396 015a 8111      		cpse r24,__zero_reg__
+ 397 015c 00C0      		rjmp .L82
+ 316:main.c        **** 		wdt_enable(WDTO_2S);
+ 398               		.loc 1 316 0 is_stmt 0 discriminator 2
+ 399               	/* #APP */
+ 400               	 ;  316 "main.c" 1
+ 401 015e 8895      		sleep
+ 402               		
+ 403               	 ;  0 "" 2
+ 404               	/* #NOAPP */
+ 405 0160 00C0      		rjmp .L14
+ 406               	.L82:
+ 407               	.LVL30:
+ 408               	.LBB77:
+ 409               	.LBB57:
+ 453:c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"in __tmp_reg__,__SREG__" "\n\t"
+ 410               		.loc 2 453 0 is_stmt 1
+ 411               	/* #APP */
+ 412               	 ;  453 "c:\program files (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\
+ 413 0162 0FB6      		in __tmp_reg__,__SREG__
+ 414 0164 F894      		cli
+ 415 0166 A895      		wdr
+ 416 0168 D1BD      		out 33, r29
+ 417 016a 0FBE      		out __SREG__,__tmp_reg__
+ 418 016c 91BC      		out 33, r9
+ 419               	 	
+ 420               	 ;  0 "" 2
+ 421               	/* #NOAPP */
+ 422               	.LBE57:
+ 423               	.LBE77:
+ 319:main.c        **** 			wdt_reset();
+ 424               		.loc 1 319 0
+ 425 016e 3110      		cpse r3,__zero_reg__
+ 426 0170 00C0      		rjmp .L16
+ 427               	.L66:
+ 428               	.LVL31:
+ 320:main.c        **** 			res = pf_readdir(&Dir, &Fno);		/* Get a dir entry */
+ 429               		.loc 1 320 0
+ 430               	/* #APP */
+ 431               	 ;  320 "main.c" 1
+ 432 0172 A895      		wdr
+ 433               	 ;  0 "" 2
+ 321:main.c        **** 			if (res || !Fno.fname[0]) break;	/* Break on error or end of dir */
+ 434               		.loc 1 321 0
+ 435               	/* #NOAPP */
+ 436 0174 60E0      		ldi r22,lo8(Fno)
+ 437 0176 70E0      		ldi r23,hi8(Fno)
+ 438 0178 80E0      		ldi r24,lo8(Dir)
+ 439 017a 90E0      		ldi r25,hi8(Dir)
+ 440 017c 00D0      		rcall pf_readdir
+ 441               	.LVL32:
+ 442 017e 382E      		mov r3,r24
+ 443               	.LVL33:
+ 322:main.c        **** 			if (!(Fno.fattrib & (AM_DIR|AM_HID)) && Fno.fname == fileName){ //check if equal to requested fi
+ 444               		.loc 1 322 0
+ 445 0180 8111      		cpse r24,__zero_reg__
+ 446 0182 00C0      		rjmp .L16
+ 322:main.c        **** 			if (!(Fno.fattrib & (AM_DIR|AM_HID)) && Fno.fname == fileName){ //check if equal to requested fi
+ 447               		.loc 1 322 0 is_stmt 0 discriminator 1
+ 448 0184 8091 0000 		lds r24,Fno+9
+ 449 0188 8823      		tst r24
+ 450 018a 01F4      		brne .+2
+ 451 018c 00C0      		rjmp .L16
+ 452               		.loc 1 323 0 is_stmt 1
+ 453 018e 8091 0000 		lds r24,Fno+8
+ 454 0192 8271      		andi r24,lo8(18)
+ 455 0194 01F4      		brne .L66
+ 456               		.loc 1 323 0 is_stmt 0 discriminator 1
+ 457 0196 F0E0      		ldi r31,hi8(fileName)
+ 458 0198 0030      		cpi r16,lo8(fileName)
+ 459 019a 1F07      		cpc r17,r31
+ 460 019c 01F4      		brne .L66
+ 324:main.c        **** 				newFile = false;
+ 461               		.loc 1 324 0 is_stmt 1
+ 462 019e 1092 0000 		sts newFile,__zero_reg__
+ 463               	.LVL34:
+ 464               	.LBB78:
+ 465               	.LBB70:
+ 182:main.c        **** 
+ 466               		.loc 1 182 0
+ 467               	/* #APP */
+ 468               	 ;  182 "main.c" 1
+ 469 01a2 A895      		wdr
+ 470               	 ;  0 "" 2
+ 184:main.c        **** 	if (res == FR_OK) {
+ 471               		.loc 1 184 0
+ 472               	/* #NOAPP */
+ 473 01a4 80E0      		ldi r24,lo8(Buff)
+ 474 01a6 90E0      		ldi r25,hi8(Buff)
+ 475 01a8 00D0      		rcall pf_open
+ 476               	.LVL35:
+ 477 01aa 382E      		mov r3,r24
+ 478               	.LVL36:
+ 185:main.c        **** 		sz = load_header();			/* Check file format and ready to play */
+ 479               		.loc 1 185 0
+ 480 01ac 8111      		cpse r24,__zero_reg__
+ 481 01ae 00C0      		rjmp .L38
+ 482               	.LVL37:
+ 483               	.LBB64:
+ 484               	.LBB62:
+  89:main.c        **** 
+ 485               		.loc 1 89 0
+ 486 01b0 40E0      		ldi r20,lo8(rb)
+ 487 01b2 50E0      		ldi r21,hi8(rb)
+ 488 01b4 6CE0      		ldi r22,lo8(12)
+ 489 01b6 70E0      		ldi r23,0
+ 490 01b8 80E0      		ldi r24,lo8(Buff)
+ 491 01ba 90E0      		ldi r25,hi8(Buff)
+ 492 01bc 00D0      		rcall pf_read
+ 493               	.LVL38:
+ 494 01be 8111      		cpse r24,__zero_reg__
+ 495 01c0 00C0      		rjmp .L22
+  91:main.c        **** 
+ 496               		.loc 1 91 0
+ 497 01c2 8091 0000 		lds r24,rb
+ 498 01c6 9091 0000 		lds r25,rb+1
+ 499 01ca 0C97      		sbiw r24,12
+ 500 01cc 01F0      		breq .+2
+ 501 01ce 00C0      		rjmp .L22
+ 502 01d0 8091 0000 		lds r24,Buff+8
+ 503 01d4 9091 0000 		lds r25,Buff+8+1
+ 504 01d8 A091 0000 		lds r26,Buff+8+2
+ 505 01dc B091 0000 		lds r27,Buff+8+3
+ 506 01e0 8735      		cpi r24,87
+ 507 01e2 9144      		sbci r25,65
+ 508 01e4 A645      		sbci r26,86
+ 509 01e6 B544      		sbci r27,69
+ 510 01e8 01F0      		breq .+2
+ 511 01ea 00C0      		rjmp .L22
+ 512 01ec 812C      		mov r8,__zero_reg__
+ 513               	.LVL39:
+ 514               	.L21:
+  94:main.c        **** 		pf_read(Buff, 8, &rb);			/* Get Chunk ID and size */
+ 515               		.loc 1 94 0
+ 516               	/* #APP */
+ 517               	 ;  94 "main.c" 1
+ 518 01ee A895      		wdr
+ 519               	 ;  0 "" 2
+  95:main.c        **** 		if (rb != 8) return 0;
+ 520               		.loc 1 95 0
+ 521               	/* #NOAPP */
+ 522 01f0 40E0      		ldi r20,lo8(rb)
+ 523 01f2 50E0      		ldi r21,hi8(rb)
+ 524 01f4 68E0      		ldi r22,lo8(8)
+ 525 01f6 70E0      		ldi r23,0
+ 526 01f8 80E0      		ldi r24,lo8(Buff)
+ 527 01fa 90E0      		ldi r25,hi8(Buff)
+ 528 01fc 00D0      		rcall pf_read
+ 529               	.LVL40:
+  96:main.c        **** 		sz = LD_DWORD(&Buff[4]);		/* Chunk size */
+ 530               		.loc 1 96 0
+ 531 01fe 8091 0000 		lds r24,rb
+ 532 0202 9091 0000 		lds r25,rb+1
+ 533 0206 0897      		sbiw r24,8
+ 534 0208 01F0      		breq .+2
+ 535 020a 00C0      		rjmp .L22
+  97:main.c        **** 
+ 536               		.loc 1 97 0
+ 537 020c C090 0000 		lds r12,Buff+4
+ 538 0210 D090 0000 		lds r13,Buff+4+1
+ 539 0214 E090 0000 		lds r14,Buff+4+2
+ 540 0218 F090 0000 		lds r15,Buff+4+3
+ 541               	.LVL41:
+  99:main.c        **** 		case FCC('f','m','t',' ') :					/* 'fmt ' chunk */
+ 542               		.loc 1 99 0
+ 543 021c 8091 0000 		lds r24,Buff
+ 544 0220 9091 0000 		lds r25,Buff+1
+ 545 0224 A091 0000 		lds r26,Buff+2
+ 546 0228 B091 0000 		lds r27,Buff+3
+ 547 022c 8C34      		cpi r24,76
+ 548 022e 69E4      		ldi r22,73
+ 549 0230 9607      		cpc r25,r22
+ 550 0232 63E5      		ldi r22,83
+ 551 0234 A607      		cpc r26,r22
+ 552 0236 64E5      		ldi r22,84
+ 553 0238 B607      		cpc r27,r22
+ 554 023a 01F4      		brne .+2
+ 555 023c 00C0      		rjmp .L23
+ 556 023e 00F4      		brsh .L24
+ 557 0240 8636      		cpi r24,102
+ 558 0242 FDE6      		ldi r31,109
+ 559 0244 9F07      		cpc r25,r31
+ 560 0246 F4E7      		ldi r31,116
+ 561 0248 AF07      		cpc r26,r31
+ 562 024a F0E2      		ldi r31,32
+ 563 024c BF07      		cpc r27,r31
+ 564 024e 01F0      		breq .L25
+ 565 0250 8434      		cpi r24,68
+ 566 0252 9944      		sbci r25,73
+ 567 0254 A345      		sbci r26,83
+ 568 0256 B045      		sbci r27,80
+ 569 0258 01F0      		breq .+2
+ 570 025a 00C0      		rjmp .L22
+ 571 025c 00C0      		rjmp .L23
+ 572               	.L24:
+ 573 025e 8436      		cpi r24,100
+ 574 0260 61E6      		ldi r22,97
+ 575 0262 9607      		cpc r25,r22
+ 576 0264 64E7      		ldi r22,116
+ 577 0266 A607      		cpc r26,r22
+ 578 0268 61E6      		ldi r22,97
+ 579 026a B607      		cpc r27,r22
+ 580 026c 01F4      		brne .+2
+ 581 026e 00C0      		rjmp .L26
+ 582 0270 8636      		cpi r24,102
+ 583 0272 9146      		sbci r25,97
+ 584 0274 A346      		sbci r26,99
+ 585 0276 B447      		sbci r27,116
+ 586 0278 01F0      		breq .+2
+ 587 027a 00C0      		rjmp .L22
+ 588 027c 00C0      		rjmp .L23
+ 589               	.L25:
+ 101:main.c        **** 			if (sz > 100 || sz < 16) return 0;		/* Check chunk size */
+ 590               		.loc 1 101 0
+ 591 027e C0FE      		sbrs r12,0
+ 592 0280 00C0      		rjmp .L27
+ 593 0282 FFEF      		ldi r31,-1
+ 594 0284 CF1A      		sub r12,r31
+ 595 0286 DF0A      		sbc r13,r31
+ 596 0288 EF0A      		sbc r14,r31
+ 597 028a FF0A      		sbc r15,r31
+ 598               	.LVL42:
+ 599               	.L27:
+ 102:main.c        **** 			pf_read(Buff, sz, &rb);					/* Get content */
+ 600               		.loc 1 102 0
+ 601 028c D701      		movw r26,r14
+ 602 028e C601      		movw r24,r12
+ 603 0290 4097      		sbiw r24,16
+ 604 0292 A109      		sbc r26,__zero_reg__
+ 605 0294 B109      		sbc r27,__zero_reg__
+ 606 0296 8535      		cpi r24,85
+ 607 0298 9105      		cpc r25,__zero_reg__
+ 608 029a A105      		cpc r26,__zero_reg__
+ 609 029c B105      		cpc r27,__zero_reg__
+ 610 029e 00F0      		brlo .+2
+ 611 02a0 00C0      		rjmp .L22
+ 103:main.c        **** 			if (rb != sz) return 0;
+ 612               		.loc 1 103 0
+ 613 02a2 40E0      		ldi r20,lo8(rb)
+ 614 02a4 50E0      		ldi r21,hi8(rb)
+ 615 02a6 B601      		movw r22,r12
+ 616 02a8 80E0      		ldi r24,lo8(Buff)
+ 617 02aa 90E0      		ldi r25,hi8(Buff)
+ 618 02ac 00D0      		rcall pf_read
+ 619               	.LVL43:
+ 104:main.c        **** 			if (Buff[0] != 1) return 0;				/* Check coding type (LPCM) */
+ 620               		.loc 1 104 0
+ 621 02ae 8091 0000 		lds r24,rb
+ 622 02b2 9091 0000 		lds r25,rb+1
+ 623 02b6 A0E0      		ldi r26,0
+ 624 02b8 B0E0      		ldi r27,0
+ 625 02ba 8C15      		cp r24,r12
+ 626 02bc 9D05      		cpc r25,r13
+ 627 02be AE05      		cpc r26,r14
+ 628 02c0 BF05      		cpc r27,r15
+ 629 02c2 01F0      		breq .+2
+ 630 02c4 00C0      		rjmp .L22
+ 105:main.c        **** 			b = Buff[2];
+ 631               		.loc 1 105 0
+ 632 02c6 8091 0000 		lds r24,Buff
+ 633 02ca 8130      		cpi r24,lo8(1)
+ 634 02cc 01F0      		breq .+2
+ 635 02ce 00C0      		rjmp .L22
+ 106:main.c        **** 			if (b != 1 && b != 2) return 0;			/* Check channels (1/2) */
+ 636               		.loc 1 106 0
+ 637 02d0 8090 0000 		lds r8,Buff+2
+ 638               	.LVL44:
+ 107:main.c        **** 			GPIOR0 = al = b;						/* Save channel flag */
+ 639               		.loc 1 107 0
+ 640 02d4 8FEF      		ldi r24,lo8(-1)
+ 641 02d6 880D      		add r24,r8
+ 642 02d8 8230      		cpi r24,lo8(2)
+ 643 02da 00F0      		brlo .+2
+ 644 02dc 00C0      		rjmp .L22
+ 645               	.LVL45:
+ 108:main.c        **** 			b = Buff[14];
+ 646               		.loc 1 108 0
+ 647 02de 81BA      		out 0x11,r8
+ 109:main.c        **** 			if (b != 8 && b != 16) return 0;		/* Check resolution (8/16 bit) */
+ 648               		.loc 1 109 0
+ 649 02e0 8091 0000 		lds r24,Buff+14
+ 650               	.LVL46:
+ 110:main.c        **** 			GPIOR0 |= b;							/* Save resolution flag */
+ 651               		.loc 1 110 0
+ 652 02e4 8830      		cpi r24,lo8(8)
+ 653 02e6 01F0      		breq .L28
+ 654 02e8 8031      		cpi r24,lo8(16)
+ 655 02ea 01F0      		breq .+2
+ 656 02ec 00C0      		rjmp .L22
+ 657               	.L28:
+ 111:main.c        **** 			if (b & 16) al <<= 1;
+ 658               		.loc 1 111 0
+ 659 02ee 91B3      		in r25,0x11
+ 660 02f0 982B      		or r25,r24
+ 661 02f2 91BB      		out 0x11,r25
+ 112:main.c        **** 			f = LD_DWORD(&Buff[4]);					/* Check sampling freqency (8k-48k) */
+ 662               		.loc 1 112 0
+ 663 02f4 84FD      		sbrc r24,4
+ 664 02f6 880C      		lsl r8
+ 665               	.LVL47:
+ 666               	.L29:
+ 113:main.c        **** 			if (f < 8000 || f > 48000) return 4;
+ 667               		.loc 1 113 0
+ 668 02f8 2091 0000 		lds r18,Buff+4
+ 669 02fc 3091 0000 		lds r19,Buff+4+1
+ 670 0300 4091 0000 		lds r20,Buff+4+2
+ 671 0304 5091 0000 		lds r21,Buff+4+3
+ 672               	.LVL48:
+ 114:main.c        **** 			OCR0A = (BYTE)(F_CPU / 8 / f) - 1;		/* Set sampling interval */
+ 673               		.loc 1 114 0
+ 674 0308 DA01      		movw r26,r20
+ 675 030a C901      		movw r24,r18
+ 676               	.LVL49:
+ 677 030c 8054      		subi r24,64
+ 678 030e 9F41      		sbci r25,31
+ 679 0310 A109      		sbc r26,__zero_reg__
+ 680 0312 B109      		sbc r27,__zero_reg__
+ 681 0314 8134      		cpi r24,65
+ 682 0316 9C49      		sbci r25,-100
+ 683 0318 A105      		cpc r26,__zero_reg__
+ 684 031a B105      		cpc r27,__zero_reg__
+ 685 031c 00F0      		brlo .+2
+ 686 031e 00C0      		rjmp .L22
+ 115:main.c        **** 			break;
+ 687               		.loc 1 115 0
+ 688 0320 C301      		movw r24,r6
+ 689 0322 B201      		movw r22,r4
+ 690 0324 00D0      		rcall __udivmodsi4
+ 691               	.LVL50:
+ 692 0326 2150      		subi r18,lo8(-(-1))
+ 693 0328 29BD      		out 0x29,r18
+ 694 032a 00C0      		rjmp .L21
+ 695               	.LVL51:
+ 696               	.L26:
+ 119:main.c        **** 			if (sz < 1024 || (sz & (al - 1))) return 0;	/* Check size */
+ 697               		.loc 1 119 0
+ 698 032c 8820      		tst r8
+ 699 032e 01F4      		brne .+2
+ 700 0330 00C0      		rjmp .L22
+ 120:main.c        **** 			if (Fs.fptr & (al - 1)) return 0;			/* Check word alignment */
+ 701               		.loc 1 120 0
+ 702 0332 C114      		cp r12,__zero_reg__
+ 703 0334 84E0      		ldi r24,4
+ 704 0336 D806      		cpc r13,r24
+ 705 0338 E104      		cpc r14,__zero_reg__
+ 706 033a F104      		cpc r15,__zero_reg__
+ 707 033c 00F4      		brsh .+2
+ 708 033e 00C0      		rjmp .L22
+ 709 0340 882D      		mov r24,r8
+ 710 0342 90E0      		ldi r25,0
+ 711 0344 0197      		sbiw r24,1
+ 712 0346 092E      		mov __tmp_reg__,r25
+ 713 0348 000C      		lsl r0
+ 714 034a AA0B      		sbc r26,r26
+ 715 034c BB0B      		sbc r27,r27
+ 716 034e AC01      		movw r20,r24
+ 717 0350 BD01      		movw r22,r26
+ 718 0352 4C21      		and r20,r12
+ 719 0354 5D21      		and r21,r13
+ 720 0356 6E21      		and r22,r14
+ 721 0358 7F21      		and r23,r15
+ 722 035a 452B      		or r20,r21
+ 723 035c 462B      		or r20,r22
+ 724 035e 472B      		or r20,r23
+ 725 0360 01F0      		breq .+2
+ 726 0362 00C0      		rjmp .L22
+ 121:main.c        **** 			return sz;									/* Start to play */
+ 727               		.loc 1 121 0
+ 728 0364 4091 0000 		lds r20,Fs+22
+ 729 0368 5091 0000 		lds r21,Fs+22+1
+ 730 036c 6091 0000 		lds r22,Fs+22+2
+ 731 0370 7091 0000 		lds r23,Fs+22+3
+ 732 0374 8423      		and r24,r20
+ 733 0376 9523      		and r25,r21
+ 734 0378 A623      		and r26,r22
+ 735 037a B723      		and r27,r23
+ 736 037c 892B      		or r24,r25
+ 737 037e 8A2B      		or r24,r26
+ 738 0380 8B2B      		or r24,r27
+ 739 0382 01F0      		breq .+2
+ 740 0384 00C0      		rjmp .L22
+ 741               	.LBE62:
+ 742               	.LBE64:
+ 189:main.c        **** 
+ 743               		.loc 1 189 0
+ 744 0386 1092 0000 		sts FifoCt,__zero_reg__
+ 745 038a 1092 0000 		sts FifoRi,__zero_reg__
+ 746 038e 1092 0000 		sts FifoWi,__zero_reg__
+ 191:main.c        **** 			PLLCSR = 0b00000110;	/* Select PLL clock for TC1.ck */
+ 747               		.loc 1 191 0
+ 748 0392 80B7      		in r24,0x30
+ 749 0394 8823      		tst r24
+ 750 0396 01F0      		breq .L31
+ 751               	.L35:
+ 201:main.c        **** 		sz -= rb;
+ 752               		.loc 1 201 0
+ 753 0398 8091 0000 		lds r24,Fs+22
+ 754 039c 9091 0000 		lds r25,Fs+22+1
+ 755 03a0 9170      		andi r25,1
+ 756 03a2 B501      		movw r22,r10
+ 757 03a4 681B      		sub r22,r24
+ 758 03a6 790B      		sbc r23,r25
+ 759 03a8 40E0      		ldi r20,lo8(rb)
+ 760 03aa 50E0      		ldi r21,hi8(rb)
+ 761 03ac 80E0      		ldi r24,0
+ 762 03ae 90E0      		ldi r25,0
+ 763 03b0 00D0      		rcall pf_read
+ 764               	.LVL52:
+ 202:main.c        **** 		sw = 1;	/* Button status flag */
+ 765               		.loc 1 202 0
+ 766 03b2 8091 0000 		lds r24,rb
+ 767 03b6 9091 0000 		lds r25,rb+1
+ 768 03ba C81A      		sub r12,r24
+ 769 03bc D90A      		sbc r13,r25
+ 770 03be E108      		sbc r14,__zero_reg__
+ 771 03c0 F108      		sbc r15,__zero_reg__
+ 772               	.LVL53:
+ 203:main.c        **** 		do {	/* Data transfer loop */
+ 773               		.loc 1 203 0
+ 774 03c2 8824      		clr r8
+ 775 03c4 8394      		inc r8
+ 776               	.LVL54:
+ 777 03c6 00C0      		rjmp .L32
+ 778               	.LVL55:
+ 779               	.L23:
+ 780               	.LBB65:
+ 781               	.LBB63:
+ 127:main.c        **** 			pf_lseek(Fs.fptr + sz);			/* Skip this chunk */
+ 782               		.loc 1 127 0
+ 783 03c8 C0FE      		sbrs r12,0
+ 784 03ca 00C0      		rjmp .L33
+ 785 03cc 9FEF      		ldi r25,-1
+ 786 03ce C91A      		sub r12,r25
+ 787 03d0 D90A      		sbc r13,r25
+ 788 03d2 E90A      		sbc r14,r25
+ 789 03d4 F90A      		sbc r15,r25
+ 790               	.LVL56:
+ 791               	.L33:
+ 128:main.c        **** 			break;
+ 792               		.loc 1 128 0
+ 793 03d6 8091 0000 		lds r24,Fs+22
+ 794 03da 9091 0000 		lds r25,Fs+22+1
+ 795 03de A091 0000 		lds r26,Fs+22+2
+ 796 03e2 B091 0000 		lds r27,Fs+22+3
+ 797 03e6 BC01      		movw r22,r24
+ 798 03e8 CD01      		movw r24,r26
+ 799 03ea 6C0D      		add r22,r12
+ 800 03ec 7D1D      		adc r23,r13
+ 801 03ee 8E1D      		adc r24,r14
+ 802 03f0 9F1D      		adc r25,r15
+ 803 03f2 00D0      		rcall pf_lseek
+ 804               	.LVL57:
+ 805 03f4 00C0      		rjmp .L21
+ 806               	.L31:
+ 807               	.LBE63:
+ 808               	.LBE65:
+ 192:main.c        **** 			GTCCR =  0b01100000;	/* Enable OC1B as PWM */
+ 809               		.loc 1 192 0
+ 810 03f6 86E0      		ldi r24,lo8(6)
+ 811 03f8 87BD      		out 0x27,r24
+ 193:main.c        **** 			TCCR1 = MODE ? 0b01100001 : 0b00000001;	/* Start TC1 and enable OC1A as PWM if needed */
+ 812               		.loc 1 193 0
+ 813 03fa 80E6      		ldi r24,lo8(96)
+ 814 03fc 8CBD      		out 0x2c,r24
+ 194:main.c        **** 			TCCR0A = 0b00000010;	/* Statr TC0 as interval timer at 2MHz */
+ 815               		.loc 1 194 0
+ 816 03fe 81E0      		ldi r24,lo8(1)
+ 817 0400 80BF      		out 0x30,r24
+ 195:main.c        **** 			TCCR0B = 0b00000010;
+ 818               		.loc 1 195 0
+ 819 0402 82E0      		ldi r24,lo8(2)
+ 820 0404 8ABD      		out 0x2a,r24
+ 196:main.c        **** 			TIMSK = _BV(OCIE0A);
+ 821               		.loc 1 196 0
+ 822 0406 83BF      		out 0x33,r24
+ 197:main.c        **** 			ramp(1);
+ 823               		.loc 1 197 0
+ 824 0408 80E1      		ldi r24,lo8(16)
+ 825 040a 89BF      		out 0x39,r24
+ 826               	.LVL58:
+ 827 040c 80E0      		ldi r24,0
+ 828               	.LVL59:
+ 829               	.L34:
+ 830               	.LBB66:
+ 831               	.LBB67:
+ 158:main.c        **** 		OCR1A = v; OCR1B = v;
+ 832               		.loc 1 158 0
+ 833 040e 8F5F      		subi r24,lo8(-(1))
+ 834               	.LVL60:
+ 159:main.c        **** 		delay_us(100);
+ 835               		.loc 1 159 0
+ 836 0410 8EBD      		out 0x2e,r24
+ 837 0412 8BBD      		out 0x2b,r24
+ 838               	.LVL61:
+ 839               	.LBB68:
+ 840               	.LBB69:
+ 841               		.loc 3 245 0
+ 842 0414 E7EC      		ldi r30,lo8(199)
+ 843 0416 F0E0      		ldi r31,hi8(199)
+ 844 0418 3197      	1:	sbiw r30,1
+ 845 041a 01F4      		brne 1b
+ 846 041c 00C0      		rjmp .
+ 847 041e 0000      		nop
+ 848               	.LVL62:
+ 849               	.LBE69:
+ 850               	.LBE68:
+ 161:main.c        **** #else
+ 851               		.loc 1 161 0
+ 852 0420 8038      		cpi r24,lo8(-128)
+ 853 0422 01F4      		brne .L34
+ 854 0424 00C0      		rjmp .L35
+ 855               	.LVL63:
+ 856               	.L39:
+ 857               	.LBE67:
+ 858               	.LBE66:
+ 207:main.c        **** 			res = pf_read(0, btr, &rb);	/* Forward the data into audio FIFO */
+ 859               		.loc 1 207 0
+ 860 0426 60E0      		ldi r22,0
+ 861 0428 74E0      		ldi r23,lo8(4)
+ 862               	.L36:
+ 863               	.LVL64:
+ 208:main.c        **** 			if (rb != 1024) break;		/* Break on error or end of data */
+ 864               		.loc 1 208 0
+ 865 042a 40E0      		ldi r20,lo8(rb)
+ 866 042c 50E0      		ldi r21,hi8(rb)
+ 867 042e 80E0      		ldi r24,0
+ 868 0430 90E0      		ldi r25,0
+ 869 0432 00D0      		rcall pf_read
+ 870               	.LVL65:
+ 871 0434 382E      		mov r3,r24
+ 872               	.LVL66:
+ 209:main.c        **** 			sz -= rb;					/* Decrease data counter */
+ 873               		.loc 1 209 0
+ 874 0436 2091 0000 		lds r18,rb
+ 875 043a 3091 0000 		lds r19,rb+1
+ 876 043e 2115      		cp r18,__zero_reg__
+ 877 0440 3440      		sbci r19,4
+ 878 0442 01F4      		brne .L38
+ 210:main.c        **** 
+ 879               		.loc 1 210 0
+ 880 0444 84E0      		ldi r24,4
+ 881 0446 D81A      		sub r13,r24
+ 882 0448 E108      		sbc r14,__zero_reg__
+ 883 044a F108      		sbc r15,__zero_reg__
+ 884               	.LVL67:
+ 212:main.c        **** 		} while (!newFile || ++sw != 1); //break on filename change
+ 885               		.loc 1 212 0
+ 886 044c 880C      		lsl r8
+ 887               	.LVL68:
+ 213:main.c        **** 	}
+ 888               		.loc 1 213 0
+ 889 044e 8091 0000 		lds r24,newFile
+ 890 0452 8111      		cpse r24,__zero_reg__
+ 891 0454 00C0      		rjmp .L83
+ 892               	.LVL69:
+ 893               	.L32:
+ 205:main.c        **** 
+ 894               		.loc 1 205 0
+ 895               	/* #APP */
+ 896               	 ;  205 "main.c" 1
+ 897 0456 A895      		wdr
+ 898               	 ;  0 "" 2
+ 207:main.c        **** 			res = pf_read(0, btr, &rb);	/* Forward the data into audio FIFO */
+ 899               		.loc 1 207 0
+ 900               	/* #NOAPP */
+ 901 0458 F1E0      		ldi r31,1
+ 902 045a CF16      		cp r12,r31
+ 903 045c F4E0      		ldi r31,4
+ 904 045e DF06      		cpc r13,r31
+ 905 0460 E104      		cpc r14,__zero_reg__
+ 906 0462 F104      		cpc r15,__zero_reg__
+ 907 0464 00F4      		brsh .L39
+ 908 0466 B601      		movw r22,r12
+ 909 0468 00C0      		rjmp .L36
+ 910               	.L83:
+ 213:main.c        **** 	}
+ 911               		.loc 1 213 0
+ 912 046a 8394      		inc r8
+ 913               	.LVL70:
+ 914 046c 91E0      		ldi r25,lo8(1)
+ 915 046e 8912      		cpse r8,r25
+ 916 0470 00C0      		rjmp .L32
+ 917               	.LVL71:
+ 918               	.L38:
+ 216:main.c        **** 	OCR1A = 128; OCR1B = 128;	/* Return output to center level */
+ 919               		.loc 1 216 0
+ 920 0472 8091 0000 		lds r24,FifoCt
+ 921 0476 8111      		cpse r24,__zero_reg__
+ 922 0478 00C0      		rjmp .L38
+ 217:main.c        **** 
+ 923               		.loc 1 217 0
+ 924 047a CEBD      		out 0x2e,r28
+ 925 047c CBBD      		out 0x2b,r28
+ 926 047e 00C0      		rjmp .L16
+ 927               	.L22:
+ 187:main.c        **** 
+ 928               		.loc 1 187 0
+ 929 0480 3324      		clr r3
+ 930 0482 3A94      		dec r3
+ 931               	.LVL72:
+ 932 0484 00C0      		rjmp .L16
+ 933               	.LBE70:
+ 934               	.LBE78:
+ 935               		.cfi_endproc
+ 936               	.LFE13:
+ 938               		.text
+ 939               	.global	__vector_2
+ 941               	__vector_2:
+ 942               	.LFB14:
+ 325:main.c        **** 				res = play(dir, Fno.fname);		/* Play file */
+ 326:main.c        **** 				break; //finish playing files
+ 327:main.c        **** 			}
+ 328:main.c        **** 		}
+ 329:main.c        **** 	}
+ 330:main.c        **** }
+ 331:main.c        **** 
+ 332:main.c        **** ISR(PCINT0_vect) //CS is High
+ 333:main.c        **** {
+ 943               		.loc 1 333 0
+ 944               		.cfi_startproc
+ 945 0002 1F92      		push r1
+ 946               	.LCFI0:
+ 947               		.cfi_def_cfa_offset 3
+ 948               		.cfi_offset 1, -2
+ 949 0004 0F92      		push r0
+ 950               	.LCFI1:
+ 951               		.cfi_def_cfa_offset 4
+ 952               		.cfi_offset 0, -3
+ 953 0006 0FB6      		in r0,__SREG__
+ 954 0008 0F92      		push r0
+ 955 000a 1124      		clr __zero_reg__
+ 956 000c 2F93      		push r18
+ 957               	.LCFI2:
+ 958               		.cfi_def_cfa_offset 5
+ 959               		.cfi_offset 18, -4
+ 960 000e 3F93      		push r19
+ 961               	.LCFI3:
+ 962               		.cfi_def_cfa_offset 6
+ 963               		.cfi_offset 19, -5
+ 964 0010 4F93      		push r20
+ 965               	.LCFI4:
+ 966               		.cfi_def_cfa_offset 7
+ 967               		.cfi_offset 20, -6
+ 968 0012 5F93      		push r21
+ 969               	.LCFI5:
+ 970               		.cfi_def_cfa_offset 8
+ 971               		.cfi_offset 21, -7
+ 972 0014 6F93      		push r22
+ 973               	.LCFI6:
+ 974               		.cfi_def_cfa_offset 9
+ 975               		.cfi_offset 22, -8
+ 976 0016 7F93      		push r23
+ 977               	.LCFI7:
+ 978               		.cfi_def_cfa_offset 10
+ 979               		.cfi_offset 23, -9
+ 980 0018 8F93      		push r24
+ 981               	.LCFI8:
+ 982               		.cfi_def_cfa_offset 11
+ 983               		.cfi_offset 24, -10
+ 984 001a 9F93      		push r25
+ 985               	.LCFI9:
+ 986               		.cfi_def_cfa_offset 12
+ 987               		.cfi_offset 25, -11
+ 988 001c AF93      		push r26
+ 989               	.LCFI10:
+ 990               		.cfi_def_cfa_offset 13
+ 991               		.cfi_offset 26, -12
+ 992 001e BF93      		push r27
+ 993               	.LCFI11:
+ 994               		.cfi_def_cfa_offset 14
+ 995               		.cfi_offset 27, -13
+ 996 0020 EF93      		push r30
+ 997               	.LCFI12:
+ 998               		.cfi_def_cfa_offset 15
+ 999               		.cfi_offset 30, -14
+ 1000 0022 FF93      		push r31
+ 1001               	.LCFI13:
+ 1002               		.cfi_def_cfa_offset 16
+ 1003               		.cfi_offset 31, -15
+ 1004               	/* prologue: Signal */
+ 1005               	/* frame size = 0 */
+ 1006               	/* stack size = 15 */
+ 1007               	.L__stack_usage = 15
+ 334:main.c        **** 	spi_slave();
+ 1008               		.loc 1 334 0
+ 1009 0024 00D0      		rcall spi_slave
+ 1010               	.LVL73:
+ 1011               	.L85:
+ 335:main.c        **** 	BYTE recv;
+ 336:main.c        **** 	while(PINB & (1 << CS)); //wait until CS is low, meaning transmission is done
+ 1012               		.loc 1 336 0 discriminator 1
+ 1013 0026 B399      		sbic 0x16,3
+ 1014 0028 00C0      		rjmp .L85
+ 337:main.c        **** 	recv = slave_rcv_spi();
+ 1015               		.loc 1 337 0
+ 1016 002a 00D0      		rcall slave_rcv_spi
+ 1017               	.LVL74:
+ 338:main.c        **** 	strcpy(fileName, filenameRef[(uint16_t)recv]);
+ 1018               		.loc 1 338 0
+ 1019 002c 682F      		mov r22,r24
+ 1020 002e 70E0      		ldi r23,0
+ 1021 0030 84E0      		ldi r24,4
+ 1022               		1:
+ 1023 0032 660F      		lsl r22
+ 1024 0034 771F      		rol r23
+ 1025 0036 8A95      		dec r24
+ 1026 0038 01F4      		brne 1b
+ 1027               	.LVL75:
+ 1028 003a 6050      		subi r22,lo8(-(filenameRef))
+ 1029 003c 7040      		sbci r23,hi8(-(filenameRef))
+ 1030 003e 80E0      		ldi r24,lo8(fileName)
+ 1031 0040 90E0      		ldi r25,hi8(fileName)
+ 1032 0042 00D0      		rcall strcpy
+ 1033               	.LVL76:
+ 339:main.c        **** 	newFile = true;
+ 1034               		.loc 1 339 0
+ 1035 0044 81E0      		ldi r24,lo8(1)
+ 1036 0046 8093 0000 		sts newFile,r24
+ 340:main.c        **** 	spi_master();
+ 1037               		.loc 1 340 0
+ 1038 004a 00D0      		rcall spi_master
+ 1039               	.LVL77:
+ 341:main.c        **** 	sleep_disable();
+ 1040               		.loc 1 341 0
+ 1041 004c 85B7      		in r24,0x35
+ 1042 004e 8F7D      		andi r24,lo8(-33)
+ 1043 0050 85BF      		out 0x35,r24
+ 1044               	/* epilogue start */
+ 342:main.c        **** }
+ 1045               		.loc 1 342 0
+ 1046 0052 FF91      		pop r31
+ 1047 0054 EF91      		pop r30
+ 1048 0056 BF91      		pop r27
+ 1049 0058 AF91      		pop r26
+ 1050 005a 9F91      		pop r25
+ 1051 005c 8F91      		pop r24
+ 1052 005e 7F91      		pop r23
+ 1053 0060 6F91      		pop r22
+ 1054 0062 5F91      		pop r21
+ 1055 0064 4F91      		pop r20
+ 1056 0066 3F91      		pop r19
+ 1057 0068 2F91      		pop r18
+ 1058 006a 0F90      		pop r0
+ 1059 006c 0FBE      		out __SREG__,r0
+ 1060 006e 0F90      		pop r0
+ 1061 0070 1F90      		pop r1
+ 1062 0072 1895      		reti
+ 1063               		.cfi_endproc
+ 1064               	.LFE14:
+ 1066               		.data
+ 1069               	filenameRef:
+ 1070 0000 62        		.byte	98
+ 1071 0001 65        		.byte	101
+ 1072 0002 65        		.byte	101
+ 1073 0003 70        		.byte	112
+ 1074 0004 2E        		.byte	46
+ 1075 0005 77        		.byte	119
+ 1076 0006 61        		.byte	97
+ 1077 0007 76        		.byte	118
+ 1078 0008 0000 0000 		.zero	8
+ 1078      0000 0000 
+ 1079 0010 70        		.byte	112
+ 1080 0011 65        		.byte	101
+ 1081 0012 77        		.byte	119
+ 1082 0013 2E        		.byte	46
+ 1083 0014 77        		.byte	119
+ 1084 0015 61        		.byte	97
+ 1085 0016 76        		.byte	118
+ 1086 0017 0000 0000 		.zero	9
+ 1086      0000 0000 
+ 1086      00
+ 1087 0020 64        		.byte	100
+ 1088 0021 65        		.byte	101
+ 1089 0022 61        		.byte	97
+ 1090 0023 64        		.byte	100
+ 1091 0024 2E        		.byte	46
+ 1092 0025 77        		.byte	119
+ 1093 0026 61        		.byte	97
+ 1094 0027 76        		.byte	118
+ 1095 0028 0000 0000 		.zero	8
+ 1095      0000 0000 
+ 1096               		.comm	newFile,1,1
+ 1097               		.comm	fileName,16,1
+ 1098               		.comm	rb,2,1
+ 1099               		.comm	Fno,22,1
+ 1100               		.comm	Dir,16,1
+ 1101               		.comm	Fs,42,1
+ 1102               		.comm	Buff,256,1
+ 1103               		.comm	FifoCt,1,1
+ 1104               		.comm	FifoWi,1,1
+ 1105               		.comm	FifoRi,1,1
+ 1106               		.comm	CardType,1,1
+ 1107               		.text
+ 1108               	.Letext0:
+ 1109               		.file 4 "c:\\program files (x86)\\atmel\\studio\\7.0\\toolchain\\avr8\\avr8-gnu-toolchain\\avr\\in
+ 1110               		.file 5 "integer.h"
+ 1111               		.file 6 "pff.h"
+ 1112               		.file 7 "mmc.h"
+ 1113               		.file 8 "c:\\program files (x86)\\atmel\\studio\\7.0\\toolchain\\avr8\\avr8-gnu-toolchain\\avr\\in
+DEFINED SYMBOLS
+                            *ABS*:00000000 main.c
+C:\Users\Noah\AppData\Local\Temp\ccllck70.s:2      *ABS*:0000003e __SP_H__
+C:\Users\Noah\AppData\Local\Temp\ccllck70.s:3      *ABS*:0000003d __SP_L__
+C:\Users\Noah\AppData\Local\Temp\ccllck70.s:4      *ABS*:0000003f __SREG__
+C:\Users\Noah\AppData\Local\Temp\ccllck70.s:5      *ABS*:00000000 __tmp_reg__
+C:\Users\Noah\AppData\Local\Temp\ccllck70.s:6      *ABS*:00000001 __zero_reg__
+C:\Users\Noah\AppData\Local\Temp\ccllck70.s:12     .text:00000000 __vector_12
+C:\Users\Noah\AppData\Local\Temp\ccllck70.s:41     .text.startup:00000000 main
+                            *COM*:0000002a Fs
+                            *COM*:00000100 Buff
+                            *COM*:00000002 rb
+                            *COM*:00000010 Dir
+                            *COM*:00000016 Fno
+                            *COM*:00000001 newFile
+                            *COM*:00000010 fileName
+                            *COM*:00000001 FifoCt
+                            *COM*:00000001 FifoRi
+                            *COM*:00000001 FifoWi
+C:\Users\Noah\AppData\Local\Temp\ccllck70.s:941    .text:00000002 __vector_2
+C:\Users\Noah\AppData\Local\Temp\ccllck70.s:1069   .data:00000000 filenameRef
+                            *COM*:00000001 CardType
+
+UNDEFINED SYMBOLS
+init_spi
+spi_slave
+slave_rcv_spi
+spi_master
+pf_mount
+pf_open
+pf_read
+pf_opendir
+pf_readdir
+__udivmodsi4
+pf_lseek
+strcpy
+__do_copy_data
+__do_clear_bss
