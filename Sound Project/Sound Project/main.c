@@ -17,14 +17,12 @@
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
 #include <avr/wdt.h>
-#include <string.h>
 #include <util/delay.h>
 #include <stdbool.h>
 #include "pff.h"
 #include "mmc.h"
 
 #define CS PB3
-#define ACK 0x0e
 
 //setup pin change interrupt
 #define SETUP_PIN_CHANGE PCMSK |= (1 << CS)
@@ -69,7 +67,7 @@ FILINFO Fno;		/* File information */
 
 WORD rb;			/* Return value. Put this here to avoid avr-gcc's bug */
 
-volatile char fileName[16];
+volatile uint8_t filename;
 volatile bool newFile;
 /*---------------------------------------------------------*/
 
@@ -265,31 +263,18 @@ int main (void)
 	DISABLE_PIN_INTR;
 	
 	set_sleep_mode(SLEEP_MODE_PWR_DOWN);	//set power down mode
-
-	init_spi();
-	spi_slave();
+	sleep_enable();
 
 	sei();
-
-	PORTB |= 1 << PB1;
-	delay_ms(500);
-	PORTB &= ~(1 << PB1);
-
-	while(PINB & (1 << CS)) wdt_reset(); //wait until main board is ready
-	PORTB |= 1 << PB1; //Flash an LED 
-	while(!(PINB & (1 << CS))) wdt_reset(); //wait for transmission to finish
 
 	PORTB &= ~(1 << PB1);
 	delay_ms(500);
 	PORTB |= (1 << PB1);
-	wdt_reset();
-	if(slave_rcv_spi() == 0xAA) //short blink for correct response
-		delay_ms(150);
-	else if(slave_rcv_spi() == 0x55) //long blink for incorrect bit order, but correct response
-		delay_ms(500);
-	wdt_reset();
-	PORTB &= ~(1 << PB1); //no blink for incorrect response
+	delay_ms(500);
 
+	wdt_reset();
+
+	init_spi();
 	spi_master();
 	
 	//setup sdcard
@@ -312,7 +297,6 @@ int main (void)
 			TCCR1 = 0; GTCCR = 0;
 		}
 		wdt_disable();
-		sleep_enable();
 		while(!newFile) sleep_cpu(); //Sleep until interrupt changes filename
 		wdt_enable(WDTO_2S);
 		
@@ -320,7 +304,7 @@ int main (void)
 			wdt_reset();
 			res = pf_readdir(&Dir, &Fno);		/* Get a dir entry */
 			if (res || !Fno.fname[0]) break;	/* Break on error or end of dir */
-			if (!(Fno.fattrib & (AM_DIR|AM_HID)) && Fno.fname == fileName){ //check if equal to requested file name
+			if (!(Fno.fattrib & (AM_DIR|AM_HID)) && Fno.fname == filenameRef[filename]){ //check if equal to requested file name
 				newFile = false;
 				res = play(dir, Fno.fname);		/* Play file */
 				break; //finish playing files
@@ -332,11 +316,11 @@ int main (void)
 ISR(PCINT0_vect) //CS is High
 {
 	spi_slave();
-	BYTE recv;
+
 	while(PINB & (1 << CS)); //wait until CS is low, meaning transmission is done
-	recv = slave_rcv_spi();
-	strcpy(fileName, filenameRef[(uint16_t)recv]);
+
+	filename = (uint8_t)USIDR;
 	newFile = true;
+
 	spi_master();
-	sleep_disable();
 }

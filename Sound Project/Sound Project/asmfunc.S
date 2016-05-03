@@ -65,7 +65,7 @@
 .global init_spi
 .func init_spi
 init_spi:
-	ldi	r24, 0b00001000			; Enable only SCK and DI. DO is controlled by software
+	ldi	r24, (1 << USICS1)		; Enable only SCK and DI. DO is controlled by software
 	out	_SFR_IO_ADDR(USICR), r24
 	;sbi	_SFR_IO_ADDR(PORTB), B_DO	; MMC DI = H
 	;sbi	_SFR_IO_ADDR(PORTB), B_CS	; MMC CS = H
@@ -84,19 +84,6 @@ init_spi:
 	ret
 .endfunc
 
-; And read it
-; only call this after master is done transmitting 
-; BYTE slave_rcv_spi (void)
-
-.global slave_rcv_spi
-.func slave_rcv_spi
-	slave_rcv_spi:
-	nop  ;Just in case
-	in r24, _SFR_IO_ADDR(USIDR)
-	ret
-.endfunc
-
-
 ;---------------------------------------------------------------------------;
 ; Set USI to master mode
 ;
@@ -106,6 +93,8 @@ init_spi:
 .func spi_master
 	spi_master:
 	sbi _SFR_IO_ADDR(DDRB), 2 ; Set clock to output
+	ldi r24, (1 << USIOIF)
+	out _SFR_IO_ADDR(USISR), r24 ; Clear the USI status register just in case
 	ret
 .endfunc
 
