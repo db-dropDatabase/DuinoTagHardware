@@ -12,14 +12,13 @@
 / * Redistributions of source code must retain the above copyright notice.
 /
 /----------------------------------------------------------------------------*/
-#define F_CPU 8000000L
+#define F_CPU 16000000
 #define MODE 0
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
 #include <avr/wdt.h>
-#include <util/delay.h>
 #include <stdbool.h>
 #include <string.h>
 #include "pff.h"
@@ -32,9 +31,6 @@
 //enable pin change interrupt
 #define ENABLE_PIN_INTR GIMSK |= 0b00100000
 #define DISABLE_PIN_INTR GIMSK &= 0b11011111
-
-#define delay_us(a) _delay_us(a)
-#define delay_ms(a) _delay_ms(a)
 
 #ifndef MODE
 #error Wrong make file.
@@ -80,8 +76,7 @@ static char filenameRef[3][16] ={
 	 {'d','e','a','d','.','w','a','v'}
 };
 
-static
-DWORD load_header (void)	/* 0:Invalid format, 1:I/O error, >=1024:Number of samples */
+static DWORD load_header (void)	/* 0:Invalid format, 1:I/O error, >=1024:Number of samples */
 {
 	DWORD sz, f;
 	BYTE b, al = 0;
@@ -139,8 +134,7 @@ DWORD load_header (void)	/* 0:Invalid format, 1:I/O error, >=1024:Number of samp
 
 
 
-static
-void ramp (
+static void ramp (
 	int dir		/* 0:Ramp-down, 1:Ramp-up */
 )
 {
@@ -206,8 +200,9 @@ static FRESULT play (const char *dir,	/* Directory */const char *fn		/* File */)
 			sz -= rb;					/* Decrease data counter */
 
 			sw <<= 1;					/* Break on button down */
-			PORTB |= (1 << CS);
+			//PORTB |= (1 << CS);
 		} while ((PINB & 1) || ++sw != 1);
+		//PORTB &= ~(1 << CS);
 	}
 
 	while (FifoCt) ;			/* Wait for audio FIFO empty */
@@ -255,22 +250,16 @@ int main (void)
 	MCUSR = 0; //Clear any reset status flags
 	wdt_enable(WDTO_2S);
 
-	PORTB = 0b101001 & ~(1 << CS);		/* Initialize port: - - H L H L L P */
-	DDRB  = 0b111110 | (1 << CS);
+	PORTB = 0b101001;		/* Initialize port: - - H L H L L P */
+	DDRB  = 0b111110;
 	
 	//SETUP_PIN_CHANGE;
 	//DISABLE_PIN_INTR;
 	
-	set_sleep_mode(SLEEP_MODE_PWR_DOWN);	//set power down mode
-	sleep_enable();
+	//set_sleep_mode(SLEEP_MODE_PWR_DOWN);	//set power down mode
+	sleep_disable();
 
 	sei();
-	wdt_reset();
-
-	PORTB |= (1 << CS);
-	delay_ms(200);
-	PORTB &= ~(1 << CS);
-	delay_ms(100);
 
 	for (;;) {
 		wdt_reset();
@@ -297,14 +286,11 @@ int main (void)
 					res = pf_readdir(&Dir, &Fno);		/* Get a dir entry */
 					if (res || !Fno.fname[0]) break;	/* Break on error or end of dir */
 					if (!(Fno.fattrib & (AM_DIR|AM_HID)) && strstr(Fno.fname, ".WAV")){
-						newFile = false;
+						//newFile = false;
 						res = play(dir, Fno.fname);		/* Play file */
-
 						//break;
 					}
 				}
-				PORTB &= ~(1 << CS);
-				newFile = true;
 			}
 		}
 		delay_ms(200);
@@ -313,6 +299,7 @@ int main (void)
 
 ISR(PCINT0_vect) //CS is High
 {
+	/*
 	if(PINB & (1 << CS)){
 		spi_slave();
 
@@ -326,4 +313,5 @@ ISR(PCINT0_vect) //CS is High
 
 		spi_master();
 	}
+	*/
 }

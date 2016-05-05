@@ -28,6 +28,8 @@
 #include "diskio.h"
 
 /* Low level SPI control functions */
+void delay_ms(WORD ms);
+void delay_us(WORD us);
 void init_spi (void);
 void spi_slave(void);
 void spi_master(void);

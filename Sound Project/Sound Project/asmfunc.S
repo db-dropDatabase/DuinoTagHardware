@@ -9,7 +9,7 @@
 #endif
 .list
 
-#define F_CPU 8000000L
+#define F_CPU 16000000
 #define MODE 0
 
 #define	_FLAGS	_SFR_IO_ADDR(GPIOR0)
@@ -23,39 +23,39 @@
 #endif
 #define B_CS	3
 
+
 ;---------------------------------------------------------------------------;
 ; Simple Delay
 ;---------------------------------------------------------------------------;
 ; void delay_ms(WORD ms);
 ; void delay_us(WORD us);
 
-;.global delay_ms
-;.func delay_ms
-;delay_ms:
-;	wdr			; Reset WDT
-;	sbiw	r24, 1		; if (ms-- == 0) return;
-;	brcs	9f		; /
-;	ldi	ZL, lo8(F_CPU/4000)	; 1ms delay
-;	ldi	ZH, hi8(F_CPU/4000)	; 
-;1:	sbiw	ZL, 1		; 
-;	brne	1b		; /
-;	rjmp	delay_ms
-;9:	ret
-;.endfunc
-;
-;
-;.global delay_us
-;.func delay_us
-;delay_us:
-;	ldi	r23, 2
-;1:	dec	r23
-;	brne	1b
-;	sbiw	r24, 1
-;	brne	delay_us
-;	wdr
-;	ret
-;.endfunc
+.global delay_ms
+.func delay_ms
+delay_ms:
+	wdr			; Reset WDT
+	sbiw	r24, 1		; if (ms-- == 0) return;
+	brcs	9f		; /
+	ldi	ZL, lo8(F_CPU/4000)	; 1ms delay
+	ldi	ZH, hi8(F_CPU/4000)	; 
+1:	sbiw	ZL, 1		; 
+	brne	1b		; /
+	rjmp	delay_ms
+9:	ret
+.endfunc
 
+
+.global delay_us
+.func delay_us
+delay_us:
+	ldi	r23, 2
+1:	dec	r23
+	brne	1b
+	sbiw	r24, 1
+	brne	delay_us
+	wdr
+	ret
+.endfunc
 
 ;---------------------------------------------------------------------------;
 ; Initialize USI
@@ -68,7 +68,7 @@ init_spi:
 	ldi	r24, (1 << USICS1)		; Enable only SCK and DI. DO is controlled by software
 	out	_SFR_IO_ADDR(USICR), r24
 	sbi	_SFR_IO_ADDR(PORTB), B_DO	; MMC DI = H
-	;sbi	_SFR_IO_ADDR(PORTB), B_CS	; MMC CS = H
+	sbi	_SFR_IO_ADDR(PORTB), B_CS	; MMC CS = H
 	ret
 .endfunc
 
@@ -108,14 +108,14 @@ init_spi:
 .global select
 .func select
 select:
-	;cbi	_SFR_IO_ADDR(PORTB), B_CS	; CS = L CS is going to be input in this program, so yeah
+	cbi	_SFR_IO_ADDR(PORTB), B_CS	; CS = L CS is going to be input in this program, so yeah
 	ret
 .endfunc
 
 .global deselect
 .func deselect
 deselect:
-	;sbi	_SFR_IO_ADDR(PORTB), B_CS	; CS = H
+	sbi	_SFR_IO_ADDR(PORTB), B_CS	; CS = H
 	ret
 .endfunc
 
