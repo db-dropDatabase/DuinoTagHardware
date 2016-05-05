@@ -9,6 +9,17 @@
 #ifndef MMC_H_
 #define MMC_H_
 
+#define	_FLAGS	_SFR_IO_ADDR(GPIOR0)
+
+#ifdef MODE
+#if MODE >= 1
+#define B_DO	5
+#else
+#define B_DO	1
+#endif
+#endif
+#define B_CS	3
+
 /*-----------------------------------------------------------------------*/
 /* Low level disk control module                        (C)ChaN, 2009    */
 /*-----------------------------------------------------------------------*/
@@ -19,7 +30,6 @@
 /* Low level SPI control functions */
 void init_spi (void);
 void spi_slave(void);
-BYTE slave_rcv_spi(void);
 void spi_master(void);
 void select (void);
 void deselect (void);
@@ -52,13 +62,13 @@ BYTE CardType;
 /* Deselect the card and release SPI bus                                 */
 /*-----------------------------------------------------------------------*/
 
-static void release_spi (void);
+void release_spi (void);
 
 /*-----------------------------------------------------------------------*/
 /* Send a command packet to MMC                                          */
 /*-----------------------------------------------------------------------*/
 
-static BYTE send_cmd (BYTE cmd,		/* Command byte */ DWORD arg		/* Argument */);
+BYTE send_cmd (BYTE cmd,	DWORD arg);
 
 /*--------------------------------------------------------------------------
 

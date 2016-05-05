@@ -7,9 +7,9 @@
 /* Deselect the card and release SPI bus                                 */
 /*-----------------------------------------------------------------------*/
 
-static void release_spi (void)
+void release_spi (void)
 {
-	deselect();
+	//deselect();
 	rcv_spi();
 }
 
@@ -18,11 +18,7 @@ static void release_spi (void)
 /* Send a command packet to MMC                                          */
 /*-----------------------------------------------------------------------*/
 
-static
-BYTE send_cmd (
-	BYTE cmd,		/* Command byte */
-	DWORD arg		/* Argument */
-)
+BYTE send_cmd (BYTE cmd, DWORD arg)
 {
 	BYTE n, res;
 
@@ -34,9 +30,9 @@ BYTE send_cmd (
 	}
 
 	/* Select the card and wait for ready */
-	deselect();
+	//deselect();
 	rcv_spi();
-	select();
+	//select();
 	rcv_spi();
 
 	/* Send command packet */
@@ -81,7 +77,7 @@ DSTATUS disk_initialize (void)
 	init_spi();		/* Initialize USI */
 
 	for (tmr = 10; tmr; tmr--) rcv_spi();	/* Dummy clocks */
-	select();
+	//select();
 	for (tmr = 600; tmr; tmr--) rcv_spi();	/* Dummy clocks */
 
 	ty = 0;

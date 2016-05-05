@@ -9,6 +9,9 @@
 #endif
 .list
 
+#define F_CPU 8000000L
+#define MODE 0
+
 #define	_FLAGS	_SFR_IO_ADDR(GPIOR0)
 
 #ifdef MODE
@@ -19,9 +22,6 @@
 #endif
 #endif
 #define B_CS	3
-
-
-
 
 ;---------------------------------------------------------------------------;
 ; Simple Delay
@@ -67,7 +67,7 @@
 init_spi:
 	ldi	r24, (1 << USICS1)		; Enable only SCK and DI. DO is controlled by software
 	out	_SFR_IO_ADDR(USICR), r24
-	;sbi	_SFR_IO_ADDR(PORTB), B_DO	; MMC DI = H
+	sbi	_SFR_IO_ADDR(PORTB), B_DO	; MMC DI = H
 	;sbi	_SFR_IO_ADDR(PORTB), B_CS	; MMC CS = H
 	ret
 .endfunc

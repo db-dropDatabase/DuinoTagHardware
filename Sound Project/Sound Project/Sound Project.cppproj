@@ -20,12 +20,12 @@
     <OverrideVtor>false</OverrideVtor>
     <CacheFlash>true</CacheFlash>
     <ProgFlashFromRam>true</ProgFlashFromRam>
-    <RamSnippetAddress />
+    <RamSnippetAddress>0x20000000</RamSnippetAddress>
     <UncachedRange />
     <preserveEEPROM>true</preserveEEPROM>
-    <OverrideVtorValue />
+    <OverrideVtorValue>exception_table</OverrideVtorValue>
     <BootSegment>2</BootSegment>
-    <eraseonlaunchrule>1</eraseonlaunchrule>
+    <eraseonlaunchrule>0</eraseonlaunchrule>
     <AsfFrameworkConfig>
       <framework-data xmlns="">
         <options />
@@ -38,6 +38,19 @@
         </dependencies>
       </framework-data>
     </AsfFrameworkConfig>
+    <avrtool>com.atmel.avrdbg.tool.simulator</avrtool>
+    <avrtoolserialnumber />
+    <avrdeviceexpectedsignature>0x1E930B</avrdeviceexpectedsignature>
+    <com_atmel_avrdbg_tool_simulator>
+      <ToolOptions xmlns="">
+        <InterfaceProperties>
+        </InterfaceProperties>
+      </ToolOptions>
+      <ToolType xmlns="">com.atmel.avrdbg.tool.simulator</ToolType>
+      <ToolNumber xmlns="">
+      </ToolNumber>
+      <ToolName xmlns="">Simulator</ToolName>
+    </com_atmel_avrdbg_tool_simulator>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <ToolchainSettings>
@@ -149,11 +162,10 @@
         <avrgcccpp.assembler.debugging.DebugLevel>Default (-Wa,-g)</avrgcccpp.assembler.debugging.DebugLevel>
       </AvrGccCpp>
     </ToolchainSettings>
-    <UsesExternalMakeFile>True</UsesExternalMakeFile>
-    <OutputDirectory>C:\Users\Noah\Documents\Atmel Studio\7.0\Sound Project\Sound Project</OutputDirectory>
+    <UsesExternalMakeFile>False</UsesExternalMakeFile>
     <BuildTarget>all program</BuildTarget>
     <CleanTarget>clean</CleanTarget>
-    <ExternalMakeFilePath>C:\Users\Noah\Documents\Atmel Studio\7.0\Sound Project\Sound Project\make</ExternalMakeFilePath>
+    <ExternalMakeFilePath>C:\Users\Noah\Documents\code\lasertag\lasertag\DuinoTagHardware\Sound Project\Sound Project\make</ExternalMakeFilePath>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="asmfunc.S">
@@ -168,9 +180,6 @@
     <Compile Include="main.c">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="main2.cpp">
-      <SubType>compile</SubType>
-    </Compile>
     <Compile Include="mmc.c">
       <SubType>compile</SubType>
     </Compile>
@@ -183,27 +192,6 @@
     <Compile Include="pff.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="TinyWire\TinyWireS.cpp">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="TinyWire\TinyWireS.hpp">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="TinyWire\usiTwiSlave.c">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="TinyWire\usiTwiSlave.h">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="xitoa.h">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="xitoa.S">
-      <SubType>compile</SubType>
-    </Compile>
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="TinyWire" />
   </ItemGroup>
   <ItemGroup>
     <None Include="make">

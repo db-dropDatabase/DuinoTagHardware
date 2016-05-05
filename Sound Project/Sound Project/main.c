@@ -12,6 +12,8 @@
 / * Redistributions of source code must retain the above copyright notice.
 /
 /----------------------------------------------------------------------------*/
+#define F_CPU 8000000L
+#define MODE 0
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -19,6 +21,7 @@
 #include <avr/wdt.h>
 #include <util/delay.h>
 #include <stdbool.h>
+#include <string.h>
 #include "pff.h"
 #include "mmc.h"
 
@@ -67,8 +70,8 @@ FILINFO Fno;		/* File information */
 
 WORD rb;			/* Return value. Put this here to avoid avr-gcc's bug */
 
-volatile uint8_t filename;
-volatile bool newFile;
+volatile uint8_t filename = 1;
+volatile bool newFile = true;
 /*---------------------------------------------------------*/
 
 static char filenameRef[3][16] ={
@@ -165,11 +168,7 @@ void ramp (
 
 
 
-static
-FRESULT play (
-	const char *dir,	/* Directory */
-	const char *fn		/* File */
-)
+static FRESULT play (const char *dir,	/* Directory */const char *fn		/* File */)
 {
 	DWORD sz;
 	FRESULT res;
@@ -178,7 +177,6 @@ FRESULT play (
 
 
 	wdt_reset();
-
 	res = pf_open((char*)Buff);		/* Open sound file */
 	if (res == FR_OK) {
 		sz = load_header();			/* Check file format and ready to play */
@@ -208,7 +206,8 @@ FRESULT play (
 			sz -= rb;					/* Decrease data counter */
 
 			sw <<= 1;					/* Break on button down */
-		} while (!newFile || ++sw != 1); //break on filename change
+			PORTB |= (1 << CS);
+		} while ((PINB & 1) || ++sw != 1);
 	}
 
 	while (FifoCt) ;			/* Wait for audio FIFO empty */
@@ -256,71 +255,75 @@ int main (void)
 	MCUSR = 0; //Clear any reset status flags
 	wdt_enable(WDTO_2S);
 
-	PORTB = 0b101001;		/* Initialize port: - - H L H L L P */
-	DDRB  = 0b111110 & ~(1 << CS);
+	PORTB = 0b101001 & ~(1 << CS);		/* Initialize port: - - H L H L L P */
+	DDRB  = 0b111110 | (1 << CS);
 	
-	SETUP_PIN_CHANGE;
-	DISABLE_PIN_INTR;
+	//SETUP_PIN_CHANGE;
+	//DISABLE_PIN_INTR;
 	
 	set_sleep_mode(SLEEP_MODE_PWR_DOWN);	//set power down mode
 	sleep_enable();
 
 	sei();
-
-	PORTB &= ~(1 << PB1);
-	delay_ms(500);
-	PORTB |= (1 << PB1);
-	delay_ms(500);
-
 	wdt_reset();
 
-	init_spi();
-	spi_master();
-	
-	//setup sdcard
-	if(pf_mount(&Fs) == FR_OK){
-		Buff[0] = 0;
-		if (!pf_open("osccal")) pf_read(Buff, 1, &rb);	/* Adjust frequency */
-		OSCCAL = org_osc + Buff[0];
+	PORTB |= (1 << CS);
+	delay_ms(200);
+	PORTB &= ~(1 << CS);
+	delay_ms(100);
 
-		res = pf_opendir(&Dir, dir = "sounds");	/* Open sound file directory */
-		if (res == FR_NO_PATH)
-		res = pf_opendir(&Dir, dir = "");	/* Open root directory */
-	}
-
-	ENABLE_PIN_INTR; //ready up
-	
 	for (;;) {
-		TCCR0B = 0; TCCR0A = 0;	/* Stop TC0 */
-		if (TCCR1) {	/* Stop TC1 if enabled */
-			ramp(0);
-			TCCR1 = 0; GTCCR = 0;
-		}
-		wdt_disable();
-		while(!newFile) sleep_cpu(); //Sleep until interrupt changes filename
-		wdt_enable(WDTO_2S);
-		
-		while (res == FR_OK) {				/* Play until find file */
+		wdt_reset();
+		if (pf_mount(&Fs) == FR_OK) {	/* Initialize FS */
+			Buff[0] = 0;
+			if (!pf_open("osccal")) pf_read(Buff, 1, &rb);	/* Adjust frequency */
+			OSCCAL = org_osc + Buff[0];
+
+			res = pf_opendir(&Dir, dir = "wav");	/* Open sound file directory */
+			if (res == FR_NO_PATH) res = pf_opendir(&Dir, dir = "");	/* Open root directory */
+
 			wdt_reset();
-			res = pf_readdir(&Dir, &Fno);		/* Get a dir entry */
-			if (res || !Fno.fname[0]) break;	/* Break on error or end of dir */
-			if (!(Fno.fattrib & (AM_DIR|AM_HID)) && Fno.fname == filenameRef[filename]){ //check if equal to requested file name
-				newFile = false;
-				res = play(dir, Fno.fname);		/* Play file */
-				break; //finish playing files
+
+			while (res == FR_OK) {				/* Repeat in the dir */
+				res = pf_readdir(&Dir, 0);			/* Rewind dir */
+
+				//sleep_enable();
+				wdt_disable();
+				while(!newFile) sleep_cpu();
+				wdt_enable(WDTO_2S);
+
+				while (res == FR_OK) {				/* Play all wav files in the dir */
+					wdt_reset();
+					res = pf_readdir(&Dir, &Fno);		/* Get a dir entry */
+					if (res || !Fno.fname[0]) break;	/* Break on error or end of dir */
+					if (!(Fno.fattrib & (AM_DIR|AM_HID)) && strstr(Fno.fname, ".WAV")){
+						newFile = false;
+						res = play(dir, Fno.fname);		/* Play file */
+
+						//break;
+					}
+				}
+				PORTB &= ~(1 << CS);
+				newFile = true;
 			}
 		}
+		delay_ms(200);
 	}
 }
 
 ISR(PCINT0_vect) //CS is High
 {
-	spi_slave();
+	if(PINB & (1 << CS)){
+		spi_slave();
 
-	while(PINB & (1 << CS)); //wait until CS is low, meaning transmission is done
+		while(PINB & (1 << CS)); //wait until CS is low, meaning transmission is done
 
-	filename = (uint8_t)USIDR;
-	newFile = true;
+		filename = (uint8_t)USIDR;
+		USIDR = 0;
+		newFile = true;
 
-	spi_master();
+		sleep_disable();
+
+		spi_master();
+	}
 }
