@@ -73,6 +73,32 @@ init_spi:
 .endfunc
 
 
+;---------------------------------------------------------------------------;
+; Set USI to slave mode
+;
+; void spi_slave (void);
+
+.global spi_slave
+.func spi_slave
+	spi_slave:
+	cbi _SFR_IO_ADDR(DDRB), 2 ; Set clock to input
+	ret
+.endfunc
+
+;---------------------------------------------------------------------------;
+; Set USI to master mode
+;
+; void spi_master (void);
+
+.global spi_master
+.func spi_master
+	spi_master:
+	sbi _SFR_IO_ADDR(DDRB), 2 ; Set clock to output
+	ldi r24, (1 << USIOIF)
+	out _SFR_IO_ADDR(USISR), r24 ; Clear the USI status register just in case
+	ret
+.endfunc
+
 
 ;---------------------------------------------------------------------------;
 ; Control CS

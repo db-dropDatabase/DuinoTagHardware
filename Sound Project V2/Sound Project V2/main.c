@@ -36,6 +36,8 @@
 #define FCC(c1,c2,c3,c4)	(((DWORD)c4<<24)+((DWORD)c3<<16)+((WORD)c2<<8)+(BYTE)c1)	/* FourCC */
 
 void delay_us (WORD);	/* Defined in asmfunc.S */
+void spi_slave (void);
+void spi_master (void);
 
 /*---------------------------------------------------------*/
 /* Work Area                                               */
@@ -55,11 +57,7 @@ WORD rb;			/* Return value. Put this here to avoid avr-gcc's bug */
 volatile uint8_t filename = 0;
 volatile bool newFile = false;
 
-static char filenameRef[3][16] ={
-	{'b','e','e','p','.','w','a','v'},
-	{'p','e','w','.','w','a','v'},
-	{'d','e','a','d','.','w','a','v'}
-};
+//char filenameRef[3][5];
 
 
 /*---------------------------------------------------------*/
@@ -240,6 +238,10 @@ int main (void)
 	char *dir;
 	BYTE org_osc = OSCCAL;
 
+	//strcpy(filenameRef[0], "beep");
+	//strcpy(filenameRef[1], "pew");
+	//strcpy(filenameRef[2], "dead");
+
 	MCUSR = 0;
 	WDTCR = _BV(WDE) | 0b110;	/* Enable WDT reset in timeout of 1s */
 
@@ -289,19 +291,22 @@ int main (void)
 
 
 ISR(PCINT0_vect){
-	if(!(PINB & (1 << CS))){
-		//spi_slave();
+	if((PINB & (1 << CS))){
+		spi_slave();
 
 		newFile = true;
 
-		while(!(PINB & (1 << CS))) wdt_reset(); //wait until CS is low, meaning transmission is done
+		while((PINB & (1 << CS))) wdt_reset(); //wait until CS is low, meaning transmission is done
 
-		//filename = (uint8_t)USIDR;
-		//USIDR = 0;
-		//newFile = true;
+		uint8_t file = USIDR;
+		USIDR = 0;
 
-		//sleep_disable();
+		if(file > 0 && file < 4){
+			filename = file - 1;
+		}
 
-		//spi_master();
+		sleep_disable();
+
+		spi_master();
 	}
 }
