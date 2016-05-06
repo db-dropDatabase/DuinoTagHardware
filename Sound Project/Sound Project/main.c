@@ -23,34 +23,17 @@
 #include <string.h>
 #include "pff.h"
 #include "mmc.h"
+#include "xitoa.h"
 
 #define CS PB3
 
 //setup pin change interrupt
 #define SETUP_PIN_CHANGE PCMSK |= (1 << CS)
 //enable pin change interrupt
-#define ENABLE_PIN_INTR GIMSK |= 0b00100000
-#define DISABLE_PIN_INTR GIMSK &= 0b11011111
-
-#ifndef MODE
-#error Wrong make file.
-#endif
-#if   MODE == 0	/* Single output */
-//FUSES = {0xE1, 0xDD, 0xFF};	/* Fuse bytes for mono: Low, High and Extended */
-#else			/* Dual output */
-//FUSES = {0xE1, 0x7D, 0xFF};	/* Fuse bytes for stereo and mono-HR: Low, High and Extended (*HVS mode only*) */
-#endif
-/* This is the fuse settings of this project. The fuse data will be included
-in the output hex file with program code. However some old flash programmers
-cannot load the fuse bits from hex file. If it is the case, remove this line
-and use these values to program the fuse bits. */
-
+#define ENABLE_PIN_INTR GIMSK |= (1 << PCIE)
+#define DISABLE_PIN_INTR GIMSK &= ~(1 << PCIE)
 
 #define FCC(c1,c2,c3,c4)	(((DWORD)c4<<24)+((DWORD)c3<<16)+((WORD)c2<<8)+(BYTE)c1)	/* FourCC */
-
-//void delay_us (WORD);	/* Defined in asmfunc.S */
-
-
 
 /*---------------------------------------------------------*/
 /* Work Area                                               */
@@ -66,8 +49,8 @@ FILINFO Fno;		/* File information */
 
 WORD rb;			/* Return value. Put this here to avoid avr-gcc's bug */
 
-volatile uint8_t filename = 1;
-volatile bool newFile = true;
+volatile uint8_t filename = 0;
+volatile bool newFile = false;
 /*---------------------------------------------------------*/
 
 static char filenameRef[3][16] ={
@@ -169,8 +152,9 @@ static FRESULT play (const char *dir,	/* Directory */const char *fn		/* File */)
 	BYTE sw;
 	WORD btr;
 
-
 	wdt_reset();
+
+	xsprintf((char*)Buff, PSTR("%s/%s"), dir, fn);
 	res = pf_open((char*)Buff);		/* Open sound file */
 	if (res == FR_OK) {
 		sz = load_header();			/* Check file format and ready to play */
@@ -201,7 +185,7 @@ static FRESULT play (const char *dir,	/* Directory */const char *fn		/* File */)
 
 			sw <<= 1;					/* Break on button down */
 			//PORTB |= (1 << CS);
-		} while ((PINB & 1) || ++sw != 1);
+		} while (!newFile || ++sw != 1);
 		//PORTB &= ~(1 << CS);
 	}
 
@@ -253,10 +237,10 @@ int main (void)
 	PORTB = 0b101001;		/* Initialize port: - - H L H L L P */
 	DDRB  = 0b111110;
 	
-	//SETUP_PIN_CHANGE;
-	//DISABLE_PIN_INTR;
+	SETUP_PIN_CHANGE;
+	DISABLE_PIN_INTR;
 	
-	//set_sleep_mode(SLEEP_MODE_PWR_DOWN);	//set power down mode
+	set_sleep_mode(SLEEP_MODE_PWR_DOWN);	//set power down mode
 	sleep_disable();
 
 	sei();
@@ -276,7 +260,7 @@ int main (void)
 			while (res == FR_OK) {				/* Repeat in the dir */
 				res = pf_readdir(&Dir, 0);			/* Rewind dir */
 
-				//sleep_enable();
+				sleep_enable();
 				wdt_disable();
 				while(!newFile) sleep_cpu();
 				wdt_enable(WDTO_2S);
@@ -286,9 +270,9 @@ int main (void)
 					res = pf_readdir(&Dir, &Fno);		/* Get a dir entry */
 					if (res || !Fno.fname[0]) break;	/* Break on error or end of dir */
 					if (!(Fno.fattrib & (AM_DIR|AM_HID)) && strstr(Fno.fname, ".WAV")){
-						//newFile = false;
+						newFile = false;
 						res = play(dir, Fno.fname);		/* Play file */
-						//break;
+						break;
 					}
 				}
 			}
@@ -299,7 +283,6 @@ int main (void)
 
 ISR(PCINT0_vect) //CS is High
 {
-	/*
 	if(PINB & (1 << CS)){
 		spi_slave();
 
@@ -313,5 +296,4 @@ ISR(PCINT0_vect) //CS is High
 
 		spi_master();
 	}
-	*/
 }
