@@ -53,12 +53,8 @@ FILINFO Fno;		/* File information */
 
 WORD rb;			/* Return value. Put this here to avoid avr-gcc's bug */
 
-
-volatile uint8_t filename = 0;
+volatile char *filename = NULL;
 volatile bool newFile = false;
-
-//char filenameRef[3][5];
-
 
 /*---------------------------------------------------------*/
 
@@ -238,10 +234,6 @@ int main (void)
 	char *dir;
 	BYTE org_osc = OSCCAL;
 
-	//strcpy(filenameRef[0], "beep");
-	//strcpy(filenameRef[1], "pew");
-	//strcpy(filenameRef[2], "dead");
-
 	MCUSR = 0;
 	WDTCR = _BV(WDE) | 0b110;	/* Enable WDT reset in timeout of 1s */
 
@@ -277,8 +269,9 @@ int main (void)
 					wdt_reset();
 					res = pf_readdir(&Dir, &Fno);		/* Get a dir entry */
 					if (res || !Fno.fname[0]) break;	/* Break on error or end of dir */
-					if (!(Fno.fattrib & (AM_DIR|AM_HID)) && strstr(Fno.fname, ".WAV")){
+					if (!(Fno.fattrib & (AM_DIR|AM_HID)) && strstr(Fno.fname, (const char *)filename)){
 						newFile = false;
+						filename = NULL;
 						res = play(dir, Fno.fname);		/* Play file */
 						break; //break on correct file
 					}
@@ -291,21 +284,23 @@ int main (void)
 
 
 ISR(PCINT0_vect){
-	if((PINB & (1 << CS))){
+	if(PINB & (1 << CS)){
 		spi_slave();
 
-		newFile = true;
-
-		while((PINB & (1 << CS))) wdt_reset(); //wait until CS is low, meaning transmission is done
-
-		uint8_t file = USIDR;
-		USIDR = 0;
-
-		if(file > 0 && file < 4){
-			filename = file - 1;
+		while(PINB & (1 << CS)) { //wait until CS is low, meaning transmission is done
+			wdt_reset();
+			if(USISR & (1 << USIOIF)){
+				const char *buff = USIDR;
+				filename = strcat((char *)filename, buff);
+				USIDR = 0;
+				USISR |= (1 << USIOIF);
+			}
 		}
 
-		sleep_disable();
+		if(filename != NULL){
+			newFile = true;
+			sleep_disable();
+		}
 
 		spi_master();
 	}
