@@ -5,12 +5,12 @@
  * Author : Noah
  */ 
 
- #define F_CPU 8000000L
+ #define F_CPU 8000000
 
 #include <avr/io.h>
 #include <util/delay.h>
 
-#define LED PB0
+#define LED PB1
 #define CS PB2
 #define MOSI PB3
 #define MISO PB4
@@ -30,7 +30,7 @@ int main(void)
 
 	//blink
 	PORTB |= (1 << LED);
-	_delay_ms(200);
+	_delay_ms(500);
 	PORTB &= ~(1 << LED);
 	_delay_ms(100);
 

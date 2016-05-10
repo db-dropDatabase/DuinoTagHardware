@@ -53,7 +53,7 @@ FILINFO Fno;		/* File information */
 
 WORD rb;			/* Return value. Put this here to avoid avr-gcc's bug */
 
-volatile char *filename = NULL;
+volatile char *filename = '\0';
 volatile bool newFile = false;
 
 /*---------------------------------------------------------*/
@@ -271,7 +271,7 @@ int main (void)
 					if (res || !Fno.fname[0]) break;	/* Break on error or end of dir */
 					if (!(Fno.fattrib & (AM_DIR|AM_HID)) && strstr(Fno.fname, (const char *)filename)){
 						newFile = false;
-						filename = NULL;
+						filename = (char*)'\0';
 						res = play(dir, Fno.fname);		/* Play file */
 						break; //break on correct file
 					}
@@ -289,15 +289,16 @@ ISR(PCINT0_vect){
 
 		while(PINB & (1 << CS)) { //wait until CS is low, meaning transmission is done
 			wdt_reset();
-			if(USISR & (1 << USIOIF)){
-				const char *buff = USIDR;
-				filename = strcat((char *)filename, buff);
-				USIDR = 0;
-				USISR |= (1 << USIOIF);
+			if(USISR & (1 << USIOIF)){ //if USIDR is full
+				const char *buff = USIDR; //read USIDR
+				buff += '\0'; //add null term for strcat
+				filename = strcat((char *)filename, buff); //append whatever character received to filename string
+				USIDR = (uint8_t)buff[0]; //send it back for debugging
+				USISR |= (1 << USIOIF); //reset USI
 			}
 		}
 
-		if(filename != NULL){
+		if(filename != '\0'){
 			newFile = true;
 			sleep_disable();
 		}
