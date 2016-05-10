@@ -243,6 +243,8 @@ int main (void)
 	SETUP_PIN_CHANGE;
 	ENABLE_PIN_INTR;
 
+	set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+
 	sei();
 
 	for (;;) {
@@ -294,7 +296,7 @@ ISR(PCINT0_vect){
 				buff += '\0'; //add null term for strcat
 				filename = strcat((char *)filename, buff); //append whatever character received to filename string
 				USIDR = (uint8_t)buff[0]; //send it back for debugging
-				USISR |= (1 << USIOIF); //reset USI
+				USISR = (1 << USIOIF); //reset USI
 			}
 		}
 

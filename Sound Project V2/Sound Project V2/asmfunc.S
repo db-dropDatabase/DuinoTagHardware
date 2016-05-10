@@ -81,7 +81,10 @@ init_spi:
 .global spi_slave
 .func spi_slave
 	spi_slave:
-	cbi _SFR_IO_ADDR(DDRB), 2 ; Set clock to input
+	ldi r24, (1 << PB4) | (1 << PB1) ; Set SCK to input, MISO to output, MOSI to input, and keep rest of pins original
+	out _SFR_IO_ADDR(DDRB), r24
+	ldi r24, (1 << PB0) | (1 << PB2) | (1 << PB3) ;set up approprite pullups
+	out _SFR_IO_ADDR(PORTB), r24
 	ret
 .endfunc
 
@@ -93,9 +96,10 @@ init_spi:
 .global spi_master
 .func spi_master
 	spi_master:
-	sbi _SFR_IO_ADDR(DDRB), 2 ; Set clock to output
-	ldi r24, (1 << USIOIF)
-	out _SFR_IO_ADDR(USISR), r24 ; Clear the USI status register just in case
+	ldi r24, ~((1 << PB3) | (1 << PB1)) ;reset pin directions
+	out _SFR_IO_ADDR(DDRB), r24
+	ldi r24, (1 << PB3) | (1 << PB1) ;reset pullups
+	out _SFR_IO_ADDR(PORTB), r24
 	ret
 .endfunc
 
