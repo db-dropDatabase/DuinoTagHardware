@@ -22,17 +22,40 @@
 #define ENABLE_PIN_INTR GIMSK |= (1 << PCIE)
 #define DISABLE_PIN_INTR GIMSK &= ~(1 << PCIE)
 
-volatile char *filename = '\0';
+volatile char filename[4] = "";
 volatile bool newFile = false;
 
 void init_spi(void);
 void spi_slave(void);
 void spi_master(void);
 
+static inline void new_spi_slave(){
+	DDRB &= ~(1 << PB2);
+	USICR |= (1 << USIWM0);
+	USISR = (1 << USIOIF);
+	USIDR = 0;
+}
+
+static inline void new_spi_master(){
+	DDRB |= (1 << PB2);
+	USICR &= ~(1 << USIWM0);
+	USISR = (1 << USIOIF);
+	USIDR = 0;
+}
+
+static inline void new_init_spi(){
+	USICR = (1 << USICS1);
+}
+
 int main(void)
 {	
-	init_spi();
-	spi_master();
+	cli();
+
+	DDRB  = 0b111110 & ~(1 << CS);
+	PORTB = 0b101001 | (1 << CS);		/* Initialize port: - - H L H L L P */
+
+	new_init_spi();
+	new_spi_master();
 
 	SETUP_PIN_CHANGE;
 	ENABLE_PIN_INTR;
@@ -45,34 +68,43 @@ int main(void)
 	PORTB &= ~(1 << PB4);
 	_delay_ms(100);
 
+	sei();
+
     /* Replace with your application code */
     while (1) 
     {
-		while(!newFile) sleep_cpu();
-		_delay_ms(200);
-		PORTB &= ~(1 << LED);
+		//while(!newFile) sleep_cpu();
     }
 }
 
 
 ISR(PCINT0_vect){
-	spi_slave();
 	if(PINB & (1 << CS)){
+		new_spi_slave();
+		newFile = true;
 		while(PINB & (1 << CS)) { //wait until CS is low, meaning transmission is done
-			wdt_reset();
 			if(USISR & (1 << USIOIF)){ //if USIDR is full
-				const char *buff = USIDR; //read USIDR
-				buff += '\0'; //add null term for strcat
-				filename = strcat((char *)filename, buff); //append whatever character received to filename string
-				USIDR = (char)buff[0]; //send it back for debugging
-				USISR = (1 << USIOIF); //reset USI
+				const char temp = USIDR;
+				for(uint8_t i=0; i<4; i++){ //copy char into next slot
+					if(filename[i] == '\0'){
+						filename[i] = temp;
+						filename[i+1] = '\0';
+						break;
+					}
+				}
+
+				USIDR = filename[0];
+				USISR = (1 << USIOIF);
 			}
 		}
 
-		if(filename != '\0'){
-			newFile = true;
-			PORTB |= (1 << LED);
+		const char *temp = (const char *)filename;
+
+		if(strstr("BEE BEE MCBEEFACE (that should do it)", temp)){
+			PORTB |= (1 << LED); //Woohoo!
 		}
+
+		newFile = false;
+		new_spi_master();
 	}
-	spi_master();
 }

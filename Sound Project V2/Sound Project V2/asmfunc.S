@@ -72,38 +72,6 @@ init_spi:
 	ret
 .endfunc
 
-
-;---------------------------------------------------------------------------;
-; Set USI to slave mode
-;
-; void spi_slave (void);
-
-.global spi_slave
-.func spi_slave
-	spi_slave:
-	ldi r24, (1 << PB4) | (1 << PB1) ; Set SCK to input, MISO to output, MOSI to input, and keep rest of pins original
-	out _SFR_IO_ADDR(DDRB), r24
-	ldi r24, (1 << PB0) | (1 << PB2) | (1 << PB3) ;set up approprite pullups
-	out _SFR_IO_ADDR(PORTB), r24
-	ret
-.endfunc
-
-;---------------------------------------------------------------------------;
-; Set USI to master mode
-;
-; void spi_master (void);
-
-.global spi_master
-.func spi_master
-	spi_master:
-	ldi r24, ~((1 << PB3) | (1 << PB1)) ;reset pin directions
-	out _SFR_IO_ADDR(DDRB), r24
-	ldi r24, (1 << PB3) | (1 << PB1) ;reset pullups
-	out _SFR_IO_ADDR(PORTB), r24
-	ret
-.endfunc
-
-
 ;---------------------------------------------------------------------------;
 ; Control CS
 ;

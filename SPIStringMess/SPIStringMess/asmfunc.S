@@ -31,7 +31,7 @@
 init_spi:
 	ldi	r24, 0b00001000			; Enable only SCK and DI. DO is controlled by software
 	out	_SFR_IO_ADDR(USICR), r24
-	sbi	_SFR_IO_ADDR(PORTB), B_DO	; MMC DI = H
+	;sbi	_SFR_IO_ADDR(PORTB), B_DO	; MMC DI = H
 	;sbi	_SFR_IO_ADDR(PORTB), B_CS	; MMC CS = H
 	ret
 .endfunc
@@ -45,10 +45,12 @@ init_spi:
 .global spi_slave
 .func spi_slave
 	spi_slave:
-	ldi r24, (1 << PB4) | (1 << PB1); Set SCK to input, MISO to output, MOSI to input, and keep rest of pins original
-	out _SFR_IO_ADDR(DDRB), r24
-	ldi r24, (1 << PB0) | (1 << PB2) | (1 << PB3) ;set up approprite pullups
-	out _SFR_IO_ADDR(PORTB), r24
+	cbi _SFR_IO_ADDR(DDRB), PB2 ;set clock pin input
+	sbi _SFR_IO_ADDR(USICR), USIWM0 ;set USI for slave mode
+	ldi r24, (1 << USIOIF)
+	out _SFR_IO_ADDR(USISR), r24 ;reset USI bus
+	clr r24
+	out _SFR_IO_ADDR(USIDR), r24 ;clear resudual USI data
 	ret
 .endfunc
 
@@ -60,9 +62,11 @@ init_spi:
 .global spi_master
 .func spi_master
 	spi_master:
-	ldi r24, ~((1 << PB3) | (1 << PB1)) ;reset pin directions
-	out _SFR_IO_ADDR(DDRB), r24
-	ldi r24, (1 << PB3) | (1 << PB1) ;reset pullups
-	out _SFR_IO_ADDR(PORTB), r24
+	clr r24
+	out _SFR_IO_ADDR(USIDR), r24 ;clear resudual USI data
+	ldi r24, (1 << USIOIF)
+	out _SFR_IO_ADDR(USISR), r24 ;and wipe status just in case
+	sbi _SFR_IO_ADDR(DDRB), PB2 ; set clock pin output
+	cbi _SFR_IO_ADDR(USICR), USIWM0; set USI back to original state
 	ret
 .endfunc

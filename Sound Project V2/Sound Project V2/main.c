@@ -36,8 +36,6 @@
 #define FCC(c1,c2,c3,c4)	(((DWORD)c4<<24)+((DWORD)c3<<16)+((WORD)c2<<8)+(BYTE)c1)	/* FourCC */
 
 void delay_us (WORD);	/* Defined in asmfunc.S */
-void spi_slave (void);
-void spi_master (void);
 
 /*---------------------------------------------------------*/
 /* Work Area                                               */
@@ -53,10 +51,28 @@ FILINFO Fno;		/* File information */
 
 WORD rb;			/* Return value. Put this here to avoid avr-gcc's bug */
 
-volatile char *filename = '\0';
+volatile char filename[4] = "";
 volatile bool newFile = false;
 
 /*---------------------------------------------------------*/
+
+static inline void new_spi_slave(){
+	DDRB &= ~(1 << PB2);
+	USICR |= (1 << USIWM0);
+	USISR = (1 << USIOIF);
+	USIDR = 0;
+}
+
+static inline void new_spi_master(){
+	DDRB |= (1 << PB2);
+	USICR &= ~(1 << USIWM0);
+	USISR = (1 << USIOIF);
+	USIDR = 0;
+}
+
+static inline void new_init_spi(){
+	USICR = (1 << USICS1);
+}
 
 static
 DWORD load_header (void)	/* 0:Invalid format, 1:I/O error, >=1024:Number of samples */
@@ -217,7 +233,8 @@ void delay500 (void)
 	sleep_mode();
 
 	wdt_reset();
-	WDTCR = _BV(WDE) | 0b110;				/* Set WDT to reset mode in timeout of 1s */
+	//WDTCR = _BV(WDE) | 0b110;				/* Set WDT to reset mode in timeout of 1s */
+	wdt_enable(WDTO_2S);
 }
 
 
@@ -234,8 +251,10 @@ int main (void)
 	char *dir;
 	BYTE org_osc = OSCCAL;
 
+	cli();
+
 	MCUSR = 0;
-	WDTCR = _BV(WDE) | 0b110;	/* Enable WDT reset in timeout of 1s */
+	wdt_enable(WDTO_2S);
 
 	DDRB  = 0b111110 & ~(1 << CS);
 	PORTB = 0b101001 | (1 << CS);		/* Initialize port: - - H L H L L P */
@@ -244,6 +263,8 @@ int main (void)
 	ENABLE_PIN_INTR;
 
 	set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+
+	new_init_spi();
 
 	sei();
 
@@ -264,7 +285,7 @@ int main (void)
 				wdt_disable();
 				sleep_enable();
 				while(!newFile) sleep_cpu();
-				WDTCR = _BV(WDE) | _BV(WDIE) | 0b101;	/* Set WDT to interrupt mode in timeout of 0.5s */
+				wdt_enable(WDTO_2S);
 				
 
 				while (res == FR_OK) {				/* Play all wav files in the dir */
@@ -273,38 +294,42 @@ int main (void)
 					if (res || !Fno.fname[0]) break;	/* Break on error or end of dir */
 					if (!(Fno.fattrib & (AM_DIR|AM_HID)) && strstr(Fno.fname, (const char *)filename)){
 						newFile = false;
-						filename = (char*)'\0';
+						filename[0] = '\0';
 						res = play(dir, Fno.fname);		/* Play file */
 						break; //break on correct file
 					}
 				}
 			}
 		}
-		delay500();			/* Delay 500ms in low power sleep mode */
+		delay500();
 	}
 }
 
 
 ISR(PCINT0_vect){
 	if(PINB & (1 << CS)){
-		spi_slave();
+		new_spi_slave();
 
 		while(PINB & (1 << CS)) { //wait until CS is low, meaning transmission is done
 			wdt_reset();
 			if(USISR & (1 << USIOIF)){ //if USIDR is full
-				const char *buff = USIDR; //read USIDR
-				buff += '\0'; //add null term for strcat
-				filename = strcat((char *)filename, buff); //append whatever character received to filename string
-				USIDR = (uint8_t)buff[0]; //send it back for debugging
-				USISR = (1 << USIOIF); //reset USI
+				const char temp = USIDR;
+				
+				USIDR = 0;
+				USISR = (1 << USIOIF);
+
+				for(uint8_t i=0; i<4; i++){ //copy char into next slot
+					if(filename[i] == '\0'){
+						filename[i] = temp;
+						filename[i+1] = '\0';
+						break;
+					}
+				}
 			}
 		}
+		
+		if(filename[0] != '\0') newFile = true;
 
-		if(filename != '\0'){
-			newFile = true;
-			sleep_disable();
-		}
-
-		spi_master();
+		new_spi_master();
 	}
 }
