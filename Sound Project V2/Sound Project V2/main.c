@@ -12,18 +12,18 @@
 / * Redistributions of source code must retain the above copyright notice.
 /
 /----------------------------------------------------------------------------*/
+#define MODE 0
+#define F_CPU 16000000L
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
 #include <avr/wdt.h>
+#include <util/delay.h>
 #include <string.h>
 #include <stdbool.h>
 #include "pff.h"
 #include "xitoa.h"
-
-#define MODE 0
-#define F_CPU 16000000L
 
 //setup pin change interrupt
 #define SETUP_PIN_CHANGE PCMSK |= (1 << CS)
@@ -251,20 +251,29 @@ int main (void)
 	char *dir;
 	BYTE org_osc = OSCCAL;
 
+	_delay_ms(200);
+
 	cli();
 
-	MCUSR = 0;
-	wdt_enable(WDTO_2S);
+	//wdt_enable(WDTO_2S);
 
-	DDRB  = 0b111110 & ~(1 << CS);
-	PORTB = 0b101001 | (1 << CS);		/* Initialize port: - - H L H L L P */
+	DDRB  = 0b111110 | (1 << CS);
+	PORTB = 0b101001 & ~(1 << CS);		/* Initialize port: - - H L H L L P */
 
-	SETUP_PIN_CHANGE;
-	ENABLE_PIN_INTR;
+	//SETUP_PIN_CHANGE;
+	//ENABLE_PIN_INTR;
 
 	set_sleep_mode(SLEEP_MODE_PWR_DOWN);
 
 	new_init_spi();
+
+	if(MCUSR & (1 << BORF)){
+		PORTB |= (1 << CS);
+		_delay_ms(200);
+		PORTB &= ~(1 << CS);
+		_delay_ms(200);
+	}
+	MCUSR = 0;
 
 	sei();
 
@@ -284,7 +293,7 @@ int main (void)
 
 				wdt_disable();
 				sleep_enable();
-				while(!newFile) sleep_cpu();
+				//while(!newFile) sleep_cpu();
 				wdt_enable(WDTO_2S);
 				
 
@@ -292,16 +301,16 @@ int main (void)
 					wdt_reset();
 					res = pf_readdir(&Dir, &Fno);		/* Get a dir entry */
 					if (res || !Fno.fname[0]) break;	/* Break on error or end of dir */
-					if (!(Fno.fattrib & (AM_DIR|AM_HID)) && strstr(Fno.fname, (const char *)filename)){
-						newFile = false;
-						filename[0] = '\0';
+					if (!(Fno.fattrib & (AM_DIR|AM_HID)) && strstr(Fno.fname, "BEE")){
+						//newFile = false;
+						//filename[0] = '\0';
+						PORTB |= (1 << CS);
 						res = play(dir, Fno.fname);		/* Play file */
 						break; //break on correct file
 					}
 				}
 			}
 		}
-		delay500();
 	}
 }
 
@@ -313,18 +322,22 @@ ISR(PCINT0_vect){
 		while(PINB & (1 << CS)) { //wait until CS is low, meaning transmission is done
 			wdt_reset();
 			if(USISR & (1 << USIOIF)){ //if USIDR is full
-				const char temp = USIDR;
+				//const char temp = USIDR;
 				
-				USIDR = 0;
+				USIDR = newFile;
 				USISR = (1 << USIOIF);
 
-				for(uint8_t i=0; i<4; i++){ //copy char into next slot
-					if(filename[i] == '\0'){
-						filename[i] = temp;
-						filename[i+1] = '\0';
-						break;
-					}
-				}
+				//for(uint8_t i=0; i<4; i++){ //copy char into next slot
+				//	if(filename[i] == '\0'){
+				//		filename[i] = temp;
+				//		filename[i+1] = '\0';
+				//		break;
+				//	}
+				filename[0] = 'B';
+				filename[1] = 'E';
+				filename[2] = 'E';
+				filename[3] = '\0';
+				//newFile = true;
 			}
 		}
 		
