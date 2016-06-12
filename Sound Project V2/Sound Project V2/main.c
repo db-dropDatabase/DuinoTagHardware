@@ -267,12 +267,11 @@ int main (void)
 
 	new_init_spi();
 
-	if(MCUSR & (1 << BORF)){
-		PORTB |= (1 << CS);
-		_delay_ms(200);
-		PORTB &= ~(1 << CS);
-		_delay_ms(200);
-	}
+	//PORTB |= (1 << CS);
+	//_delay_ms(200);
+	//PORTB &= ~(1 << CS);
+	//_delay_ms(200);
+
 	MCUSR = 0;
 
 	sei();
@@ -304,7 +303,7 @@ int main (void)
 					if (!(Fno.fattrib & (AM_DIR|AM_HID)) && strstr(Fno.fname, "BEE")){
 						//newFile = false;
 						//filename[0] = '\0';
-						PORTB |= (1 << CS);
+						//PORTB |= (1 << CS);
 						res = play(dir, Fno.fname);		/* Play file */
 						break; //break on correct file
 					}

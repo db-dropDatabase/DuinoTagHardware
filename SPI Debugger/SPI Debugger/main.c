@@ -11,6 +11,7 @@
 #include <util/delay.h>
 
 #define LED PB1
+#define BUTTON PB0
 #define CS PB2
 #define MOSI PB3
 #define MISO PB4
@@ -28,6 +29,9 @@ int main(void)
 	//Enable SPI, set master mode, f/64 speed
 	SPCR |= (1 << SPE) | (1 << MSTR) | (1 << SPR1);
 
+	//pull high
+	PORTB |= (1 << MOSI) | (1 << SCK);
+
 	//blink
 	PORTB |= (1 << LED);
 	_delay_ms(500);
@@ -36,25 +40,29 @@ int main(void)
 
     while (1) 
     {
-		//blink LED and enable CS
-		PORTB |= (1 << LED) | (1 << CS);
-		//transmit
-		SPDR = SONG1;
-		//and wait until done
-		while(!(SPSR & (1 << SPIF)));
-		_delay_ms(1);
-		//and do it again
-		SPDR = SONG2;
-		while(!(SPSR & (1 << SPIF)));
-		_delay_ms(1);
-		//and again
-		SPDR = SONG3;
-		while(!(SPSR & (1 << SPIF)));
-		_delay_ms(1);
-		//back to blinking
-		PORTB &= ~(1 << LED) & ~(1 << CS);
-		//wait for effect
-		_delay_ms(5000);
-    }
+		if(PINB & (1 << BUTTON)){
+			//blink LED and enable CS
+			PORTB |= (1 << LED) | (1 << CS);
+			//transmit
+			SPDR = SONG1;
+			//and wait until done
+			while(!(SPSR & (1 << SPIF)));
+			_delay_ms(1);
+			//and do it again
+			SPDR = SONG2;
+			while(!(SPSR & (1 << SPIF)));
+			_delay_ms(1);
+			//and again
+			SPDR = SONG3;
+			while(!(SPSR & (1 << SPIF)));
+			_delay_ms(1);
+			//back to blinking
+			PORTB &= ~(1 << LED) & ~(1 << CS);
+			//pull high
+			PORTB |= (1 << MOSI) | (1 << SCK);
+			//wait for effect
+			_delay_ms(5000);
+		}
+	}
 }
 
