@@ -16,12 +16,6 @@
 #include <string.h>
 #include <stdbool.h>
 
-//setup pin change interrupt
-#define SETUP_PIN_CHANGE PCMSK |= (1 << CS)
-//enable pin change interrupt
-#define ENABLE_PIN_INTR GIMSK |= (1 << PCIE)
-#define DISABLE_PIN_INTR GIMSK &= ~(1 << PCIE)
-
 volatile char filename[4] = "";
 volatile bool newFile = false;
 
@@ -56,9 +50,6 @@ int main(void)
 
 	new_init_spi();
 	new_spi_master();
-
-	SETUP_PIN_CHANGE;
-	ENABLE_PIN_INTR;
 
 	set_sleep_mode(SLEEP_MODE_PWR_DOWN);
 	sleep_enable();

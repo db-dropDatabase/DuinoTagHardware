@@ -5,48 +5,47 @@
  *  Author: Noah
  */ 
 
-//Single wire transmission protocol for ultra-small music player
+//Single wire song selection transmission protocol for ultra-small music player
 
 #ifndef ONEWIRE_H_
 #define ONEWIRE_H_
 
-#define PIN PB2
-#define REG PORTB
-
-#define HEAD iTime*4
-#define ONE iTime*2
-#define ZERO iTime
-#define SPACE iTime
+#define F_CPU 8000000L
 
 #include <util/delay.h>
+#include <avr/interrupt.h>
+#include <stdbool.h>
+#include <stdint-gcc.h>
 #include <string.h>
 
-const uint16_t iTime;
+#define PIN PB1
+#define DREG DDRB
+#define REG PORTB
+#define IN_REG PINB
+#define INT_VECT TIMER1_COMPA_vect
 
-static void OWsetup(uint16_t speed){
-	iTime = speed;
-}
+#define TICK_LEN 32
 
-static void OWSend(const char * string){
-	for(uint8_t i=0; i<strlen(string); i++){
-		REG |= (1 << PIN);
-		_delay_ms(HEAD);
-		REG &= ~(1 << PIN);
-		_delay_ms(SPACE)
+//# of ticks, so if a tick was 500us then a head trans. would be 8*500us long
+#define HEAD 16
+#define ONE 8
+#define ZERO 4
+#define SPACE 4
+#define TICK 1
 
-		for(uint8_t o=0; o<8; o++){
-			REG |= (1 << PIN);
+extern volatile bool finished;
+extern volatile char charBuf;
+extern volatile uint8_t charPlace;
+extern volatile char * stringBuf;
+extern volatile uint8_t ticks;
+extern volatile bool timingMark;
+extern volatile uint8_t tickStore[100];
+extern volatile uint8_t tickPlace;
 
-			if(string[i] & (1 << o))
-				_delay_ms(ONE);
-			else
-				_delay_ms(ZERO);
-
-			REG &= !(1 << PIN);
-			_delay_ms(SPACE)
-		}
-	}
-}
-
+extern void OWSetup(bool receive);
+extern uint8_t OWConvert(uint8_t ticks);
+extern void OWSend(const char * string);
+extern void OWCheckRecv(char * data);
+extern void callback(void);
 
 #endif /* ONEWIRE_H_ */
