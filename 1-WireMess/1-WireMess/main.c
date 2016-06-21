@@ -4,13 +4,13 @@
  * Created: 6/11/2016 5:20:12 PM
  * Author : Noah
  */
+ #define F_CPU 8000000L
+
 #include <avr/io.h>
 #include <stdbool.h>
 #include <util/delay.h>
 #include "OneWire.h"
 #include "BasicSerial.h"
-
-#define F_CPU 8000000L
 
 #define CS PB1
 
@@ -76,17 +76,9 @@ int main(void)
 			PORTB |= (1 << PB4);
 			serOut(temp);
 			serOut("\n");
-			for(uint8_t i=0; tickStore[i] != 0 && tickStore[i+1] != 0; i++){
-				char ray[4] = {};
-				serOut(itoa(tickStore[i], ray));
-				serOut(", ");
-			}
+			char temp2[2] = {};
+			serOut(itoa(memcmp(temp, "EEE", 3), temp2));
 			serOut("\n");
-			for(uint8_t i=0; i<sizeof(tickStore); i++){
-				tickStore[i] = 0;
-			}
-			tickPlace = 0;
-
 		}
 	}	
 }
