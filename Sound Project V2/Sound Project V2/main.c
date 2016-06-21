@@ -24,12 +24,7 @@
 #include <stdbool.h>
 #include "pff.h"
 #include "xitoa.h"
-
-//setup pin change interrupt
-#define SETUP_PIN_CHANGE PCMSK |= (1 << CS)
-//enable pin change interrupt
-#define ENABLE_PIN_INTR GIMSK |= (1 << PCIE)
-#define DISABLE_PIN_INTR GIMSK &= ~(1 << PCIE)
+#include "OneWire.h"
 
 #define CS PB3
 
@@ -51,24 +46,9 @@ FILINFO Fno;		/* File information */
 
 WORD rb;			/* Return value. Put this here to avoid avr-gcc's bug */
 
-volatile char filename[4] = "";
-volatile bool newFile = false;
+char filename[4] = "";
 
 /*---------------------------------------------------------*/
-
-static inline void new_spi_slave(){
-	DDRB &= ~(1 << PB2);
-	USICR |= (1 << USIWM0);
-	USISR = (1 << USIOIF);
-	USIDR = 0;
-}
-
-static inline void new_spi_master(){
-	DDRB |= (1 << PB2);
-	USICR &= ~(1 << USIWM0);
-	USISR = (1 << USIOIF);
-	USIDR = 0;
-}
 
 static inline void new_init_spi(){
 	USICR = (1 << USICS1);
@@ -183,15 +163,15 @@ FRESULT play (
 
 		FifoCt = 0; FifoRi = 0; FifoWi = 0;	/* Reset audio FIFO */
 
-		if (!TCCR1) {				/* Enable audio out if not enabled */
-			PLLCSR = 0b00000110;	/* Select PLL clock for TC1.ck */
-			GTCCR =  0b01100000;	/* Enable OC1B as PWM */
-			TCCR1 = MODE ? 0b01100001 : 0b00000001;	/* Start TC1 and enable OC1A as PWM if needed */
-			TCCR0A = 0b00000010;	/* Statr TC0 as interval timer at 2MHz */
-			TCCR0B = 0b00000010;
-			TIMSK = _BV(OCIE0A);
-			ramp(1);
-		}
+		//if (!TCCR1) {				/* Enable audio out if not enabled */
+		PLLCSR = 0b00000110;	/* Select PLL clock for TC1.ck */
+		GTCCR =  0b01100000;	/* Enable OC1B as PWM */
+		TCCR1 = MODE ? 0b01100001 : 0b00000001;	/* Start TC1 and enable OC1A as PWM if needed */
+		TCCR0A = 0b00000010;	/* Start TC0 as interval timer at 2MHz */
+		TCCR0B = 0b00000010;
+		TIMSK = _BV(OCIE0A);
+		ramp(1);
+		//}
 
 		pf_read(0, 512 - (Fs.fptr % 512), &rb);	/* Snip sector unaligned part */
 		sz -= rb;
@@ -205,12 +185,11 @@ FRESULT play (
 			sz -= rb;					/* Decrease data counter */
 
 			sw <<= 1;					/* Break on button down */
-		} while (((PINB & 1) || ++sw != 1) && !newFile);
+		} while (((PINB & 1) || ++sw != 1) && !OWCheckRecv(filename));
 	}
 
 	while (FifoCt) ;			/* Wait for audio FIFO empty */
-	OCR1A = 128; OCR1B = 128;	/* Return output to center level */
-
+	//OCR1A = 128; OCR1B = 128;	/* Return output to center level */
 	return res;
 }
 
@@ -255,22 +234,14 @@ int main (void)
 
 	cli();
 
-	//wdt_enable(WDTO_2S);
+	wdt_enable(WDTO_2S);
 
-	DDRB  = 0b111110 | (1 << CS);
-	PORTB = 0b101001 & ~(1 << CS);		/* Initialize port: - - H L H L L P */
+	DDRB  = 0b111110;
+	PORTB = 0b101001;		/* Initialize port: - - H L H L L P */
 
-	//SETUP_PIN_CHANGE;
-	//ENABLE_PIN_INTR;
-
-	set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+	OWSetup(true);
 
 	new_init_spi();
-
-	//PORTB |= (1 << CS);
-	//_delay_ms(200);
-	//PORTB &= ~(1 << CS);
-	//_delay_ms(200);
 
 	MCUSR = 0;
 
@@ -290,58 +261,19 @@ int main (void)
 			while (res == FR_OK) {				/* Repeat in the dir */
 				res = pf_readdir(&Dir, 0);			/* Rewind dir */
 
-				wdt_disable();
-				sleep_enable();
-				//while(!newFile) sleep_cpu();
-				wdt_enable(WDTO_2S);
+				while(!OWCheckRecv(filename)) wdt_reset();
 				
-
 				while (res == FR_OK) {				/* Play all wav files in the dir */
 					wdt_reset();
 					res = pf_readdir(&Dir, &Fno);		/* Get a dir entry */
 					if (res || !Fno.fname[0]) break;	/* Break on error or end of dir */
-					if (!(Fno.fattrib & (AM_DIR|AM_HID)) && strstr(Fno.fname, "BEE")){
-						//newFile = false;
-						//filename[0] = '\0';
-						//PORTB |= (1 << CS);
+					if (!(Fno.fattrib & (AM_DIR|AM_HID)) && strstr(Fno.fname, filename)){
+						filename[0] = '\0';
 						res = play(dir, Fno.fname);		/* Play file */
 						break; //break on correct file
 					}
 				}
 			}
 		}
-	}
-}
-
-
-ISR(PCINT0_vect){
-	if(PINB & (1 << CS)){
-		new_spi_slave();
-
-		while(PINB & (1 << CS)) { //wait until CS is low, meaning transmission is done
-			wdt_reset();
-			if(USISR & (1 << USIOIF)){ //if USIDR is full
-				//const char temp = USIDR;
-				
-				USIDR = newFile;
-				USISR = (1 << USIOIF);
-
-				//for(uint8_t i=0; i<4; i++){ //copy char into next slot
-				//	if(filename[i] == '\0'){
-				//		filename[i] = temp;
-				//		filename[i+1] = '\0';
-				//		break;
-				//	}
-				filename[0] = 'B';
-				filename[1] = 'E';
-				filename[2] = 'E';
-				filename[3] = '\0';
-				//newFile = true;
-			}
-		}
-		
-		if(filename[0] != '\0') newFile = true;
-
-		new_spi_master();
 	}
 }

@@ -22,12 +22,6 @@ void OWSetup(bool receive){
 	if(receive) {
 		DREG &= ~(1 << PIN);
 		REG |= (1 << PIN);
-		//timer stuff
-		GTCCR |= (1 << TSM); //temp. disable timer
-		TCCR1 |= (1 << CS12) | (1 << CS11) | (1 << CTC1); // f/32 prescale
-		OCR1C = (TICK_LEN/4)-1;
-		OCR1A = (TICK_LEN/4)-1;
-		GTCCR &= ~(1 << TSM); //reset timer
 		//pin change stuff
 		GIMSK |= (1 << PCIE);
 		OWSetPinChange(true);
@@ -39,9 +33,12 @@ void OWSetup(bool receive){
 
 void OWSetTimer(bool on){
 	if(on) {
-		GTCCR |= (1 << PSR0);
-		TCNT1 = 0; //reset timer
+		GTCCR = (1 << TSM); //temp. disable timer
+		TCCR1 = (1 << CS12) | (1 << CS11) | (1 << CTC1); // f/32 prescale
+		OCR1C = (TICK_LEN/4)-1;
+		OCR1A = (TICK_LEN/4)-1;
 		TIMSK |= (1 << OCIE1A); //enable intr.
+		GTCCR &= ~(1 << TSM); //reset timer
 
 	}
 	else TIMSK &= ~(1 << OCIE1A);
@@ -59,6 +56,7 @@ uint8_t OWConvert(uint8_t iTicks){
 	else return 0;
 }
 
+/*
 void OWSend(const char * string){
     REG |= (1 << PIN);
 	_delay_us(HEAD * TICK_LEN);
@@ -76,16 +74,19 @@ void OWSend(const char * string){
 		}
 	}
 }
+*/
 
-void OWCheckRecv(char * data){
-   if(finished && strlen((const char *)stringBuf) > 0){
+bool OWCheckRecv(char * data){
+	if(data[0] != '\0') return true;
+    else if(finished && strlen((const char *)stringBuf) > 0){
         strcpy(data, (const char *)stringBuf);
         stringBuf[0] = '\0';
 	    charPlace = 0;
         charBuf = '\0';
 		finished = false;
+		return true;
 	}
-	else data[0] = '\0';
+	else return false;
 }
 
 ISR(PIN_INT_VECT){

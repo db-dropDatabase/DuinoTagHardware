@@ -71,14 +71,13 @@ int main(void)
 		char temp[] = "\0\0\0\0";
 		OWCheckRecv(temp);
 		if(temp[0] != '\0'){
-			PORTB &= ~(1 << PB4);
-			_delay_ms(100);
-			PORTB |= (1 << PB4);
 			serOut(temp);
 			serOut("\n");
-			char temp2[2] = {};
-			serOut(itoa(memcmp(temp, "EEE", 3), temp2));
-			serOut("\n");
+			if(!memcmp(temp, "BEE", 3)){
+				PORTB &= ~(1 << PB4);
+				_delay_ms(200);
+				PORTB |= (1 << PB4);
+			}
 		}
 	}	
 }
