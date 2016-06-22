@@ -73,6 +73,16 @@ int main(void)
 		if(temp[0] != '\0'){
 			serOut(temp);
 			serOut("\n");
+			for(uint8_t i = 0; tickStore[i] != 0 && tickStore[i+1] != 0; i++){
+				char temp2[4] = {};
+				serOut(itoa(tickStore[i], temp2));
+				serOut(", ");
+			}
+			serOut("\n");
+
+			tickPlace = 0;
+			for(uint8_t i = 0; i < sizeof(tickStore); i++) tickStore[i] = 0;
+
 			if(!memcmp(temp, "BEE", 3)){
 				PORTB &= ~(1 << PB4);
 				_delay_ms(200);
