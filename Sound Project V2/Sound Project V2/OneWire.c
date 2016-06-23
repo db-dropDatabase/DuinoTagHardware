@@ -15,19 +15,11 @@ volatile uint8_t charPlace = 0;
 volatile char * stringBuf = (volatile char *)"\0\0\0\0";
 volatile uint8_t ticks = 0;
 volatile bool timingMark;
-volatile uint8_t tickStore[100] = {};
-volatile uint8_t tickPlace = 0;
 
 void OWSetup(bool receive){
 	if(receive) {
 		DREG &= ~(1 << PIN);
-		REG |= (1 << PIN);
-		//timer stuff
-		GTCCR |= (1 << TSM); //temp. disable timer
-		TCCR1 |= (1 << CS12) | (1 << CS11) | (1 << CTC1); // f/32 prescale
-		OCR1C = (TICK_LEN/4)-1;
-		OCR1A = (TICK_LEN/4)-1;
-		GTCCR &= ~(1 << TSM); //reset timer
+		//REG |= (1 << PIN);
 		//pin change stuff
 		GIMSK |= (1 << PCIE);
 		OWSetPinChange(true);
@@ -39,12 +31,22 @@ void OWSetup(bool receive){
 
 void OWSetTimer(bool on){
 	if(on) {
-		GTCCR |= (1 << PSR0);
-		TCNT1 = 0; //reset timer
-		TIMSK |= (1 << OCIE1A); //enable intr.
+		GTCCR = (1 << TSM); //temp. disable timer
+		PLLCSR = 0;
+		OCR1B = 0;
+		TCCR1 = (1 << CS12) | (1 << CS11) | (1 << CTC1); // f/32 prescale
+		OCR1C = (TICK_LEN/4)-1;
+		OCR1A = (TICK_LEN/4)-1;
+		TIMSK = (1 << OCIE1A); //enable intr.
+		GTCCR &= ~(1 << TSM); //reset timer
 
 	}
-	else TIMSK &= ~(1 << OCIE1A);
+	else {
+		TIMSK = 0;
+		TCCR1 = 0;
+		OCR1A = 0;
+		OCR1C = 0;
+	}
 }
 
 void OWSetPinChange(bool on){
@@ -59,33 +61,17 @@ uint8_t OWConvert(uint8_t iTicks){
 	else return 0;
 }
 
-void OWSend(const char * string){
-    REG |= (1 << PIN);
-	_delay_us(HEAD * TICK_LEN);
-	REG &= ~(1 << PIN);
-	_delay_us(SPACE * TICK_LEN);
-	for(uint8_t i=0; i<strlen(string); i++){
-		for(uint8_t o=0; o<8; o++){
-			REG |= (1 << PIN);
-			if(string[i] & (1 << o))
-			_delay_us(ONE * TICK_LEN);
-			else
-			_delay_us(ZERO * TICK_LEN);
-			REG &= !(1 << PIN);
-			_delay_us(SPACE * TICK_LEN);
-		}
-	}
-}
-
-void OWCheckRecv(char * data){
-   if(finished && strlen((const char *)stringBuf) > 0){
+bool OWCheckRecv(char * data){
+	if(data[0] != '\0') return true;
+	if(finished && strlen((const char *)stringBuf) > 0){
         strcpy(data, (const char *)stringBuf);
         stringBuf[0] = '\0';
 	    charPlace = 0;
         charBuf = '\0';
 		finished = false;
+		return true;
 	}
-	else data[0] = '\0';
+	else return false;
 }
 
 ISR(PIN_INT_VECT){
