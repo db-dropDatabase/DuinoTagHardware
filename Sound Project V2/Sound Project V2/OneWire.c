@@ -12,14 +12,14 @@
 volatile bool finished;
 volatile char charBuf = '\0';
 volatile uint8_t charPlace = 0;
-volatile char * stringBuf = (volatile char *)"\0\0\0\0";
+volatile char stringBuf[4] = {'\0', '\0', '\0', '\0'};
 volatile uint8_t ticks = 0;
 volatile bool timingMark;
 
 void OWSetup(bool receive){
 	if(receive) {
 		DREG &= ~(1 << PIN);
-		//REG |= (1 << PIN);
+		REG |= (1 << PIN);
 		//pin change stuff
 		GIMSK |= (1 << PCIE);
 		OWSetPinChange(true);
@@ -64,7 +64,7 @@ uint8_t OWConvert(uint8_t iTicks){
 bool OWCheckRecv(char * data){
 	if(data[0] != '\0') return true;
 	if(finished && strlen((const char *)stringBuf) > 0){
-        strcpy(data, (const char *)stringBuf);
+        strncpy(data, (const char *)stringBuf, 4);
         stringBuf[0] = '\0';
 	    charPlace = 0;
         charBuf = '\0';
@@ -74,12 +74,14 @@ bool OWCheckRecv(char * data){
 	else return false;
 }
 
+/*
 ISR(PIN_INT_VECT){
 	if(IN_REG & (1 << PIN) && !finished){
 		OWSetPinChange(false);
 		OWSetTimer(true);
 	}
 }
+*/
 
 ISR(TIM_INT_VECT){
 	if(!timingMark && IN_REG & (1 << PIN)){
@@ -103,10 +105,13 @@ ISR(TIM_INT_VECT){
 			break;
 		}
 		if(charPlace >= 8){
-			const char tempString[2] = {charBuf, '\0'};
-			stringBuf = (volatile char *)strcat((char *)stringBuf, (const char *)tempString);
-			if(strlen((const char *)stringBuf) >= 3) finished = true;
-			charBuf = '\0'; //cast much?
+			uint8_t i = 0;
+			while(i < 3 && stringBuf[i] != '\0') i++;
+			stringBuf[i] = charBuf;
+			stringBuf[i+1] = '\0';
+			if(i == 3) finished = true;
+
+			charBuf = '\0'; 
             charPlace = 0;
 		}
 		timingMark = false;

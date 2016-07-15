@@ -17,6 +17,7 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <util/delay.h>
 #include <string.h>
 #include <stdbool.h>
 #include "pff.h"
@@ -185,8 +186,8 @@ FRESULT play (
 		} while (((PINB & 1) || ++sw != 1) && !quit);
 	}
 
-	while (FifoCt) ;			/* Wait for audio FIFO empty */
-	OCR1A = 128; OCR1B = 128;	/* Return output to center level */
+	//while (FifoCt) ;			/* Wait for audio FIFO empty */
+	//OCR1A = 128; OCR1B = 128;	/* Return output to center level */
 
 	return res;
 }
@@ -199,7 +200,7 @@ int main (void)
 	FRESULT res;
 	char *dir;
 	BYTE org_osc = OSCCAL;
-	char * filename = "PEW";
+	char filename[4] = {'\0', '\0', '\0', '\0'};
 
 	cli();
 
@@ -210,6 +211,7 @@ int main (void)
 	PORTB = 0b101001;		/* Initialize port: - - H L H L L P */
 
 	new_init_spi();
+	OWSetup(true);
 
 	MCUSR = 0;
 
@@ -229,27 +231,32 @@ int main (void)
 				res = pf_readdir(&Dir, 0);			/* Rewind dir */
 
 				//MOAR TESTING
+				OWSetPinChange(false);
+				OWSetTimer(true);
+				while(!OWCheckRecv(filename) && filename[0] == '\0');
 
-				OWSetTimer(false);
 				OCR1C = tempOCR1C;
 				soundInit = false;
+				quit = false;
+				
 				//END MOAR TESTING
-
-				//filename[0] = 'P';
-				//filename[1] = 'E';
-				//filename[2] = 'W';
-				//filename[3] = '\0';
 
 				while (res == FR_OK) {				/* Play all wav files in the dir */
 					res = pf_readdir(&Dir, &Fno);		/* Get a dir entry */
 					if (res || !Fno.fname[0]) break;	/* Break on error or end of dir */
 					if (!(Fno.fattrib & (AM_DIR|AM_HID)) && strstr(Fno.fname, filename)){
 						res = play(dir, Fno.fname);		/* Play file */
-						OWSetTimer(true);
+						filename[0] = '\0';
 						break; //break on correct file
 					}
 				}
 			}
 		}
+	}
+}
+
+ISR(PCINT0_vect){
+	if(PINB & (1 << CS)){
+		quit = true;
 	}
 }

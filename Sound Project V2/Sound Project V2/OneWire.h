@@ -36,7 +36,7 @@
 extern volatile bool finished;
 extern volatile char charBuf;
 extern volatile uint8_t charPlace;
-extern volatile char * stringBuf;
+extern volatile char stringBuf[4];
 extern volatile uint8_t ticks;
 extern volatile bool timingMark;
 
