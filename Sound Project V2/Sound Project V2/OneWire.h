@@ -10,8 +10,6 @@
 #ifndef ONEWIRE_H_
 #define ONEWIRE_H_
 
-//#define F_CPU 8000000L
-
 #include <avr/interrupt.h>
 #include <stdbool.h>
 #include <stdint-gcc.h>

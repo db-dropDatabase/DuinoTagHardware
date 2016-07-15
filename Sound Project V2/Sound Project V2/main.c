@@ -213,6 +213,8 @@ int main (void)
 	new_init_spi();
 	OWSetup(true);
 
+
+
 	MCUSR = 0;
 
 	sei();
@@ -231,9 +233,9 @@ int main (void)
 				res = pf_readdir(&Dir, 0);			/* Rewind dir */
 
 				//MOAR TESTING
-				OWSetPinChange(false);
-				OWSetTimer(true);
-				while(!OWCheckRecv(filename) && filename[0] == '\0');
+				//OWSetPinChange(false);
+				//OWSetTimer(true);
+				//while(!OWCheckRecv(filename) && filename[0] == '\0');
 
 				OCR1C = tempOCR1C;
 				soundInit = false;
@@ -244,7 +246,7 @@ int main (void)
 				while (res == FR_OK) {				/* Play all wav files in the dir */
 					res = pf_readdir(&Dir, &Fno);		/* Get a dir entry */
 					if (res || !Fno.fname[0]) break;	/* Break on error or end of dir */
-					if (!(Fno.fattrib & (AM_DIR|AM_HID)) && strstr(Fno.fname, filename)){
+					if (!(Fno.fattrib & (AM_DIR|AM_HID)) && strstr(Fno.fname, "BEE")){
 						res = play(dir, Fno.fname);		/* Play file */
 						filename[0] = '\0';
 						break; //break on correct file

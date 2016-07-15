@@ -7,6 +7,7 @@
  #define F_CPU 8000000L
 
 #include <avr/io.h>
+#include <avr/sleep.h>
 #include <stdbool.h>
 #include <util/delay.h>
 #include "OneWire.h"
@@ -48,16 +49,10 @@ char* itoa(int i, char b[]){
 
 int main(void)
 {
-	_delay_ms(5000);
-	serOut("Booting up...");
-
 	cli();
 
     DDRB  = 0b111110 & ~(1 << CS);
     PORTB = 0b101001 & ~(1 << CS);
-
-	PORTB |= (1 << PB4);
-	_delay_ms(500);
 
 	//SPIInit();
 
@@ -65,21 +60,11 @@ int main(void)
 
 	sei();
 
-	serOut("Done\n");
-
 	while(true){
 		char temp[] = "\0\0\0\0";
-		OWCheckRecv(temp);
-		if(temp[0] != '\0'){
-			PORTB &= ~(1 << PB4);
-			_delay_ms(100);
-			PORTB |= (1 << PB4);
-			serOut(temp);
-			serOut("\n");
-			char temp2[2] = {};
-			serOut(itoa(memcmp(temp, "EEE", 3), temp2));
-			serOut("\n");
-		}
+		while(!OWCheckRecv(temp) && temp[0] == '\0') sleep_cpu();
+		serOut(temp);
+		serOut("\n");
 	}	
 }
 
