@@ -32,6 +32,8 @@ void OWSetup(bool receive){
 void OWSetTimer(bool on){
 	if(on) {
 		GTCCR = (1 << TSM); //temp. disable timer
+		TCCR0A = 0;
+		TCCR0B = 0;
 		PLLCSR = 0;
 		OCR1B = 0;
 		TCCR1 = (1 << CS12) | (1 << CS11) | (1 << CTC1); // f/32 prescale
@@ -74,14 +76,13 @@ bool OWCheckRecv(char * data){
 	else return false;
 }
 
-/*
 ISR(PIN_INT_VECT){
 	if(IN_REG & (1 << PIN) && !finished){
 		OWSetPinChange(false);
 		OWSetTimer(true);
+		quit = true;
 	}
 }
-*/
 
 ISR(TIM_INT_VECT){
 	if(!timingMark && IN_REG & (1 << PIN)){

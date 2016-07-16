@@ -44,9 +44,7 @@ FILINFO Fno;		/* File information */
 
 WORD rb;			/* Return value. Put this here to avoid avr-gcc's bug */
 
-volatile bool quit = false;
-uint8_t tempOCR1C;
-bool soundInit = false;
+volatile bool quit = false; //declared in OneWire
 
 /*---------------------------------------------------------*/
 
@@ -160,17 +158,13 @@ FRESULT play (
 
 		FifoCt = 0; FifoRi = 0; FifoWi = 0;	/* Reset audio FIFO */
 
-		//if (!TCCR1) {				/* Enable audio out if not enabled */
-		if(!soundInit) {
-			soundInit = true;
-			PLLCSR = 0b00000110;	/* Select PLL clock for TC1.ck */
-			GTCCR =  0b01100000;	/* Enable OC1B as PWM */
-			TCCR1 = MODE ? 0b01100001 : 0b00000001;	/* Start TC1 and enable OC1A as PWM if needed */
-			TCCR0A = 0b00000010;	/* Statr TC0 as interval timer at 2MHz */
-			TCCR0B = 0b00000010;
-			TIMSK = _BV(OCIE0A);
-			ramp(1);
-		}
+		PLLCSR = 0b00000110;	/* Select PLL clock for TC1.ck */
+		GTCCR =  0b01100000;	/* Enable OC1B as PWM */
+		TCCR1 = MODE ? 0b01100001 : 0b00000001;	/* Start TC1 and enable OC1A as PWM if needed */
+		TCCR0A = 0b00000010;	/* Start TC0 as interval timer at 2MHz */
+		TCCR0B = 0b00000010;
+		TIMSK = _BV(OCIE0A);
+		ramp(1);
 
 		pf_read(0, 512 - (Fs.fptr % 512), &rb);	/* Snip sector unaligned part */
 		sz -= rb;
@@ -205,21 +199,25 @@ int main (void)
 	cli();
 
 	//OWSetup(true);
-	tempOCR1C = OCR1C;
 
 	DDRB  = 0b111110;
 	PORTB = 0b101001;		/* Initialize port: - - H L H L L P */
 
 	new_init_spi();
+
+	const uint8_t tempOCR1C = OCR1C;
 	OWSetup(true);
-
-
 
 	MCUSR = 0;
 
 	sei();
 
 	for (;;) {
+		while(!OWCheckRecv(filename) && filename[0] != '\0');
+		quit = false;
+
+		OCR1C = tempOCR1C;
+
 		if (pf_mount(&Fs) == FR_OK) {	/* Initialize FS */
 			Buff[0] = 0;
 			if (!pf_open("osccal")) pf_read(Buff, 1, &rb);	/* Adjust frequency */
@@ -229,36 +227,18 @@ int main (void)
 			if (res == FR_NO_PATH)
 				res = pf_opendir(&Dir, dir = "");	/* Open root directory */
 
-			while (res == FR_OK) {				/* Repeat in the dir */
+			while (res == FR_OK && filename[0] != '\0') {				/* Repeat in the dir */
 				res = pf_readdir(&Dir, 0);			/* Rewind dir */
 
-				//MOAR TESTING
-				//OWSetPinChange(false);
-				//OWSetTimer(true);
-				//while(!OWCheckRecv(filename) && filename[0] == '\0');
-
-				OCR1C = tempOCR1C;
-				soundInit = false;
-				quit = false;
-				
-				//END MOAR TESTING
-
-				while (res == FR_OK) {				/* Play all wav files in the dir */
+				while (res == FR_OK && filename[0] != '\0') {				/* Play all wav files in the dir */
 					res = pf_readdir(&Dir, &Fno);		/* Get a dir entry */
-					if (res || !Fno.fname[0]) break;	/* Break on error or end of dir */
-					if (!(Fno.fattrib & (AM_DIR|AM_HID)) && strstr(Fno.fname, "BEE")){
+					if (res || !Fno.fname[0]) filename[0] = '\0';	/* Break on error or end of dir */
+					if (!(Fno.fattrib & (AM_DIR|AM_HID)) && strstr(Fno.fname, filename)){
 						res = play(dir, Fno.fname);		/* Play file */
-						filename[0] = '\0';
-						break; //break on correct file
+						filename[0] = '\0'; //break on correct file
 					}
 				}
 			}
 		}
-	}
-}
-
-ISR(PCINT0_vect){
-	if(PINB & (1 << CS)){
-		quit = true;
 	}
 }

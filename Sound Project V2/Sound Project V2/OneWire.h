@@ -37,6 +37,7 @@ extern volatile uint8_t charPlace;
 extern volatile char stringBuf[4];
 extern volatile uint8_t ticks;
 extern volatile bool timingMark;
+extern volatile bool quit;
 
 extern void OWSetup(bool receive);
 extern void OWSetTimer(bool on);
