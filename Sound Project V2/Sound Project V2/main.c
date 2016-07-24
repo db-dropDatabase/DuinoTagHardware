@@ -45,6 +45,7 @@ FILINFO Fno;		/* File information */
 WORD rb;			/* Return value. Put this here to avoid avr-gcc's bug */
 
 volatile bool quit = false; //declared in OneWire
+bool firstPlay = false;
 
 /*---------------------------------------------------------*/
 
@@ -181,7 +182,6 @@ FRESULT play (
 	}
 
 	//while (FifoCt) ;			/* Wait for audio FIFO empty */
-	//OCR1A = 128; OCR1B = 128;	/* Return output to center level */
 
 	return res;
 }
@@ -204,18 +204,24 @@ int main (void)
 	PORTB = 0b101001;		/* Initialize port: - - H L H L L P */
 
 	new_init_spi();
-
+	
 	const uint8_t tempOCR1C = OCR1C;
-	OWSetup(true);
 
 	MCUSR = 0;
 
 	sei();
 
 	for (;;) {
-		while(!OWCheckRecv(filename) && filename[0] != '\0');
-		quit = false;
+		OWSetup(true);
 
+		while(!OWCheckRecv(filename) && filename[0] != '\0');
+		if(firstPlay){
+			strncpy(filename, "PEW", 3);
+			filename[3] = '\0';
+		}
+		quit = false;
+		
+		OCR1A = 128; OCR1B = 128;	/* Return output to center level */
 		OCR1C = tempOCR1C;
 
 		if (pf_mount(&Fs) == FR_OK) {	/* Initialize FS */
@@ -232,9 +238,13 @@ int main (void)
 
 				while (res == FR_OK && filename[0] != '\0') {				/* Play all wav files in the dir */
 					res = pf_readdir(&Dir, &Fno);		/* Get a dir entry */
-					if (res || !Fno.fname[0]) filename[0] = '\0';	/* Break on error or end of dir */
+					if (res || !Fno.fname[0]) {
+						filename[0] = '\0';	/* Break on error or end of dir */
+						break;
+					}
 					if (!(Fno.fattrib & (AM_DIR|AM_HID)) && strstr(Fno.fname, filename)){
 						res = play(dir, Fno.fname);		/* Play file */
+						firstPlay = true;
 						filename[0] = '\0'; //break on correct file
 					}
 				}
