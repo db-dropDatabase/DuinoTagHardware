@@ -76,6 +76,7 @@ bool OWCheckRecv(char * data){
 	else return false;
 }
 
+/*
 ISR(PIN_INT_VECT){
 	if(IN_REG & (1 << PIN) && !finished){
 		OWSetPinChange(false);
@@ -83,6 +84,7 @@ ISR(PIN_INT_VECT){
 		quit = true;
 	}
 }
+*/
 
 ISR(TIM_INT_VECT){
 	if(!timingMark && IN_REG & (1 << PIN)){
