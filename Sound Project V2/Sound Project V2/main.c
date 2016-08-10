@@ -47,12 +47,23 @@ WORD rb;			/* Return value. Put this here to avoid avr-gcc's bug */
 volatile bool quit = false; //declared in OneWire
 bool loop = true;
 volatile bool firstPlay = false;
+volatile uint8_t debugCount = 0;
 char filename[4] = {'\0', '\0', '\0', '\0'};
+
 
 /*---------------------------------------------------------*/
 
+void deselect (void);
+BYTE rcv_spi (void);
+
 static inline void new_init_spi(){
 	USICR = (1 << USICS1);
+}
+
+static void release_spi (void)
+{
+	deselect();
+	rcv_spi();
 }
 
 static
@@ -161,7 +172,7 @@ FRESULT play (
 
 		FifoCt = 0; FifoRi = 0; FifoWi = 0;	/* Reset audio FIFO */
 
-		if(!TCCR1){
+		//if(!TCCR1){
 			PLLCSR = 0b00000110;	/* Select PLL clock for TC1.ck */
 			GTCCR =  0b01100000;	/* Enable OC1B as PWM */
 			TCCR1 = MODE ? 0b01100001 : 0b00000001;	/* Start TC1 and enable OC1A as PWM if needed */
@@ -169,7 +180,7 @@ FRESULT play (
 			TCCR0B = 0b00000010;
 			TIMSK = _BV(OCIE0A);
 			ramp(1);
-		}
+		//}
 		
 		pf_read(0, 512 - (Fs.fptr % 512), &rb);	/* Snip sector unaligned part */
 		sz -= rb;
@@ -231,10 +242,7 @@ int main (void)
 
 		quit = false;
 		loop = true;
-		
-		const uint8_t tempOCR1C = OCR1C;
 
-		OCR1C = tempOCR1C;
 
 		if (pf_mount(&Fs) == FR_OK) {	/* Initialize FS */
 			Buff[0] = 0;
@@ -284,6 +292,42 @@ ISR(PIN_INT_VECT){
 			//filename[2] = 'W';
 			//filename[3] = '\0';
 			strncpy(filename, "PEW", 3);
+
+			uint8_t tempGTC = GTCCR;
+			uint8_t tempTCR = TCCR1;
+			uint8_t tempOCR1C = OCR1C;
+			uint8_t tempOCR1A = OCR1A;
+			uint8_t tempTIM = TIMSK;
+
+
+			GTCCR = (1 << TSM); //temp. disable timer
+			TCCR1 = (1 << CS12) | (1 << CS11) | (1 << CTC1); // f/32 prescale
+			OCR1C = (TICK_LEN/4)-1;
+			OCR1A = (TICK_LEN/4)-1;
+			TIMSK = (1 << OCIE1A); //enable intr.
+			GTCCR &= ~(1 << TSM); //reset timer
+
+			//disable timer 0?
+			
+			sei();
+
+			while(debugCount < 128);
+
+			cli();
+			
+			GTCCR = tempGTC;
+			TCCR1 = tempTCR;
+			OCR1C = tempOCR1C;
+			OCR1A = tempOCR1A;
+			TIMSK = tempTIM;
+
+			debugCount = 0;
+
+			release_spi();
 		}
 	}
+}
+
+ISR(TIM_INT_VECT){
+	debugCount++;
 }

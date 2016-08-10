@@ -3,6 +3,7 @@
 /*-----------------------------------------------------------------------*/
 
 #include "diskio.h"
+#include <avr/interrupt.h>
 
 
 /* Low level SPI control functions */
@@ -59,6 +60,8 @@ BYTE send_cmd (
 {
 	BYTE n, res;
 
+	//added for project, hopefully to increase stability?
+	cli();
 
 	if (cmd & 0x80) {	/* ACMD<n> is the command sequense of CMD55-CMD<n> */
 		cmd &= 0x7F;
@@ -89,6 +92,8 @@ BYTE send_cmd (
 		res = rcv_spi();
 	} while ((res & 0x80) && --n);
 
+	sei();
+
 	return res;			/* Return with the response value */
 }
 
@@ -110,6 +115,7 @@ DSTATUS disk_initialize (void)
 	BYTE n, cmd, ty, ocr[4];
 	WORD tmr;
 
+	cli(); //added to increase stability
 
 	init_spi();		/* Initialize USI */
 
@@ -143,6 +149,8 @@ DSTATUS disk_initialize (void)
 	CardType = ty;
 	release_spi();
 
+	sei();
+
 	return ty ? 0 : STA_NOINIT;
 }
 
@@ -163,6 +171,7 @@ DRESULT disk_readp (
 	BYTE rc;
 	WORD tmr;
 
+	cli(); //added to increase stability
 
 	if (!(CardType & CT_BLOCK)) lba *= 512;		/* Convert LBA to BA if needed */
 
@@ -179,6 +188,8 @@ DRESULT disk_readp (
 	}
 
 	release_spi();
+
+	sei();
 
 	return res;
 }

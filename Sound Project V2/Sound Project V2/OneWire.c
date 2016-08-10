@@ -86,6 +86,7 @@ ISR(PIN_INT_VECT){
 }
 */
 
+/*
 ISR(TIM_INT_VECT){
 	if(!timingMark && IN_REG & (1 << PIN)){
 		timingMark = true;
@@ -130,5 +131,6 @@ ISR(TIM_INT_VECT){
 		OWSetPinChange(true);
 	}
 }
+*/
 
 #endif
