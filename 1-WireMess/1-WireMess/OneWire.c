@@ -34,7 +34,7 @@ bool OWConvert(uint8_t iTicks){
 }
 
 ISR(PCINT0_vect){
-	if(IN_REG & (1 << PIN)){
+	if(!(IN_REG & (1 << PIN))){
 		//transmission incoming
 
 		uint8_t charPlace = 0;
@@ -47,8 +47,8 @@ ISR(PCINT0_vect){
 		//while(IN_REG & (1 << PIN));
 
 		while(stringPlace < 4){
-			_delay_us(50); //one tick, corrected
-			if((IN_REG & (1 << PIN)) == lastState) ticks++;
+			
+			if(!(IN_REG & (1 << PIN)) == lastState) ticks++;
 
 			else {
 				if(lastState){ //mark
@@ -68,6 +68,8 @@ ISR(PCINT0_vect){
 				ticks = 0;
 				lastState = (IN_REG & (1 << PIN));
 			}
+
+			_delay_us(50); //one tick, corrected
 		}
 
 		if(stringPlace > 0) {
