@@ -70,7 +70,6 @@ int main(void)
 		while(!done);
 		//serOut((const char *) retString);
 		//serOut("\n");
-		cli();
 		for(uint8_t i=0; i<debugPlace; i++){
 			char temp[3] = {};
 			char* tempString = itoa(debugLog[i], temp);
@@ -83,6 +82,5 @@ int main(void)
 		debugPlace = 0;
 		
 		done = false;
-		sei();
 	}	
 }
