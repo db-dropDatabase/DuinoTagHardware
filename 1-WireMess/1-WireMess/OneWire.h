@@ -11,7 +11,6 @@
 #define ONEWIRE_H_
 
 #include <avr/interrupt.h>
-#include <util/delay.h>
 #include <stdbool.h>
 #include <stdint-gcc.h>
 #include <string.h>
@@ -20,6 +19,8 @@
 #define DREG DDRB
 #define REG PORTB
 #define IN_REG PINB
+#define TIM_INT_VECT TIMER1_COMPA_vect
+#define PIN_INT_VECT PCINT0_vect
 
 #define TICK_LEN 16
 
@@ -30,12 +31,17 @@
 #define SPACE 4
 #define TICK 1
 
-extern char retString[4]; //declare this in your main
-extern volatile bool done; //this too
-extern volatile uint8_t debugLog[(4*8)+10];
-extern volatile uint8_t debugPlace;
+extern volatile bool finished;
+extern volatile char charBuf;
+extern volatile uint8_t charPlace;
+extern volatile char stringBuf[4];
+extern volatile uint8_t ticks;
+extern volatile bool timingMark;
 
 extern void OWSetup(bool receive);
-extern bool OWConvert(uint8_t ticks);
+extern void OWSetTimer(bool on);
+extern void OWSetPinChange(bool on);
+extern uint8_t OWConvert(uint8_t ticks);
+extern bool OWCheckRecv(char * data);
 
 #endif /* ONEWIRE_H_ */

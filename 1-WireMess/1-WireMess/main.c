@@ -4,10 +4,7 @@
  * Created: 6/11/2016 5:20:12 PM
  * Author : Noah
  */
-
- #define F_CPU 8000000L //this is incorrect, and all values in library are adjusted to correct for it
- //please do not try to use this library in another project w/o changing this value to 2x the F_CPU
- //honestly don't even bother with this library, it isn't worth it
+ #define F_CPU 8000000L
 
 #include <avr/io.h>
 #include <avr/sleep.h>
@@ -17,11 +14,6 @@
 #include "BasicSerial.h"
 
 #define CS PB1
-
-char retString[4] = {'\0', '\0', '\0', '\0'}; //also used in OneWire
-volatile uint8_t debugLog[(4*8)+10] = {};
-volatile uint8_t debugPlace = 0;
-volatile bool done = false;
 
 static inline void SPIInit(){
 	DDRB &= ~(1 << PB2);
@@ -62,25 +54,23 @@ int main(void)
     DDRB  = 0b111110 & ~(1 << CS);
     PORTB = 0b101001 & ~(1 << CS);
 
+	//SPIInit();
+
 	OWSetup(true);
 
 	sei();
 
 	while(true){
-		while(!done);
-		//serOut((const char *) retString);
-		//serOut("\n");
-		for(uint8_t i=0; i<debugPlace; i++){
-			char temp[3] = {};
-			char* tempString = itoa(debugLog[i], temp);
-			serOut(tempString);
-			serOut(", ");
-			debugLog[i] = 0;
-		}
+		char temp[] = "\0\0\0\0";
+		while(!OWCheckRecv(temp) && temp[0] == '\0') sleep_cpu();
+		serOut(temp);
 		serOut("\n");
-
-		debugPlace = 0;
-		
-		done = false;
 	}	
 }
+
+//ISR(USI_OVF_vect){
+//	USISR = (1 << USIOIF);
+//}
+
+
+

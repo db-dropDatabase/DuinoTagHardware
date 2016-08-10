@@ -7,11 +7,14 @@
 #ifndef ONEWIRE_C_
 #define ONEWIRE_C_
 
-#define F_CPU 8000000L //this is incorrect, and all values in library are adjusted to correct for it
-//please do not try to use this library in another project w/o changing this value to 2x the F_CPU
-//honestly don't even bother with this library, it isn't worth it
-
 #include "OneWire.h"
+
+volatile bool finished;
+volatile char charBuf = '\0';
+volatile uint8_t charPlace = 0;
+volatile char stringBuf[4] = {'\0', '\0', '\0', '\0'};
+volatile uint8_t ticks = 0;
+volatile bool timingMark;
 
 void OWSetup(bool receive){
 	if(receive) {
@@ -19,61 +22,106 @@ void OWSetup(bool receive){
 		REG |= (1 << PIN);
 		//pin change stuff
 		GIMSK |= (1 << PCIE);
-		PCMSK |= (1 << PIN);
+		OWSetPinChange(true);
 	}
 	else{
 		DREG |= (1 << PIN);
 	}
 }
 
-bool OWConvert(uint8_t iTicks){
-	if(iTicks >= HEAD-2) return 0; //head
-	else if(iTicks >= ONE-2) return 1; //one
-	else if(iTicks >= ZERO-2) return 0; //zero
-	else return 0; //???
+void OWSetTimer(bool on){
+	if(on) {
+		GTCCR = (1 << TSM); //temp. disable timer
+		PLLCSR = 0;
+		OCR1B = 0;
+		TCCR1 = (1 << CS12) | (1 << CS11) | (1 << CTC1); // f/32 prescale
+		OCR1C = (TICK_LEN/4)-1;
+		OCR1A = (TICK_LEN/4)-1;
+		TIMSK = (1 << OCIE1A); //enable intr.
+		GTCCR &= ~(1 << TSM); //reset timer
+	}
+	else {
+		TIMSK = 0;
+		TCCR1 = 0;
+		OCR1A = 0;
+		OCR1C = 0;
+	}
 }
 
-ISR(PCINT0_vect){
-	if(IN_REG & (1 << PIN)){
-		//transmission incoming
+void OWSetPinChange(bool on){
+	if(on) PCMSK |= (1 << PIN);
+	else PCMSK &= ~(1 << PIN);
+}
 
-		uint8_t charPlace = 0;
-		uint8_t stringPlace = 0;
-		char stringBuf[4] = {'\0', '\0', '\0', '\0'};
-		uint8_t ticks = 0;
-		bool lastState = false;
+uint8_t OWConvert(uint8_t iTicks){
+	if(iTicks >= HEAD-2) return HEAD;
+	else if(iTicks >= ONE-2) return ONE;
+	else if(iTicks >= ZERO-2) return ZERO;
+	else return 0;
+}
 
-		//wait until header is done, to sync timing
-		//while(IN_REG & (1 << PIN));
+bool OWCheckRecv(char * data){
+	if(data[0] != '\0') return true;
+	if(finished && strlen((const char *)stringBuf) > 0){
+        strncpy(data, (const char *)stringBuf, 4);
+        stringBuf[0] = '\0';
+	    charPlace = 0;
+        charBuf = '\0';
+		finished = false;
+		return true;
+	}
+	else return false;
+}
 
-		while(stringPlace < 4){
-			_delay_us(50); //one tick, corrected
-			if((IN_REG & (1 << PIN)) == lastState) ticks++;
+ISR(PIN_INT_VECT){
+	if(IN_REG & (1 << PIN) && !finished){
+		OWSetPinChange(false);
+		OWSetTimer(true);
+	}
+}
 
-			else {
-				if(lastState){ //mark
-					stringBuf[stringPlace] |= (OWConvert(ticks) << charPlace);
-					charPlace++;
-					if(charPlace >= 8){
-						stringPlace++;
-						charPlace = 0;
-					}
-				}
-				if(ticks > HEAD) break; //EOF
-
-				debugLog[debugPlace] = ticks;
-				debugPlace++;
-				if(debugPlace > sizeof(debugLog)) debugPlace = 0;
-
-				ticks = 0;
-				lastState = (IN_REG & (1 << PIN));
-			}
+ISR(TIM_INT_VECT){
+	if(!timingMark && IN_REG & (1 << PIN)){
+		timingMark = true;
+		ticks = 0;
+	}
+	else if(timingMark && IN_REG & (1 << PIN)){
+		ticks++;
+	}
+	else if(timingMark && !(IN_REG & !(1 << PIN))){
+		switch(OWConvert(ticks)){
+			case ONE:
+			charBuf |= (1 << charPlace);
+			charPlace++;
+			break;
+			case ZERO:
+			charBuf &= ~(1 << charPlace);
+			charPlace++;
+			break;
+			default:
+			break;
 		}
+		if(charPlace >= 8){
+			uint8_t i = 0;
+			while(i < 3 && stringBuf[i] != '\0') i++;
+			stringBuf[i] = charBuf;
+			stringBuf[i+1] = '\0';
+			if(i == 3) finished = true;
 
-		if(stringPlace > 0) {
-			strncpy(retString, stringBuf, 3);
-			done = true;
+			charBuf = '\0'; 
+            charPlace = 0;
 		}
+		timingMark = false;
+		ticks = 0;
+	}
+	else if(strlen((const char *)stringBuf) != 0 && !finished){
+		if(ticks > HEAD) finished = true;
+		else ticks++;
+	}
+
+	if(finished){
+		OWSetTimer(false);
+		OWSetPinChange(true);
 	}
 }
 
