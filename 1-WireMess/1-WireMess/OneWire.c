@@ -54,9 +54,6 @@ void OWSetPinChange(bool on){
 }
 
 uint8_t OWConvert(uint8_t iTicks){
-	tickStore[tickPlace] = iTicks;
-	tickPlace++;
-
 	if(iTicks >= HEAD-2) return HEAD;
 	else if(iTicks >= ONE-2) return ONE;
 	else if(iTicks >= ZERO-2) return ZERO;
