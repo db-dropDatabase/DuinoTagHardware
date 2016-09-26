@@ -56,6 +56,8 @@ char filename[4] = {'\0', '\0', '\0', '\0'};
 void deselect (void);
 BYTE rcv_spi (void);
 
+=======
+>>>>>>> master
 static inline void new_init_spi(){
 	USICR = (1 << USICS1);
 }
