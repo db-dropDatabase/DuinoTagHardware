@@ -1,0 +1,30 @@
+Basic idea: creating a simple language for light animations (dimming, delays)
+then interpreting it on the fly into a list of current things the LEDs should be doing in the current tick (such as dim X LED) of 10 us or something similair 
+then preintepreting that into a sequencial list of pins to toggle with an ISR (which will run at 10*the speed of the ticks)
+all this to have multiple different dimming effects on charlie (read: cheap) matrixed LEDs
+in order to maintain POW, this must refresh every LED at 50hz, but I'm too lazy to do the math, so we'll just have to see if it works
+
+simple mock up:
+	
+	animation and state storage stuff
+	
+	dynamic queue system (so I can edit one while using the other)
+	
+	state machine:
+		Interpret simple language
+		return what to do for the current tick (i.e. delay, dim 50%, turn on)
+		set up state machine for next tick
+		
+	preinterpreter (compilier?):
+		split full tick into ten sections (for dimmability)
+		split each section into # animations (matrixing can only light one LED at a time, this will light then sequentially)
+		for each section, determin if the LED should be on or not
+		set queue with sequantial data
+		
+	wait until ISR is ready for next queue
+	repeat
+	
+	ISR:
+		set the LED to whatever the queue says
+		if finished with queue, recycle and move on to next queue
+		that's it

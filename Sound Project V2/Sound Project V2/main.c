@@ -186,7 +186,6 @@ FRESULT play (
 		sz -= rb;
 		sw = 1;	/* Button status flag */
 		do {	/* Data transfer loop */
-
 			btr = (sz > 1024) ? 1024 : (WORD)sz;/* A chunk of audio data */
 			res = pf_read(0, btr, &rb);	/* Forward the data into audio FIFO */
 			if (rb != 1024) break;		/* Break on error or end of data */
@@ -243,7 +242,7 @@ int main (void)
 		quit = false;
 		loop = true;
 
-
+		cli();
 		if (pf_mount(&Fs) == FR_OK) {	/* Initialize FS */
 			Buff[0] = 0;
 			if (!pf_open("osccal")) pf_read(Buff, 1, &rb);	/* Adjust frequency */
@@ -266,6 +265,7 @@ int main (void)
 					}
 					if (!(Fno.fattrib & (AM_DIR|AM_HID)) && strstr(Fno.fname, (const char *)filename)){
 						quit = false;
+						sei();
 						res = play(dir, Fno.fname);		/* Play file */
 						if(!res) firstPlay = true;
 						loop = false; //break after correct file
