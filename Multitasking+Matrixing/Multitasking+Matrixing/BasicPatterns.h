@@ -19,8 +19,8 @@ typedef const uint8_t PROGMEM animation_t;
 
 //below are commands understood by the interpreter
 enum lightCommands{
-	L_SET_POWER, //set light power, from 0 - 10
-	L_DELAY,  //add a delay in the animation, in tens of milliseconds
+	L_SET_POWER = 1, //set light power, from 0 - 10
+	L_DELAY = 2,  //add a delay in the animation, in tens of milliseconds
 	L_RAND = 255, //replace with a random number between 1 and 10
 	L_RAND_FLICKER = 254, //replace with a random number, but only 1 or 10
 };

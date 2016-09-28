@@ -6,10 +6,11 @@
  */ 
 
 #include <avr/io.h>
+#include <avr/interrupt.h>
 #include <stdbool.h>
 #include "BasicPatterns.h"
 
-#define F_CPU 8000000
+#define F_CPU 8000000L
 
 const uint8_t TICK_LEN = 100;
 
@@ -24,11 +25,13 @@ const uint8_t cheapRandom[] = {
 uint8_t randPoint = 0;
 
 uint8_t returnRandom(){
+	randPoint++;
 	if(randPoint == sizeof(cheapRandom)-1) randPoint = 0;
 	return cheapRandom[randPoint];
 }
 
 bool returnRandomBool(){
+	randPoint++;
 	if(randPoint == sizeof(cheapRandom)-1) randPoint = 0;
 	return cheapRandom[randPoint]%2;
 }
@@ -43,7 +46,6 @@ typedef struct {
 
 LEDState_t LEDStates[animationNum] = {};
 volatile bool LEDQueue[2][animationNum][10] = {};
-volatile uint8_t queueCounter = 0;
 volatile bool queueSwap = false;
 volatile uint8_t queuePointer = 0; 
 
@@ -51,14 +53,22 @@ int main(void)
 {
 	//internet code, to be modified
 	TCCR0A = (1 << WGM01);             //CTC mode
-	TCCR0B = (2 << CS00);              //div8
-	OCR0A = F_CPU/8 * 0.000010 - 1;    // 10us compare value
+	TCCR0B = (1 << CS01);              //div8
+	OCR0A = 100;						   // 50us compare value
+	TIMSK |= (1<<OCIE0A);			   // enable timer0 interrupt
 
 	//set all pins to output
-	DDRB = 0b11110;
+	DDRB = 0b011111;
 
     while (1) 
     {
+		//cli();
+
+		bool tempQueueSwap = queueSwap;
+
+		//reset queue
+		for(uint8_t i=0; i<animationNum; i++) for(uint8_t o=0; o<10; o++) LEDQueue[queueSwap][i][o] = false;
+
 		//for every animation
 		for(uint8_t i=0; i<animationNum; i++){
 			//if the animation is not in the middle of delaying, process the state machine
@@ -76,7 +86,7 @@ int main(void)
 
 						//set the next ten frames of the animation
 						for(uint8_t o=0; o<10; o++){
-							if(LEDStates[i].powerSetting > o) LEDQueue[queueSwap][i][o] = true;
+							if(LEDStates[i].powerSetting > o) LEDQueue[tempQueueSwap][i][o] = true;
 						}
 					}
 
@@ -88,13 +98,13 @@ int main(void)
 
 				//the next step is now guaranteed to be a delay, so process that
 				//if its a random delay, set delay to random*converstion factor
-				if(animationStore[i][LEDStates[i].stepCounter + 1] == L_RAND) LEDStates[i].delaySetting = returnRandom() * (10000000 / TICK_LEN);
+				if(animationStore[i][LEDStates[i].stepCounter + 1] == L_RAND) LEDStates[i].delaySetting = returnRandom() * (1000 / TICK_LEN);
 				//else set the delay to the next value times the conversion factor
-				else LEDStates[i].delaySetting = animationStore[i][LEDStates[i].stepCounter + 1] * (10000000 / TICK_LEN);
+				else LEDStates[i].delaySetting = animationStore[i][LEDStates[i].stepCounter + 1] * (1000 / TICK_LEN);
 				//increment to next step
 				LEDStates[i].stepCounter += 2;
 				//check to make sure the animation hasn't ended, and if it has reset it
-				if(LEDStates[i].stepCounter >= sizeof(animationStore[i])) LEDStates[i].stepCounter = 0;
+				if(LEDStates[i].stepCounter >= sizeof(animationStore[i]) || animationStore[i][LEDStates[i].stepCounter] == 0) LEDStates[i].stepCounter = 0;
 			}
 			//else if it is, dec. delay and copy last values (so the LED stays the same)
 			else{
@@ -104,20 +114,24 @@ int main(void)
 			LEDStates[i].delaySetting--;
 		}
 
-		//enable ISR
-		TIMSK |= (1<<OCIE0A);
+		//enable the interrupt (on the first run)
+		sei(); 
 
 		//wait until ISR empties queue
-		while(queueCounter);
+		while(queueSwap == tempQueueSwap);
     }
 }
 
 ISR(TIMER0_COMPA_vect){
-	PORTB = (LEDQueue[queueSwap][0][queuePointer] << PB0) | (LEDQueue[queueSwap][1][queuePointer] << PB1) | (LEDQueue[queueSwap][2][queuePointer] << PB2);
+	PORTB = 0;
+	if(LEDQueue[!queueSwap][0][queuePointer]) PORTB |= (1 << PB0);
+	if(LEDQueue[!queueSwap][1][queuePointer]) PORTB |= (1 << PB1);
+	if(LEDQueue[!queueSwap][2][queuePointer]) PORTB |= (1 << PB2);
+
 	queuePointer++;
-	if(queuePointer >= sizeof(LEDQueue[queueSwap][0])){
+
+	if(queuePointer >= 10){
 		queuePointer = 0;
 		queueSwap = !queueSwap;
-		queueCounter = 0;
 	}
 }
