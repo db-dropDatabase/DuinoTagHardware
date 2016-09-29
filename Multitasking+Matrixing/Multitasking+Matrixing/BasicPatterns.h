@@ -8,12 +8,16 @@
  * And hopefully have a way to display them all at once
  */
 
-#include <avr/pgmspace.h>
-
 #ifndef BASICPATTERNS_H_
 #define BASICPATTERNS_H_
 
-#define animationNum (sizeof(animationStore) / sizeof(animationStore[0]))
+#include <avr/pgmspace.h>
+
+#define ANIMATION_NUM (sizeof(animationStore) / sizeof(animationStore[0])) //macro for me
+#define TICK_LEN 100 //length, in microseconds, of how fast the program should update
+#define DIM_RES 10 //how fine grain to control dimming of the LED
+//(e.g a value of 10 would mean valid L_SET_POWER args would be from 0-10)
+//also note that the higher the dimming res the slower the refresh rate
 
 typedef const uint8_t PROGMEM animation_t;
 
@@ -25,7 +29,7 @@ enum lightCommands{
 	L_RAND_FLICKER = 254, //replace with a random number, but only 1 or 10
 };
 
-animation_t animationStore[][10] = { //array which stores the animations
+animation_t animationStore[][50] = { //array which stores the animations
 	{
 		L_SET_POWER, 10,  //turn the LED on
 		L_DELAY, 10,  //delay for 100 millis
@@ -39,10 +43,26 @@ animation_t animationStore[][10] = { //array which stores the animations
 		L_DELAY, 5,
 	},
 	{
+		L_SET_POWER, 10,
+		L_DELAY, 2,
+		L_SET_POWER, 9,
+		L_DELAY, 2,
+		L_SET_POWER, 8,
+		L_DELAY, 2,
+		L_SET_POWER, 7,
+		L_DELAY, 2,
+		L_SET_POWER, 6,
+		L_DELAY, 2,
 		L_SET_POWER, 5,
-		L_DELAY, 100,
-		L_SET_POWER, 0,
-		L_DELAY, 5,
+		L_DELAY, 2,
+		L_SET_POWER, 4,
+		L_DELAY, 2,
+		L_SET_POWER, 3,
+		L_DELAY, 2,
+		L_SET_POWER, 2,
+		L_DELAY, 2,
+		L_SET_POWER, 1,
+		L_DELAY, 2,
 	},
 	//insert as many as you like here
 };
