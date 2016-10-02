@@ -15,7 +15,7 @@
 
 #define animationNum (sizeof(animationStore) / sizeof(animationStore[0]))
 
-typedef const uint8_t PROGMEM animation_t;
+typedef const uint8_t animation_t;
 
 //below are commands understood by the interpreter
 enum lightCommands{
@@ -25,24 +25,54 @@ enum lightCommands{
 	L_RAND_FLICKER = 254, //replace with a random number, but only 1 or 10
 };
 
-animation_t animationStore[][10] = { //array which stores the animations
+animation_t animationStore[][100] = { //array which stores the animations
 	{
 		L_SET_POWER, 10,  //turn the LED on
-		L_DELAY, 10,  //delay for 100 millis
+		L_DELAY, 100,  //delay for 100 millis
 		L_SET_POWER, L_RAND, //set the power to a random number between 0 and 1
-		L_DELAY, 10, //delay for another 100 millis
+		L_DELAY, 100, //delay for another 100 millis
 	}, //and repeat
 	{
-		L_SET_POWER, 10,
+		L_SET_POWER, L_RAND,
 		L_DELAY, L_RAND,
-		L_SET_POWER, 0,
-		L_DELAY, 5,
 	},
 	{
+		L_SET_POWER, 10,
+		L_DELAY, 10,
+		L_SET_POWER, 9,
+		L_DELAY, 10,
+		L_SET_POWER, 8,
+		L_DELAY, 10,
+		L_SET_POWER, 7,
+		L_DELAY, 10,
+		L_SET_POWER, 6,
+		L_DELAY, 10,
 		L_SET_POWER, 5,
-		L_DELAY, 100,
-		L_SET_POWER, 0,
-		L_DELAY, 5,
+		L_DELAY, 10,
+		L_SET_POWER, 4,
+		L_DELAY, 10,
+		L_SET_POWER, 3,
+		L_DELAY, 10,
+		L_SET_POWER, 2,
+		L_DELAY, 10,
+		L_SET_POWER, 1,
+		L_DELAY, 10,
+		L_SET_POWER, 2,
+		L_DELAY, 10,
+		L_SET_POWER, 3,
+		L_DELAY, 10,
+		L_SET_POWER, 4,
+		L_DELAY, 10,
+		L_SET_POWER, 5,
+		L_DELAY, 10,
+		L_SET_POWER, 6,
+		L_DELAY, 10,
+		L_SET_POWER, 7,
+		L_DELAY, 10,
+		L_SET_POWER, 8,
+		L_DELAY, 10,
+		L_SET_POWER, 9,
+		L_DELAY, 10,
 	},
 	//insert as many as you like here
 };
