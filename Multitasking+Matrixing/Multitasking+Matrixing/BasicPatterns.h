@@ -13,11 +13,16 @@
 
 #include <avr/pgmspace.h>
 
-#define ANIMATION_NUM (sizeof(animationStore) / sizeof(animationStore[0])) //macro for me
+#define ANIMATION_NUM sizeof(animationStore) / sizeof(animationStore[0]) //macro for me
 #define TICK_LEN 100 //length, in microseconds, of how fast the program should update
 #define DIM_RES 10 //how fine grain to control dimming of the LED
 //(e.g a value of 10 would mean valid L_SET_POWER args would be from 0-10)
 //also note that the higher the dimming res the slower the refresh rate
+
+//pin definitions, one for each animation needed
+uint8_t pinRay[] = {
+	PB0, PB1, PB2
+};
 
 typedef const uint8_t animation_t;
 

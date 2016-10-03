@@ -8,12 +8,9 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include "CheapRandom.h"
-#include "CheapStorage.h"
 #include "BasicPatterns.h"
 
 #define F_CPU 8000000L
-
-const uint16_t TICK_LEN = 500;
 
 void setLED(uint8_t LEDnum); //to be made later on
 
@@ -24,7 +21,8 @@ typedef struct {
 	uint8_t stepCounter;
 }LEDState_t;
 
-LEDState_t LEDStates[animationNum] = {};
+LEDState_t LEDStates[ANIMATION_NUM] = {};
+uint8_t LEDqueue[2][ANIMATION_NUM] = {};
 volatile uint8_t queueSwap = 0;
 volatile uint8_t queuePointer = 0; 
 
@@ -46,7 +44,7 @@ int main(void)
 		uint8_t tempQueueSwap = queueSwap;
 
 		//reset queue
-		zero(tempQueueSwap);
+		 for(uint8_t i=0; i<ANIMATION_NUM; i++) LEDqueue[tempQueueSwap][i] = 0;
 
 		//for every animation
 		for(uint8_t i=0; i<ANIMATION_NUM; i++){
@@ -72,9 +70,9 @@ int main(void)
 
 				//the next step is now guaranteed to be a delay, so process that
 				//if its a flicker random, set power to the random flicker
-				if(animationStore[i][LEDStates[i].stepCounter + 1] == L_RAND_FLICKER) LEDStates[i].delaySetting = returnRandomFlicker() * (1000 / TICK_LEN);
+				if(animationStore[i][LEDStates[i].stepCounter + 1] == L_RAND_FLICKER) LEDStates[i].delaySetting = returnRandomFlicker() * (100000 / (TICK_LEN * DIM_RES));
 				//if its a random delay, set delay to random*converstion factor
-				else if(animationStore[i][LEDStates[i].stepCounter + 1] == L_RAND) LEDStates[i].delaySetting = returnRandom() * (1000 / TICK_LEN);
+				else if(animationStore[i][LEDStates[i].stepCounter + 1] == L_RAND) LEDStates[i].delaySetting = returnRandom() * (100000 / (TICK_LEN * DIM_RES));
 				//else set the delay to the next value times the conversion factor
 				else LEDStates[i].delaySetting = animationStore[i][LEDStates[i].stepCounter + 1] * (100000 / (TICK_LEN * DIM_RES));
 				//increment to next step
@@ -83,10 +81,8 @@ int main(void)
 				if(LEDStates[i].stepCounter >= sizeof(animationStore[i]) || animationStore[i][LEDStates[i].stepCounter] == 0) LEDStates[i].stepCounter = 0;
 			}
 
-			//set the next ten frames of the animation
-			for(uint8_t o=0; o<10; o++){
-				if(LEDStates[i].powerSetting > o) setElement(tempQueueSwap, i, o, 1);
-			}
+			//set the next frames of the animation
+			LEDqueue[tempQueueSwap][i] = LEDStates[i].powerSetting;
 			//dec. the delay
 			LEDStates[i].delaySetting--;
 		}
@@ -101,9 +97,9 @@ int main(void)
 
 ISR(TIMER0_COMPA_vect){
 	PORTB = 0;
-	if(getElement(!queueSwap, 0, queuePointer)) PORTB |= (1 << PB0);
-	if(getElement(!queueSwap, 1, queuePointer)) PORTB |= (1 << PB1);
-	if(getElement(!queueSwap, 2, queuePointer)) PORTB |= (1 << PB2);
+	for(uint8_t i=0; i<ANIMATION_NUM; i++){
+		if(LEDqueue[queueSwap][i] <= queuePointer) PORTB |= (1 << pinRay[i]);
+	}
 
 	queuePointer++;
 

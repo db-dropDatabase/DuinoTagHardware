@@ -23,7 +23,7 @@ extern uint8_t randPoint;
 extern uint8_t returnRandom();
 //returns between 1-CHEAP_RAND_MAX
 
-extern uint8_t returnRandomBool();
-//will only return 0 or 1
+extern uint8_t returnRandomFlicker();
+//will only return 1-max/2
 
 #endif /* CHEAPRANDOM_H_ */

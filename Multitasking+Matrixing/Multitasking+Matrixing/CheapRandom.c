@@ -35,8 +35,8 @@ uint8_t returnRandom(){
 	return cheapRandom[randPoint] % CHEAP_RAND_MAX + 1; //good enough
 }
 
-uint8_t returnRandomBool(){
+uint8_t returnRandomFlicker(){
 	randPoint++;
 	if(randPoint == sizeof(cheapRandom)-1) randPoint = 0;
-	return cheapRandom[randPoint] % 2;
+	return cheapRandom[randPoint] % (CHEAP_RAND_MAX / 2);
 }
