@@ -7,11 +7,9 @@
  * This file will detail the syntax for creating simple lighting patterns
  * And hopefully have a way to display them all at once
  */
-
-#include <avr/pgmspace.h>
-
 #ifndef BASICPATTERNS_H_
 #define BASICPATTERNS_H_
+
 
 #define animationNum (sizeof(animationStore) / sizeof(animationStore[0]))
 
@@ -22,10 +20,9 @@ enum lightCommands{
 	L_SET_POWER = 1, //set light power, from 0 - 10
 	L_DELAY = 2,  //add a delay in the animation, in tens of milliseconds
 	L_RAND = 255, //replace with a random number between 1 and 10
-	L_RAND_FLICKER = 254, //replace with a random number, but only 1 or 10
 };
 
-animation_t animationStore[][100] = { //array which stores the animations
+animation_t animationStore[][150] = { //array which stores the animations
 	{
 		L_SET_POWER, 10,  //turn the LED on
 		L_DELAY, 100,  //delay for 100 millis
@@ -37,6 +34,22 @@ animation_t animationStore[][100] = { //array which stores the animations
 		L_DELAY, L_RAND,
 	},
 	{
+		L_SET_POWER, 50,
+		L_DELAY, 10,
+		L_SET_POWER, 45,
+		L_DELAY, 10,
+		L_SET_POWER, 40,
+		L_DELAY, 10,
+		L_SET_POWER, 35,
+		L_DELAY, 10,
+		L_SET_POWER, 30,
+		L_DELAY, 10,
+		L_SET_POWER, 25,
+		L_DELAY, 10,
+		L_SET_POWER, 20,
+		L_DELAY, 10,
+		L_SET_POWER, 15,
+		L_DELAY, 10,
 		L_SET_POWER, 10,
 		L_DELAY, 10,
 		L_SET_POWER, 9,
@@ -56,6 +69,8 @@ animation_t animationStore[][100] = { //array which stores the animations
 		L_SET_POWER, 2,
 		L_DELAY, 10,
 		L_SET_POWER, 1,
+		L_DELAY, 10,
+		L_SET_POWER, 0,
 		L_DELAY, 10,
 		L_SET_POWER, 2,
 		L_DELAY, 10,

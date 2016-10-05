@@ -140,12 +140,6 @@
     <Compile Include="CheapRandom.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="CheapStorage.c">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="CheapStorage.h">
-      <SubType>compile</SubType>
-    </Compile>
     <Compile Include="main.c">
       <SubType>compile</SubType>
     </Compile>
