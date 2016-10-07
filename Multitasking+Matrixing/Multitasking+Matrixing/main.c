@@ -22,6 +22,7 @@ typedef struct {
 	uint8_t powerSetting;
 	uint8_t scaleSetting;
 	uint8_t dimSetting;
+	uint8_t dimTime;
 	uint8_t stepCounter;
 }LEDState_t;
 
@@ -73,8 +74,9 @@ int main(void)
 					}
 
 					else if(pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter]) == L_SET_DIM){
-						//set the dim setting
-						LEDStates[i].dimSetting = pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter + 1]);
+						//set the dim setting, or set the dimming delay
+						if(pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter + 1]) >= D_DIM_CYCLE_DEC) LEDStates[i].dimSetting = pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter + 1]);
+						else LEDStates[i].dimTime = pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter + 1]);
 					}
 
 					else if(pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter]) == L_SET_SCALE){
@@ -86,6 +88,38 @@ int main(void)
 					LEDStates[i].stepCounter += 2;
 					//check to make sure the animation hasn't ended, and if it has reset it
 					if(LEDStates[i].stepCounter >= sizeof(animationStore[i])) LEDStates[i].stepCounter = 0;
+				}
+
+				//process dimming
+				if(LEDStates[i].dimSetting) {
+					switch(LEDStates[i].dimSetting){
+						case D_DIM_DEC:
+							//don't dec if under zero
+							if(LEDStates[i].powerSetting > 0) LEDStates[i].powerSetting--;
+							else LEDStates[i].dimSetting = 0;
+							break;
+						case D_DIM_INC:
+							//dont inc if over max val
+							if(LEDStates[i].powerSetting < LEDStates[i].scaleSetting) LEDStates[i].powerSetting++;
+							else LEDStates[i].dimSetting = 0;
+							break;
+						case D_DIM_CYCLE_DEC:
+							//if can't dec, set to zero, then swap to inc
+							if(LEDStates[i].powerSetting > 0) LEDStates[i].powerSetting--;
+							else LEDStates[i].dimSetting = D_DIM_CYCLE_INC;
+							break;
+						case D_DIM_CYCLE_INC:
+							//if can't inc, set to max, then swap to dec
+							if(LEDStates[i].powerSetting < LEDStates[i].scaleSetting) LEDStates[i].powerSetting++;
+							else LEDStates[i].dimSetting = D_DIM_CYCLE_DEC;
+							break;
+						default:
+							LEDStates[i].dimSetting = 0;
+							break;
+					}
+					
+					//set the diming delay if there is one
+					LEDStates[i].delaySetting = LEDStates[i].dimTime;
 				}
 
 				//the next step is now guaranteed to be a delay, so process that
@@ -100,34 +134,7 @@ int main(void)
 				//check to make sure the animation hasn't ended, and if it has reset it
 				if(LEDStates[i].stepCounter >= sizeof(animationStore[i]) || pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter]) == 0) LEDStates[i].stepCounter = 0;
 			}
-
-			//process dimming
-			switch(LEDStates[i].dimSetting){
-				case D_DIM_DEC:
-					//don't dec if under zero
-					if(LEDStates[i].powerSetting > 0) LEDStates[i].powerSetting--;
-					else LEDStates[i].dimSetting = 0;
-					break;
-				case D_DIM_INC:
-					//dont inc if over max val
-					if(LEDStates[i].powerSetting < LEDStates[i].scaleSetting) LEDStates[i].powerSetting++;
-					else LEDStates[i].dimSetting = 0; 
-					break;
-				case D_DIM_CYCLE_DEC:
-					//if can't dec, set to zero, then swap to inc
-					if(LEDStates[i].powerSetting > 0) LEDStates[i].powerSetting--;
-					else LEDStates[i].dimSetting = D_DIM_CYCLE_INC;
-					break;
-				case D_DIM_CYCLE_INC:
-					//if can't inc, set to max, then swap to dec
-					if(LEDStates[i].powerSetting < LEDStates[i].scaleSetting) LEDStates[i].powerSetting++;
-					else LEDStates[i].dimSetting = D_DIM_CYCLE_DEC;
-					break;
-				default:
-					break;
-				
-			}
-
+			
 			//set the next frames of the animation
 			LEDPower[tempSwap][i] = LEDStates[i].powerSetting * (DIM_RES / LEDStates[i].scaleSetting);
 

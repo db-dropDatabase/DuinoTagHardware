@@ -25,7 +25,7 @@ enum lightCommands{
 	//below are commands for odd slots
 	L_SET_SCALE = 1, //set the scale for L_SET_POWER to run off of, do not use random (please)
 	L_SET_POWER = 2, //set light power, from 0 - scale max
-	L_SET_DIM = 3, //set dimming type, do not use random
+	L_SET_DIM = 3, //set dimming type, or set the dimming speed (higher is slower)
 	L_DELAY = 4,  //add a delay in the animation, in tens of milliseconds
 	//below are commands for even slots
 	N_RAND = 254, //replace with a random number above zero
