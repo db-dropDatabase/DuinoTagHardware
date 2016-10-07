@@ -10,6 +10,9 @@
 #ifndef BASICPATTERNS_H_
 #define BASICPATTERNS_H_
 
+#include <avr/io.h>
+#include <avr/pgmspace.h>
+
 //TODO: add complier based number checking
 //or better comments
 
@@ -25,15 +28,15 @@ enum lightCommands{
 	L_SET_DIM = 3, //set dimming type, do not use random
 	L_DELAY = 4,  //add a delay in the animation, in tens of milliseconds
 	//below are commands for even slots
-	N_RAND = 255, //replace with a random number above zero
-	N_RAND_5 = 254, //replace witha random number between 1-10
-	D_DIM_INC = 253, //have the atate machine inc the power every tick, creating a dimming effect
-	D_DIM_DEC = 252, //same as L_DIM_INC, but in reverse
-	D_DIM_CYCLE_INC = 251, //dim continiously starting up
-	D_DIM_CYCLE_DEC = 250, //dim continiously, starting down
+	N_RAND = 254, //replace with a random number above zero
+	N_RAND_5 = 253, //replace witha random number between 1-10
+	D_DIM_INC = 252, //have the atate machine inc the power every tick, creating a dimming effect
+	D_DIM_DEC = 251, //same as L_DIM_INC, but in reverse
+	D_DIM_CYCLE_INC = 250, //dim continiously starting up
+	D_DIM_CYCLE_DEC = 249, //dim continiously, starting down
 };
 
-animation_t animationStore[][50] = { //array which stores the animations
+animation_t PROGMEM animationStore[][50] = { //array which stores the animations
 	{
 		L_SET_POWER, 50,  //turn the LED on
 		L_DELAY, 100,  //delay for 100 millis
