@@ -10,6 +10,8 @@
 #ifndef BASICPATTERNS_H_
 #define BASICPATTERNS_H_
 
+//TODO: add complier based number checking
+//or better comments
 
 #define animationNum (sizeof(animationStore) / sizeof(animationStore[0]))
 
@@ -17,77 +19,39 @@ typedef const uint8_t animation_t;
 
 //below are commands understood by the interpreter
 enum lightCommands{
-	L_SET_POWER = 1, //set light power, from 0 - 10
-	L_DELAY = 2,  //add a delay in the animation, in tens of milliseconds
-	L_RAND = 255, //replace with a random number between 1 and 10
+	//below are commands for odd slots
+	L_SET_SCALE = 1, //set the scale for L_SET_POWER to run off of, do not use random (please)
+	L_SET_POWER = 2, //set light power, from 0 - scale max
+	L_SET_DIM = 3, //set dimming type, do not use random
+	L_DELAY = 4,  //add a delay in the animation, in tens of milliseconds
+	//below are commands for even slots
+	N_RAND = 255, //replace with a random number above zero
+	N_RAND_5 = 254, //replace witha random number between 1-10
+	D_DIM_INC = 253, //have the atate machine inc the power every tick, creating a dimming effect
+	D_DIM_DEC = 252, //same as L_DIM_INC, but in reverse
+	D_DIM_CYCLE_INC = 251, //dim continiously starting up
+	D_DIM_CYCLE_DEC = 250, //dim continiously, starting down
 };
 
-animation_t animationStore[][150] = { //array which stores the animations
+animation_t animationStore[][50] = { //array which stores the animations
 	{
-		L_SET_POWER, 10,  //turn the LED on
+		L_SET_POWER, 50,  //turn the LED on
 		L_DELAY, 100,  //delay for 100 millis
-		L_SET_POWER, L_RAND, //set the power to a random number between 0 and 1
+		L_SET_POWER, N_RAND, //set the power to a random number between 0 and 1
 		L_DELAY, 100, //delay for another 100 millis
+		L_SET_POWER, 0,  //turn the LED off
+		L_DELAY, 100,  //delay for 100 millis
 	}, //and repeat
 	{
-		L_SET_POWER, L_RAND,
-		L_DELAY, L_RAND,
+		L_SET_SCALE, 10,
+		L_SET_POWER, N_RAND,
+		L_DELAY, N_RAND_5,
+		L_SET_POWER, N_RAND_5,
+		L_DELAY, N_RAND_5,
 	},
 	{
-		L_SET_POWER, 50,
-		L_DELAY, 10,
-		L_SET_POWER, 45,
-		L_DELAY, 10,
-		L_SET_POWER, 40,
-		L_DELAY, 10,
-		L_SET_POWER, 35,
-		L_DELAY, 10,
-		L_SET_POWER, 30,
-		L_DELAY, 10,
-		L_SET_POWER, 25,
-		L_DELAY, 10,
-		L_SET_POWER, 20,
-		L_DELAY, 10,
-		L_SET_POWER, 15,
-		L_DELAY, 10,
-		L_SET_POWER, 10,
-		L_DELAY, 10,
-		L_SET_POWER, 9,
-		L_DELAY, 10,
-		L_SET_POWER, 8,
-		L_DELAY, 10,
-		L_SET_POWER, 7,
-		L_DELAY, 10,
-		L_SET_POWER, 6,
-		L_DELAY, 10,
-		L_SET_POWER, 5,
-		L_DELAY, 10,
-		L_SET_POWER, 4,
-		L_DELAY, 10,
-		L_SET_POWER, 3,
-		L_DELAY, 10,
-		L_SET_POWER, 2,
-		L_DELAY, 10,
-		L_SET_POWER, 1,
-		L_DELAY, 10,
-		L_SET_POWER, 0,
-		L_DELAY, 10,
-		L_SET_POWER, 2,
-		L_DELAY, 10,
-		L_SET_POWER, 3,
-		L_DELAY, 10,
-		L_SET_POWER, 4,
-		L_DELAY, 10,
-		L_SET_POWER, 5,
-		L_DELAY, 10,
-		L_SET_POWER, 6,
-		L_DELAY, 10,
-		L_SET_POWER, 7,
-		L_DELAY, 10,
-		L_SET_POWER, 8,
-		L_DELAY, 10,
-		L_SET_POWER, 9,
-		L_DELAY, 10,
+		L_SET_DIM, D_DIM_CYCLE_INC,
+		L_DELAY, 200,
 	},
 	//insert as many as you like here
 };

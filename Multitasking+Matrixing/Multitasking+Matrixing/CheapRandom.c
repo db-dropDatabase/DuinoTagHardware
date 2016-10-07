@@ -29,8 +29,8 @@ const uint8_t PROGMEM cheapRandom[] = {
 	92,	41,
 };
 
-uint8_t returnRandom(){
+uint8_t returnRandom(uint8_t mod){
 	randPoint++;
 	if(randPoint == sizeof(cheapRandom)-1) randPoint = 0;
-	return cheapRandom[randPoint] % CHEAP_RAND_MAX + 1; //good enough
+	return cheapRandom[randPoint] % mod + 1; //good enough
 }
