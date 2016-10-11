@@ -25,7 +25,7 @@ enum lightCommands{
 	//below are commands for odd slots
 	L_SET_SCALE = 1, //set the scale for L_SET_POWER to run off of, do not use random (please)
 	L_SET_POWER = 2, //set light power, from 0 - scale max
-	L_SET_DIM = 3, //set dimming type, do not use random
+	L_SET_DIM = 3, //set dimming type, or the dimming speed (higher is slower)
 	L_DELAY = 4,  //add a delay in the animation, in tens of milliseconds
 	//below are commands for even slots
 	N_RAND = 254, //replace with a random number above zero
@@ -34,16 +34,17 @@ enum lightCommands{
 	D_DIM_DEC = 251, //same as L_DIM_INC, but in reverse
 	D_DIM_CYCLE_INC = 250, //dim continiously starting up
 	D_DIM_CYCLE_DEC = 249, //dim continiously, starting down
+	D_DIM_OFF = 248, //turn dimming off
 };
 
 animation_t PROGMEM animationStore[][50] = { //array which stores the animations
 	{
 		L_SET_POWER, 50,  //turn the LED on
-		L_DELAY, 100,  //delay for 100 millis
+		L_DELAY, 50,  //delay for 100 millis
 		L_SET_POWER, N_RAND, //set the power to a random number between 0 and 1
-		L_DELAY, 100, //delay for another 100 millis
+		L_DELAY, 50, //delay for another 100 millis
 		L_SET_POWER, 0,  //turn the LED off
-		L_DELAY, 100,  //delay for 100 millis
+		L_DELAY, 50,  //delay for 100 millis
 	}, //and repeat
 	{
 		L_SET_SCALE, 10,
@@ -54,6 +55,7 @@ animation_t PROGMEM animationStore[][50] = { //array which stores the animations
 	},
 	{
 		L_SET_DIM, D_DIM_CYCLE_INC,
+		L_SET_DIM, 2,
 		L_DELAY, 200,
 	},
 	//insert as many as you like here

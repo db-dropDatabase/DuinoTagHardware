@@ -22,6 +22,8 @@ typedef struct {
 	uint8_t powerSetting;
 	uint8_t scaleSetting;
 	uint8_t dimSetting;
+	uint8_t dimTime;
+	uint8_t dimCurrentTime;
 	uint8_t stepCounter;
 }LEDState_t;
 
@@ -57,30 +59,35 @@ int main(void)
 		for(uint8_t i=0; i<animationNum; i++){
 			//keep processing state machine until there is delay
 			while(!LEDStates[i].delaySetting){
-				if(pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter]) == L_SET_POWER){
+				//cache progmem values
+				const uint8_t currentStep = pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter]);
+				const uint8_t nextStep = pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter + 1]);
+
+				if(currentStep == L_SET_POWER){
 					//parse special cases for numbers
-					if(pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter + 1]) == N_RAND) LEDStates[i].powerSetting = returnRandom(LEDStates[i].scaleSetting);
-					else if(pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter + 1]) == N_RAND_5) LEDStates[i].powerSetting = returnRandom(5);
-					else LEDStates[i].powerSetting = pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter + 1]);
+					if(nextStep == N_RAND) LEDStates[i].powerSetting = returnRandom(LEDStates[i].scaleSetting);
+					else if(nextStep == N_RAND_5) LEDStates[i].powerSetting = returnRandom(5);
+					else LEDStates[i].powerSetting = nextStep;
 				}
 
-				else if(pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter]) == L_SET_DIM){
+				else if(currentStep == L_SET_DIM){
 					//set the dim setting
-					LEDStates[i].dimSetting = pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter + 1]);
+					if(nextStep >= D_DIM_OFF) LEDStates[i].dimSetting = nextStep;
+					else LEDStates[i].dimTime = nextStep;
 				}
 
-				else if(pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter]) == L_SET_SCALE){
+				else if(currentStep == L_SET_SCALE){
 					//set the scale
-					LEDStates[i].scaleSetting = pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter + 1]);
+					LEDStates[i].scaleSetting = nextStep;
 				}
 
-				else if(pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter]) == L_DELAY){
+				else if(currentStep == L_DELAY){
 					//set the delay w/ special number cases
 					//if its a random delay, set delay to random*converstion factor
-					if(pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter + 1]) == N_RAND) LEDStates[i].delaySetting = returnRandom(DIM_RES) * (1000 / TICK_LEN);
-					else if(pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter + 1]) == N_RAND_5) LEDStates[i].delaySetting = returnRandom(5) * 2; //fix this
+					if(nextStep == N_RAND) LEDStates[i].delaySetting = returnRandom(DIM_RES) * (1000 / TICK_LEN);
+					else if(nextStep == N_RAND_5) LEDStates[i].delaySetting = returnRandom(5) * 2; //fix this
 					//else set the delay to the next value times the conversion factor
-					else LEDStates[i].delaySetting = pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter + 1]) * (1000 / TICK_LEN);
+					else LEDStates[i].delaySetting = nextStep * (1000 / TICK_LEN);
 				}
 
 				//increment to next step
@@ -90,31 +97,41 @@ int main(void)
 			}
 
 			//process dimming
-			switch(LEDStates[i].dimSetting){
-				case D_DIM_DEC:
-				//don't dec if under zero
-				if(LEDStates[i].powerSetting > 0) LEDStates[i].powerSetting--;
-				else LEDStates[i].dimSetting = 0;
-				break;
-				case D_DIM_INC:
-				//dont inc if over max val
-				if(LEDStates[i].powerSetting < LEDStates[i].scaleSetting) LEDStates[i].powerSetting++;
-				else LEDStates[i].dimSetting = 0;
-				break;
-				case D_DIM_CYCLE_DEC:
-				//if can't dec, set to zero, then swap to inc
-				if(LEDStates[i].powerSetting > 0) LEDStates[i].powerSetting--;
-				else LEDStates[i].dimSetting = D_DIM_CYCLE_INC;
-				break;
-				case D_DIM_CYCLE_INC:
-				//if can't inc, set to max, then swap to dec
-				if(LEDStates[i].powerSetting < LEDStates[i].scaleSetting) LEDStates[i].powerSetting++;
-				else LEDStates[i].dimSetting = D_DIM_CYCLE_DEC;
-				break;
-				default:
-				break;
-				
+			//if dimming timer is up
+			if(!LEDStates[i].dimCurrentTime && LEDStates[i].dimSetting){
+				//TODO: swap to if:else
+				switch(LEDStates[i].dimSetting){
+					case D_DIM_DEC:
+						//don't dec if under zero
+						if(LEDStates[i].powerSetting > 0) LEDStates[i].powerSetting--;
+						else LEDStates[i].dimSetting = 0;
+						break;
+					case D_DIM_INC:
+						//dont inc if over max val
+						if(LEDStates[i].powerSetting < LEDStates[i].scaleSetting) LEDStates[i].powerSetting++;
+						else LEDStates[i].dimSetting = 0;
+						break;
+					case D_DIM_CYCLE_DEC:
+					//if can't dec, set to zero, then swap to inc
+						if(LEDStates[i].powerSetting > 0) LEDStates[i].powerSetting--;
+						else LEDStates[i].dimSetting = D_DIM_CYCLE_INC;
+						break;
+					case D_DIM_CYCLE_INC:
+						//if can't inc, set to max, then swap to dec
+						if(LEDStates[i].powerSetting < LEDStates[i].scaleSetting) LEDStates[i].powerSetting++;
+						else LEDStates[i].dimSetting = D_DIM_CYCLE_DEC;
+						break;
+					default:
+						LEDStates[i].dimSetting = 0;
+						LEDStates[i].dimTime = 0;
+						break;
+					
+				}
+
+				LEDStates[i].dimCurrentTime = LEDStates[i].dimTime;
 			}
+			//else decrement dimming timer
+			else if(LEDStates[i].dimTime) LEDStates[i].dimCurrentTime--;
 
 			//set the next frames of the animation
 			LEDPower[tempSwap][i] = LEDStates[i].powerSetting * (DIM_RES / LEDStates[i].scaleSetting);
@@ -133,9 +150,9 @@ int main(void)
 
 ISR(TIMER0_COMPA_vect){
 	PORTB = 0;
-	if(LEDPower[!swap][0] <= queuePointer) PORTB |= (1 << PB0);
-	if(LEDPower[!swap][1] <= queuePointer) PORTB |= (1 << PB1);
-	if(LEDPower[!swap][2] <= queuePointer) PORTB |= (1 << PB2);
+	if(LEDPower[!swap][0] > queuePointer) PORTB |= (1 << PB0);
+	if(LEDPower[!swap][1] > queuePointer) PORTB |= (1 << PB1);
+	if(LEDPower[!swap][2] > queuePointer) PORTB |= (1 << PB2);
 
 	queuePointer++;
 
