@@ -55,76 +55,64 @@ int main(void)
 
 		//for every animation
 		for(uint8_t i=0; i<animationNum; i++){
-			//if the animation is not in the middle of delaying, process the state machine
-			if(!LEDStates[i].delaySetting){
-				while(pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter]) != L_DELAY){
-					if(pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter]) == L_SET_POWER){
-						//parse special cases for numbers
-						switch(pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter + 1])){
-							case N_RAND:
-								LEDStates[i].powerSetting = returnRandom(LEDStates[i].scaleSetting);
-								break;
-							case N_RAND_5:
-								LEDStates[i].powerSetting = returnRandom(5);
-								break;
-							default:
-								LEDStates[i].powerSetting = pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter + 1]);
-						}
-					}
-
-					else if(pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter]) == L_SET_DIM){
-						//set the dim setting
-						LEDStates[i].dimSetting = pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter + 1]);
-					}
-
-					else if(pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter]) == L_SET_SCALE){
-						//set the scale
-						LEDStates[i].scaleSetting = pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter + 1]);
-					}
-
-					//increment to next step
-					LEDStates[i].stepCounter += 2;
-					//check to make sure the animation hasn't ended, and if it has reset it
-					if(LEDStates[i].stepCounter >= sizeof(animationStore[i])) LEDStates[i].stepCounter = 0;
+			//keep processing state machine until there is delay
+			while(!LEDStates[i].delaySetting){
+				if(pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter]) == L_SET_POWER){
+					//parse special cases for numbers
+					if(pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter + 1]) == N_RAND) LEDStates[i].powerSetting = returnRandom(LEDStates[i].scaleSetting);
+					else if(pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter + 1]) == N_RAND_5) LEDStates[i].powerSetting = returnRandom(5);
+					else LEDStates[i].powerSetting = pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter + 1]);
 				}
 
-				//the next step is now guaranteed to be a delay, so process that
-				//if its a ten random, do that
-				if(pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter + 1]) == N_RAND) LEDStates[i].delaySetting = returnRandom(DIM_RES) * (1000 / TICK_LEN);
-				//if its a random delay, set delay to random*converstion factor
-				else if(pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter + 1]) == N_RAND_5) LEDStates[i].delaySetting = returnRandom(5) * 2; //fix this
-				//else set the delay to the next value times the conversion factor
-				else LEDStates[i].delaySetting = pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter + 1]) * (1000 / TICK_LEN);
+				else if(pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter]) == L_SET_DIM){
+					//set the dim setting
+					LEDStates[i].dimSetting = pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter + 1]);
+				}
+
+				else if(pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter]) == L_SET_SCALE){
+					//set the scale
+					LEDStates[i].scaleSetting = pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter + 1]);
+				}
+
+				else if(pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter]) == L_DELAY){
+					//set the delay w/ special number cases
+					//if its a random delay, set delay to random*converstion factor
+					if(pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter + 1]) == N_RAND) LEDStates[i].delaySetting = returnRandom(DIM_RES) * (1000 / TICK_LEN);
+					else if(pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter + 1]) == N_RAND_5) LEDStates[i].delaySetting = returnRandom(5) * 2; //fix this
+					//else set the delay to the next value times the conversion factor
+					else LEDStates[i].delaySetting = pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter + 1]) * (1000 / TICK_LEN);
+				}
+
 				//increment to next step
 				LEDStates[i].stepCounter += 2;
 				//check to make sure the animation hasn't ended, and if it has reset it
-				if(LEDStates[i].stepCounter >= sizeof(animationStore[i]) || pgm_read_byte(&animationStore[i][LEDStates[i].stepCounter]) == 0) LEDStates[i].stepCounter = 0;
+				if(LEDStates[i].stepCounter >= sizeof(animationStore[i])) LEDStates[i].stepCounter = 0;
 			}
 
 			//process dimming
 			switch(LEDStates[i].dimSetting){
 				case D_DIM_DEC:
-					//don't dec if under zero
-					if(LEDStates[i].powerSetting > 0) LEDStates[i].powerSetting--;
-					else LEDStates[i].dimSetting = 0;
-					break;
+				//don't dec if under zero
+				if(LEDStates[i].powerSetting > 0) LEDStates[i].powerSetting--;
+				else LEDStates[i].dimSetting = 0;
+				break;
 				case D_DIM_INC:
-					//dont inc if over max val
-					if(LEDStates[i].powerSetting < LEDStates[i].scaleSetting) LEDStates[i].powerSetting++;
-					else LEDStates[i].dimSetting = 0; 
-					break;
+				//dont inc if over max val
+				if(LEDStates[i].powerSetting < LEDStates[i].scaleSetting) LEDStates[i].powerSetting++;
+				else LEDStates[i].dimSetting = 0;
+				break;
 				case D_DIM_CYCLE_DEC:
-					//if can't dec, set to zero, then swap to inc
-					if(LEDStates[i].powerSetting > 0) LEDStates[i].powerSetting--;
-					else LEDStates[i].dimSetting = D_DIM_CYCLE_INC;
-					break;
+				//if can't dec, set to zero, then swap to inc
+				if(LEDStates[i].powerSetting > 0) LEDStates[i].powerSetting--;
+				else LEDStates[i].dimSetting = D_DIM_CYCLE_INC;
+				break;
 				case D_DIM_CYCLE_INC:
-					//if can't inc, set to max, then swap to dec
-					if(LEDStates[i].powerSetting < LEDStates[i].scaleSetting) LEDStates[i].powerSetting++;
-					else LEDStates[i].dimSetting = D_DIM_CYCLE_DEC;
-					break;
+				//if can't inc, set to max, then swap to dec
+				if(LEDStates[i].powerSetting < LEDStates[i].scaleSetting) LEDStates[i].powerSetting++;
+				else LEDStates[i].dimSetting = D_DIM_CYCLE_DEC;
+				break;
 				default:
-					break;
+				break;
 				
 			}
 
