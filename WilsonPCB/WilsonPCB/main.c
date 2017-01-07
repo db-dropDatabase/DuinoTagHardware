@@ -8,6 +8,12 @@
 #include <avr/io.h>
 #include <avr/sleep.h>
 #include <avr/interrupt.h>
+#include "debounce.h"
+
+#define BUTTON PB4
+
+volatile char lastButtonState = false;
+volatile char longPress = 0;
 
 inline void initUSI(){
 	PRR &= ~(1 << PRUSI);
@@ -40,7 +46,7 @@ int main(void)
 	
 	//init ports
 	DDRB |= (1 << PB0) | (1 << PB1) | (1 << PB2) | (1 << PB3);
-	PORTB |= (1 << PB4);
+	PORTB |= (1 << BUTTON);
 	
 	//init port interrupts
 	GIMSK |= (1 << PCIE);
@@ -69,9 +75,25 @@ ISR(TIMER0_COMPA_vect){
 }
 
 ISR(TIMER0_OVF_vect){
+	debounce();
 	//cycle animation
 }
 
 ISR(PCINT0_vect){
-	//check input, do stuff
+	
+	for(char i = 0; i =< 0xFF; i++) 
+	
+	if(button_down(BUTTON)){
+		if(longPress < 0xFF) longPress++;
+	}
+	else if(lastButtonState){
+		if(longPress == 0xFF){
+			//long press code
+		}
+		else{
+			//everything else
+		}
+	}
+	
+	lastButtonState = button_down(BUTTON);
 }
