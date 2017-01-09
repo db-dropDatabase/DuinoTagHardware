@@ -4,33 +4,57 @@
  * Created: 1/6/2017 8:34:29 AM
  * Author : Noah
  */ 
+#define BUTTON PB4
+#define SHORTPRESS 0x05
+#define LONGPRESS 0x30
+#define F_CPU 1000000UL
 
 #include <avr/io.h>
 #include <avr/sleep.h>
 #include <avr/interrupt.h>
+#include <util/delay.h>
 #include "debounce.h"
 
-#define BUTTON PB4
+volatile unsigned char lastButtonState = 0;
+volatile unsigned char pressTime = 0;
 
-volatile char lastButtonState = false;
-volatile char longPress = 0;
-
-inline void initUSI(){
+static inline void sendLEDs(const unsigned char data){
+	//turn USI back on
 	PRR &= ~(1 << PRUSI);
-	
-}
-
-inline void disableUSI(){
+	USICR |= (1 << USIWM0) | (USICS0);
+	USISR = 0;
+	//fill USI data register
+	USIDR = data;
+	//aaaaand pulse clock for awhile
+	while (!(USISR & (1 << USIOIE))){
+		USICR |= (1 << USITC);
+		USICR |= (1 << USITC) | (USICLK);
+	}
+	//pulse latch
+	PORTB |= (1 << PB3);
+	PORTB &= ~(1 << PB3);
+	//now go back to bed
 	PRR |= (1 << PRUSI);
 }
 
-inline void setBrightness(const volatile char * brigntness){
-	if(*brigntness > 0){
-		OCIE0A = *brigntness;  //store brightness value
+static inline void setBrightness(const volatile unsigned char brigntness){
+	if(brigntness == 0){
+		TIMSK &= ~(1 << OCIE0A); //disable brightness interrupt
+		OCR0A = 0; //erase brightness value
+		sendLEDs(0b00000000); //turn off leds
+	}
+	else if(brigntness == 0xff) {
+		TIMSK &= ~(1 << OCIE0A); //disable brightness interrupt
+		OCR0A = 0xFF; //erase brightness value
+	}
+	else{
+		OCR0A = brigntness;  //store brightness value
 		TIMSK |= (1 << OCIE0A); //enable brightness interrupt
 	}
-	else TIMSK &= ~(1 << OCIE0A); //disable brightness interrupt
+	
 }
+
+static inline unsigned char getBrightness(){ return OCR0A; }
 
 int main(void)
 {
@@ -46,18 +70,14 @@ int main(void)
 	
 	//init ports
 	DDRB |= (1 << PB0) | (1 << PB1) | (1 << PB2) | (1 << PB3);
-	PORTB |= (1 << BUTTON);
-	
-	//init port interrupts
-	GIMSK |= (1 << PCIE);
-	PCMSK |= (1 << PCINT4);
+	PORTB |= (1 << BUTTON); //button pin pullup enabled
 	
 	//init timer0 interrupt
 	GTCCR |= (1 << TSM); //pause timer
-	TCCR0B |= (1 << CS00) | (1 << CS01);  //clk/64
+	TCCR0B |= (1 << CS01) | (1 << CS00);  //clk/64
 	TIMSK |= (1 << TOIE0); //enable timer overflow interrupt
 	GTCCR &= ~(1 << TSM); //unpause timer
-	
+
 	//reenable interrupts
 	sei();
 	
@@ -72,28 +92,28 @@ int main(void)
 
 ISR(TIMER0_COMPA_vect){
 	//turn off LEDs for brightness
+	sendLEDs(0b00000000);
 }
 
 ISR(TIMER0_OVF_vect){
-	debounce();
-	//cycle animation
-}
+	if(!(PINB & (1 << BUTTON)) && pressTime < 0xff) pressTime++; //if button reads pressed, inc varible
+	else pressTime = 0;
 
-ISR(PCINT0_vect){
-	
-	for(char i = 0; i =< 0xFF; i++) 
-	
-	if(button_down(BUTTON)){
-		if(longPress < 0xFF) longPress++;
+	//if button is simply long pressed
+	if(pressTime == LONGPRESS){
+		//long press code
+		setBrightness(0);
 	}
-	else if(lastButtonState){
-		if(longPress == 0xFF){
-			//long press code
-		}
-		else{
-			//everything else
-		}
+	//else if button is not pressed, but it was pressed before (can't repeat)
+	else if(lastButtonState > SHORTPRESS && lastButtonState < LONGPRESS && !pressTime){
+		//short press code
+		setBrightness(getBrightness() + 0x20);
 	}
-	
-	lastButtonState = button_down(BUTTON);
+
+	lastButtonState = pressTime;
+
+	//cycle animation
+	if(getBrightness()){
+		sendLEDs(0b10101010);
+	}
 }
