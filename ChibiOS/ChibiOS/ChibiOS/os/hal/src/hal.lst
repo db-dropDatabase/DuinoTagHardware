@@ -1,0 +1,204 @@
+   1               		.file	"hal.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               		.section	.text.halInit,"ax",@progbits
+  11               	.global	halInit
+  13               	halInit:
+  14               	.LFB53:
+  15               		.file 1 "ChibiOS/os/hal/src/hal.c"
+   1:ChibiOS/os/hal/src/hal.c **** /*
+   2:ChibiOS/os/hal/src/hal.c ****     ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio
+   3:ChibiOS/os/hal/src/hal.c **** 
+   4:ChibiOS/os/hal/src/hal.c ****     Licensed under the Apache License, Version 2.0 (the "License");
+   5:ChibiOS/os/hal/src/hal.c ****     you may not use this file except in compliance with the License.
+   6:ChibiOS/os/hal/src/hal.c ****     You may obtain a copy of the License at
+   7:ChibiOS/os/hal/src/hal.c **** 
+   8:ChibiOS/os/hal/src/hal.c ****         http://www.apache.org/licenses/LICENSE-2.0
+   9:ChibiOS/os/hal/src/hal.c **** 
+  10:ChibiOS/os/hal/src/hal.c ****     Unless required by applicable law or agreed to in writing, software
+  11:ChibiOS/os/hal/src/hal.c ****     distributed under the License is distributed on an "AS IS" BASIS,
+  12:ChibiOS/os/hal/src/hal.c ****     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  13:ChibiOS/os/hal/src/hal.c ****     See the License for the specific language governing permissions and
+  14:ChibiOS/os/hal/src/hal.c ****     limitations under the License.
+  15:ChibiOS/os/hal/src/hal.c **** */
+  16:ChibiOS/os/hal/src/hal.c **** 
+  17:ChibiOS/os/hal/src/hal.c **** /**
+  18:ChibiOS/os/hal/src/hal.c ****  * @file    hal.c
+  19:ChibiOS/os/hal/src/hal.c ****  * @brief   HAL subsystem code.
+  20:ChibiOS/os/hal/src/hal.c ****  *
+  21:ChibiOS/os/hal/src/hal.c ****  * @addtogroup HAL
+  22:ChibiOS/os/hal/src/hal.c ****  * @{
+  23:ChibiOS/os/hal/src/hal.c ****  */
+  24:ChibiOS/os/hal/src/hal.c **** 
+  25:ChibiOS/os/hal/src/hal.c **** #include "hal.h"
+  26:ChibiOS/os/hal/src/hal.c **** 
+  27:ChibiOS/os/hal/src/hal.c **** /*===========================================================================*/
+  28:ChibiOS/os/hal/src/hal.c **** /* Driver local definitions.                                                 */
+  29:ChibiOS/os/hal/src/hal.c **** /*===========================================================================*/
+  30:ChibiOS/os/hal/src/hal.c **** 
+  31:ChibiOS/os/hal/src/hal.c **** /*===========================================================================*/
+  32:ChibiOS/os/hal/src/hal.c **** /* Driver exported variables.                                                */
+  33:ChibiOS/os/hal/src/hal.c **** /*===========================================================================*/
+  34:ChibiOS/os/hal/src/hal.c **** 
+  35:ChibiOS/os/hal/src/hal.c **** /*===========================================================================*/
+  36:ChibiOS/os/hal/src/hal.c **** /* Driver local variables and types.                                         */
+  37:ChibiOS/os/hal/src/hal.c **** /*===========================================================================*/
+  38:ChibiOS/os/hal/src/hal.c **** 
+  39:ChibiOS/os/hal/src/hal.c **** /*===========================================================================*/
+  40:ChibiOS/os/hal/src/hal.c **** /* Driver local functions.                                                   */
+  41:ChibiOS/os/hal/src/hal.c **** /*===========================================================================*/
+  42:ChibiOS/os/hal/src/hal.c **** 
+  43:ChibiOS/os/hal/src/hal.c **** /*===========================================================================*/
+  44:ChibiOS/os/hal/src/hal.c **** /* Driver exported functions.                                                */
+  45:ChibiOS/os/hal/src/hal.c **** /*===========================================================================*/
+  46:ChibiOS/os/hal/src/hal.c **** 
+  47:ChibiOS/os/hal/src/hal.c **** /**
+  48:ChibiOS/os/hal/src/hal.c ****  * @brief   HAL initialization.
+  49:ChibiOS/os/hal/src/hal.c ****  * @details This function invokes the low level initialization code then
+  50:ChibiOS/os/hal/src/hal.c ****  *          initializes all the drivers enabled in the HAL. Finally the
+  51:ChibiOS/os/hal/src/hal.c ****  *          board-specific initialization is performed by invoking
+  52:ChibiOS/os/hal/src/hal.c ****  *          @p boardInit() (usually defined in @p board.c).
+  53:ChibiOS/os/hal/src/hal.c ****  *
+  54:ChibiOS/os/hal/src/hal.c ****  * @init
+  55:ChibiOS/os/hal/src/hal.c ****  */
+  56:ChibiOS/os/hal/src/hal.c **** void halInit(void) {
+  16               		.loc 1 56 0
+  17               		.cfi_startproc
+  18               	/* prologue: function */
+  19               	/* frame size = 0 */
+  20               	/* stack size = 0 */
+  21               	.L__stack_usage = 0
+  57:ChibiOS/os/hal/src/hal.c **** 
+  58:ChibiOS/os/hal/src/hal.c ****   /* Initializes the OS Abstraction Layer.*/
+  59:ChibiOS/os/hal/src/hal.c ****   osalInit();
+  60:ChibiOS/os/hal/src/hal.c **** 
+  61:ChibiOS/os/hal/src/hal.c ****   /* Platform low level initializations.*/
+  62:ChibiOS/os/hal/src/hal.c ****   hal_lld_init();
+  22               		.loc 1 62 0
+  23 0000 0E94 0000 		call hal_lld_init
+  24               	.LVL0:
+  63:ChibiOS/os/hal/src/hal.c **** 
+  64:ChibiOS/os/hal/src/hal.c **** #if (HAL_USE_PAL == TRUE) || defined(__DOXYGEN__)
+  65:ChibiOS/os/hal/src/hal.c ****   palInit(&pal_default_config);
+  25               		.loc 1 65 0
+  26 0004 80E0      		ldi r24,lo8(pal_default_config)
+  27 0006 90E0      		ldi r25,hi8(pal_default_config)
+  28 0008 0E94 0000 		call _pal_lld_init
+  29               	.LVL1:
+  66:ChibiOS/os/hal/src/hal.c **** #endif
+  67:ChibiOS/os/hal/src/hal.c **** #if (HAL_USE_ADC == TRUE) || defined(__DOXYGEN__)
+  68:ChibiOS/os/hal/src/hal.c ****   adcInit();
+  69:ChibiOS/os/hal/src/hal.c **** #endif
+  70:ChibiOS/os/hal/src/hal.c **** #if (HAL_USE_CAN == TRUE) || defined(__DOXYGEN__)
+  71:ChibiOS/os/hal/src/hal.c ****   canInit();
+  72:ChibiOS/os/hal/src/hal.c **** #endif
+  73:ChibiOS/os/hal/src/hal.c **** #if (HAL_USE_DAC == TRUE) || defined(__DOXYGEN__)
+  74:ChibiOS/os/hal/src/hal.c ****   dacInit();
+  75:ChibiOS/os/hal/src/hal.c **** #endif
+  76:ChibiOS/os/hal/src/hal.c **** #if (HAL_USE_EXT == TRUE) || defined(__DOXYGEN__)
+  77:ChibiOS/os/hal/src/hal.c ****   extInit();
+  78:ChibiOS/os/hal/src/hal.c **** #endif
+  79:ChibiOS/os/hal/src/hal.c **** #if (HAL_USE_GPT == TRUE) || defined(__DOXYGEN__)
+  80:ChibiOS/os/hal/src/hal.c ****   gptInit();
+  81:ChibiOS/os/hal/src/hal.c **** #endif
+  82:ChibiOS/os/hal/src/hal.c **** #if (HAL_USE_I2C == TRUE) || defined(__DOXYGEN__)
+  83:ChibiOS/os/hal/src/hal.c ****   i2cInit();
+  84:ChibiOS/os/hal/src/hal.c **** #endif
+  85:ChibiOS/os/hal/src/hal.c **** #if (HAL_USE_I2S == TRUE) || defined(__DOXYGEN__)
+  86:ChibiOS/os/hal/src/hal.c ****   i2sInit();
+  87:ChibiOS/os/hal/src/hal.c **** #endif
+  88:ChibiOS/os/hal/src/hal.c **** #if (HAL_USE_ICU == TRUE) || defined(__DOXYGEN__)
+  89:ChibiOS/os/hal/src/hal.c ****   icuInit();
+  90:ChibiOS/os/hal/src/hal.c **** #endif
+  91:ChibiOS/os/hal/src/hal.c **** #if (HAL_USE_MAC == TRUE) || defined(__DOXYGEN__)
+  92:ChibiOS/os/hal/src/hal.c ****   macInit();
+  93:ChibiOS/os/hal/src/hal.c **** #endif
+  94:ChibiOS/os/hal/src/hal.c **** #if (HAL_USE_PWM == TRUE) || defined(__DOXYGEN__)
+  95:ChibiOS/os/hal/src/hal.c ****   pwmInit();
+  96:ChibiOS/os/hal/src/hal.c **** #endif
+  97:ChibiOS/os/hal/src/hal.c **** #if (HAL_USE_SERIAL == TRUE) || defined(__DOXYGEN__)
+  98:ChibiOS/os/hal/src/hal.c ****   sdInit();
+  30               		.loc 1 98 0
+  31 000c 0E94 0000 		call sdInit
+  32               	.LVL2:
+  99:ChibiOS/os/hal/src/hal.c **** #endif
+ 100:ChibiOS/os/hal/src/hal.c **** #if (HAL_USE_SDC == TRUE) || defined(__DOXYGEN__)
+ 101:ChibiOS/os/hal/src/hal.c ****   sdcInit();
+ 102:ChibiOS/os/hal/src/hal.c **** #endif
+ 103:ChibiOS/os/hal/src/hal.c **** #if (HAL_USE_SPI == TRUE) || defined(__DOXYGEN__)
+ 104:ChibiOS/os/hal/src/hal.c ****   spiInit();
+ 105:ChibiOS/os/hal/src/hal.c **** #endif
+ 106:ChibiOS/os/hal/src/hal.c **** #if (HAL_USE_UART == TRUE) || defined(__DOXYGEN__)
+ 107:ChibiOS/os/hal/src/hal.c ****   uartInit();
+ 108:ChibiOS/os/hal/src/hal.c **** #endif
+ 109:ChibiOS/os/hal/src/hal.c **** #if (HAL_USE_USB == TRUE) || defined(__DOXYGEN__)
+ 110:ChibiOS/os/hal/src/hal.c ****   usbInit();
+ 111:ChibiOS/os/hal/src/hal.c **** #endif
+ 112:ChibiOS/os/hal/src/hal.c **** #if (HAL_USE_MMC_SPI == TRUE) || defined(__DOXYGEN__)
+ 113:ChibiOS/os/hal/src/hal.c ****   mmcInit();
+ 114:ChibiOS/os/hal/src/hal.c **** #endif
+ 115:ChibiOS/os/hal/src/hal.c **** #if (HAL_USE_SERIAL_USB == TRUE) || defined(__DOXYGEN__)
+ 116:ChibiOS/os/hal/src/hal.c ****   sduInit();
+ 117:ChibiOS/os/hal/src/hal.c **** #endif
+ 118:ChibiOS/os/hal/src/hal.c **** #if (HAL_USE_RTC == TRUE) || defined(__DOXYGEN__)
+ 119:ChibiOS/os/hal/src/hal.c ****   rtcInit();
+ 120:ChibiOS/os/hal/src/hal.c **** #endif
+ 121:ChibiOS/os/hal/src/hal.c **** #if (HAL_USE_WDG == TRUE) || defined(__DOXYGEN__)
+ 122:ChibiOS/os/hal/src/hal.c ****   wdgInit();
+ 123:ChibiOS/os/hal/src/hal.c **** #endif
+ 124:ChibiOS/os/hal/src/hal.c **** 
+ 125:ChibiOS/os/hal/src/hal.c ****   /* Community driver overlay initialization.*/
+ 126:ChibiOS/os/hal/src/hal.c **** #if defined(HAL_USE_COMMUNITY) || defined(__DOXYGEN__)
+ 127:ChibiOS/os/hal/src/hal.c **** #if (HAL_USE_COMMUNITY == TRUE) || defined(__DOXYGEN__)
+ 128:ChibiOS/os/hal/src/hal.c ****   halCommunityInit();
+ 129:ChibiOS/os/hal/src/hal.c **** #endif
+ 130:ChibiOS/os/hal/src/hal.c **** #endif
+ 131:ChibiOS/os/hal/src/hal.c **** 
+ 132:ChibiOS/os/hal/src/hal.c ****   /* Board specific initialization.*/
+ 133:ChibiOS/os/hal/src/hal.c ****   boardInit();
+  33               		.loc 1 133 0
+  34 0010 0E94 0000 		call boardInit
+  35               	.LVL3:
+ 134:ChibiOS/os/hal/src/hal.c **** 
+ 135:ChibiOS/os/hal/src/hal.c **** /*
+ 136:ChibiOS/os/hal/src/hal.c ****  *  The ST driver is a special case, it is only initialized if the OSAL is
+ 137:ChibiOS/os/hal/src/hal.c ****  *  configured to require it.
+ 138:ChibiOS/os/hal/src/hal.c ****  */
+ 139:ChibiOS/os/hal/src/hal.c **** #if OSAL_ST_MODE != OSAL_ST_MODE_NONE
+ 140:ChibiOS/os/hal/src/hal.c ****   stInit();
+  36               		.loc 1 140 0
+  37 0014 0C94 0000 		jmp stInit
+  38               	.LVL4:
+  39               		.cfi_endproc
+  40               	.LFE53:
+  42               		.text
+  43               	.Letext0:
+  44               		.file 2 "ChibiOS/os/hal/ports/AVR/pal_lld.h"
+  45               		.file 3 "c:\\program files (x86)\\atmel\\studio\\7.0\\toolchain\\avr8\\avr8-gnu-toolchain\\avr\\in
+  46               		.file 4 "ChibiOS/os/hal/ports/AVR/hal_lld.h"
+  47               		.file 5 "ChibiOS/os/hal/include/serial.h"
+  48               		.file 6 "ChibiOS/os/hal/boards/ARDUINO_UNO/board.h"
+  49               		.file 7 "ChibiOS/os/hal/include/st.h"
+  50               		.file 8 "ChibiOS/os/hal/osal/nil/osal.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 hal.c
+C:\Users\Noah\AppData\Local\Temp\ccp4vI8J.s:2      *ABS*:0000003e __SP_H__
+C:\Users\Noah\AppData\Local\Temp\ccp4vI8J.s:3      *ABS*:0000003d __SP_L__
+C:\Users\Noah\AppData\Local\Temp\ccp4vI8J.s:4      *ABS*:0000003f __SREG__
+C:\Users\Noah\AppData\Local\Temp\ccp4vI8J.s:5      *ABS*:00000000 __tmp_reg__
+C:\Users\Noah\AppData\Local\Temp\ccp4vI8J.s:6      *ABS*:00000001 __zero_reg__
+C:\Users\Noah\AppData\Local\Temp\ccp4vI8J.s:13     .text.halInit:00000000 halInit
+
+UNDEFINED SYMBOLS
+hal_lld_init
+pal_default_config
+_pal_lld_init
+sdInit
+boardInit
+stInit

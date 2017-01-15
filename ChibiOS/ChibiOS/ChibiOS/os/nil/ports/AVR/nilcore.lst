@@ -1,0 +1,741 @@
+   1               		.file	"nilcore.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               		.section	.text._port_switch,"ax",@progbits
+  11               		.weak	_port_switch
+  13               	_port_switch:
+  14               	.LFB24:
+  15               		.file 1 "ChibiOS/os/nil/ports/AVR/nilcore.c"
+   1:ChibiOS/os/nil/ports/AVR/nilcore.c **** /*
+   2:ChibiOS/os/nil/ports/AVR/nilcore.c ****     ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio.
+   3:ChibiOS/os/nil/ports/AVR/nilcore.c **** 
+   4:ChibiOS/os/nil/ports/AVR/nilcore.c ****     This file is part of ChibiOS.
+   5:ChibiOS/os/nil/ports/AVR/nilcore.c **** 
+   6:ChibiOS/os/nil/ports/AVR/nilcore.c ****     ChibiOS is free software; you can redistribute it and/or modify
+   7:ChibiOS/os/nil/ports/AVR/nilcore.c ****     it under the terms of the GNU General Public License as published by
+   8:ChibiOS/os/nil/ports/AVR/nilcore.c ****     the Free Software Foundation; either version 3 of the License, or
+   9:ChibiOS/os/nil/ports/AVR/nilcore.c ****     (at your option) any later version.
+  10:ChibiOS/os/nil/ports/AVR/nilcore.c **** 
+  11:ChibiOS/os/nil/ports/AVR/nilcore.c ****     ChibiOS is distributed in the hope that it will be useful,
+  12:ChibiOS/os/nil/ports/AVR/nilcore.c ****     but WITHOUT ANY WARRANTY; without even the implied warranty of
+  13:ChibiOS/os/nil/ports/AVR/nilcore.c ****     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  14:ChibiOS/os/nil/ports/AVR/nilcore.c ****     GNU General Public License for more details.
+  15:ChibiOS/os/nil/ports/AVR/nilcore.c **** 
+  16:ChibiOS/os/nil/ports/AVR/nilcore.c ****     You should have received a copy of the GNU General Public License
+  17:ChibiOS/os/nil/ports/AVR/nilcore.c ****     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  18:ChibiOS/os/nil/ports/AVR/nilcore.c **** */
+  19:ChibiOS/os/nil/ports/AVR/nilcore.c **** 
+  20:ChibiOS/os/nil/ports/AVR/nilcore.c **** /**
+  21:ChibiOS/os/nil/ports/AVR/nilcore.c ****  * @file    AVR/nilcore.c
+  22:ChibiOS/os/nil/ports/AVR/nilcore.c ****  * @brief   AVR port code.
+  23:ChibiOS/os/nil/ports/AVR/nilcore.c ****  *
+  24:ChibiOS/os/nil/ports/AVR/nilcore.c ****  * @addtogroup AVR_CORE
+  25:ChibiOS/os/nil/ports/AVR/nilcore.c ****  * @{
+  26:ChibiOS/os/nil/ports/AVR/nilcore.c ****  */
+  27:ChibiOS/os/nil/ports/AVR/nilcore.c **** 
+  28:ChibiOS/os/nil/ports/AVR/nilcore.c **** #include "nil.h"
+  29:ChibiOS/os/nil/ports/AVR/nilcore.c **** 
+  30:ChibiOS/os/nil/ports/AVR/nilcore.c **** /*===========================================================================*/
+  31:ChibiOS/os/nil/ports/AVR/nilcore.c **** /* Module local definitions.                                                 */
+  32:ChibiOS/os/nil/ports/AVR/nilcore.c **** /*===========================================================================*/
+  33:ChibiOS/os/nil/ports/AVR/nilcore.c **** 
+  34:ChibiOS/os/nil/ports/AVR/nilcore.c **** /*===========================================================================*/
+  35:ChibiOS/os/nil/ports/AVR/nilcore.c **** /* Module exported variables.                                                */
+  36:ChibiOS/os/nil/ports/AVR/nilcore.c **** /*===========================================================================*/
+  37:ChibiOS/os/nil/ports/AVR/nilcore.c **** 
+  38:ChibiOS/os/nil/ports/AVR/nilcore.c **** /*===========================================================================*/
+  39:ChibiOS/os/nil/ports/AVR/nilcore.c **** /* Module local types.                                                       */
+  40:ChibiOS/os/nil/ports/AVR/nilcore.c **** /*===========================================================================*/
+  41:ChibiOS/os/nil/ports/AVR/nilcore.c **** 
+  42:ChibiOS/os/nil/ports/AVR/nilcore.c **** /*===========================================================================*/
+  43:ChibiOS/os/nil/ports/AVR/nilcore.c **** /* Module local variables.                                                   */
+  44:ChibiOS/os/nil/ports/AVR/nilcore.c **** /*===========================================================================*/
+  45:ChibiOS/os/nil/ports/AVR/nilcore.c **** 
+  46:ChibiOS/os/nil/ports/AVR/nilcore.c **** /*===========================================================================*/
+  47:ChibiOS/os/nil/ports/AVR/nilcore.c **** /* Module local functions.                                                   */
+  48:ChibiOS/os/nil/ports/AVR/nilcore.c **** /*===========================================================================*/
+  49:ChibiOS/os/nil/ports/AVR/nilcore.c **** 
+  50:ChibiOS/os/nil/ports/AVR/nilcore.c **** /*===========================================================================*/
+  51:ChibiOS/os/nil/ports/AVR/nilcore.c **** /* Module exported functions.                                                */
+  52:ChibiOS/os/nil/ports/AVR/nilcore.c **** /*===========================================================================*/
+  53:ChibiOS/os/nil/ports/AVR/nilcore.c **** 
+  54:ChibiOS/os/nil/ports/AVR/nilcore.c **** /**
+  55:ChibiOS/os/nil/ports/AVR/nilcore.c ****  * @brief   Performs a context switch between two threads.
+  56:ChibiOS/os/nil/ports/AVR/nilcore.c ****  * @details This is the most critical code in any port, this function
+  57:ChibiOS/os/nil/ports/AVR/nilcore.c ****  *          is responsible for the context switch between 2 threads.
+  58:ChibiOS/os/nil/ports/AVR/nilcore.c ****  * @note    The implementation of this code affects <b>directly</b> the context
+  59:ChibiOS/os/nil/ports/AVR/nilcore.c ****  *          switch performance so optimize here as much as you can.
+  60:ChibiOS/os/nil/ports/AVR/nilcore.c ****  * @note    The function is declared as a weak symbol, it is possible to
+  61:ChibiOS/os/nil/ports/AVR/nilcore.c ****  *          redefine it in your application code.
+  62:ChibiOS/os/nil/ports/AVR/nilcore.c ****  *
+  63:ChibiOS/os/nil/ports/AVR/nilcore.c ****  * @param[in] ntp       the thread to be switched in
+  64:ChibiOS/os/nil/ports/AVR/nilcore.c ****  * @param[in] otp       the thread to be switched out
+  65:ChibiOS/os/nil/ports/AVR/nilcore.c ****  */
+  66:ChibiOS/os/nil/ports/AVR/nilcore.c **** #if !defined(__DOXYGEN__)
+  67:ChibiOS/os/nil/ports/AVR/nilcore.c **** __attribute__((naked, weak))
+  68:ChibiOS/os/nil/ports/AVR/nilcore.c **** #endif
+  69:ChibiOS/os/nil/ports/AVR/nilcore.c **** void _port_switch(thread_t *ntp, thread_t *otp) {
+  16               		.loc 1 69 0
+  17               		.cfi_startproc
+  18               	.LVL0:
+  19               	/* prologue: naked */
+  20               	/* frame size = 0 */
+  21               	/* stack size = 0 */
+  22               	.L__stack_usage = 0
+  70:ChibiOS/os/nil/ports/AVR/nilcore.c **** 
+  71:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("push    r2");
+  23               		.loc 1 71 0
+  24               	/* #APP */
+  25               	 ;  71 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+  26 0000 2F92      		push    r2
+  27               	 ;  0 "" 2
+  72:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("push    r3");
+  28               		.loc 1 72 0
+  29               	 ;  72 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+  30 0002 3F92      		push    r3
+  31               	 ;  0 "" 2
+  73:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("push    r4");
+  32               		.loc 1 73 0
+  33               	 ;  73 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+  34 0004 4F92      		push    r4
+  35               	 ;  0 "" 2
+  74:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("push    r5");
+  36               		.loc 1 74 0
+  37               	 ;  74 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+  38 0006 5F92      		push    r5
+  39               	 ;  0 "" 2
+  75:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("push    r6");
+  40               		.loc 1 75 0
+  41               	 ;  75 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+  42 0008 6F92      		push    r6
+  43               	 ;  0 "" 2
+  76:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("push    r7");
+  44               		.loc 1 76 0
+  45               	 ;  76 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+  46 000a 7F92      		push    r7
+  47               	 ;  0 "" 2
+  77:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("push    r8");
+  48               		.loc 1 77 0
+  49               	 ;  77 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+  50 000c 8F92      		push    r8
+  51               	 ;  0 "" 2
+  78:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("push    r9");
+  52               		.loc 1 78 0
+  53               	 ;  78 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+  54 000e 9F92      		push    r9
+  55               	 ;  0 "" 2
+  79:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("push    r10");
+  56               		.loc 1 79 0
+  57               	 ;  79 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+  58 0010 AF92      		push    r10
+  59               	 ;  0 "" 2
+  80:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("push    r11");
+  60               		.loc 1 80 0
+  61               	 ;  80 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+  62 0012 BF92      		push    r11
+  63               	 ;  0 "" 2
+  81:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("push    r12");
+  64               		.loc 1 81 0
+  65               	 ;  81 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+  66 0014 CF92      		push    r12
+  67               	 ;  0 "" 2
+  82:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("push    r13");
+  68               		.loc 1 82 0
+  69               	 ;  82 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+  70 0016 DF92      		push    r13
+  71               	 ;  0 "" 2
+  83:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("push    r14");
+  72               		.loc 1 83 0
+  73               	 ;  83 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+  74 0018 EF92      		push    r14
+  75               	 ;  0 "" 2
+  84:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("push    r15");
+  76               		.loc 1 84 0
+  77               	 ;  84 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+  78 001a FF92      		push    r15
+  79               	 ;  0 "" 2
+  85:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("push    r16");
+  80               		.loc 1 85 0
+  81               	 ;  85 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+  82 001c 0F93      		push    r16
+  83               	 ;  0 "" 2
+  86:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("push    r17");
+  84               		.loc 1 86 0
+  85               	 ;  86 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+  86 001e 1F93      		push    r17
+  87               	 ;  0 "" 2
+  87:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("push    r28");
+  88               		.loc 1 87 0
+  89               	 ;  87 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+  90 0020 CF93      		push    r28
+  91               	 ;  0 "" 2
+  88:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("push    r29");
+  92               		.loc 1 88 0
+  93               	 ;  88 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+  94 0022 DF93      		push    r29
+  95               	 ;  0 "" 2
+  89:ChibiOS/os/nil/ports/AVR/nilcore.c **** 
+  90:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("movw    r30, r22");
+  96               		.loc 1 90 0
+  97               	 ;  90 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+  98 0024 FB01      		movw    r30, r22
+  99               	 ;  0 "" 2
+  91:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("in      r0, 0x3d");
+ 100               		.loc 1 91 0
+ 101               	 ;  91 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+ 102 0026 0DB6      		in      r0, 0x3d
+ 103               	 ;  0 "" 2
+  92:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("std     Z+0, r0");
+ 104               		.loc 1 92 0
+ 105               	 ;  92 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+ 106 0028 0082      		std     Z+0, r0
+ 107               	 ;  0 "" 2
+  93:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("in      r0, 0x3e");
+ 108               		.loc 1 93 0
+ 109               	 ;  93 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+ 110 002a 0EB6      		in      r0, 0x3e
+ 111               	 ;  0 "" 2
+  94:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("std     Z+1, r0");
+ 112               		.loc 1 94 0
+ 113               	 ;  94 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+ 114 002c 0182      		std     Z+1, r0
+ 115               	 ;  0 "" 2
+  95:ChibiOS/os/nil/ports/AVR/nilcore.c **** 
+  96:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("movw    r30, r24");
+ 116               		.loc 1 96 0
+ 117               	 ;  96 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+ 118 002e FC01      		movw    r30, r24
+ 119               	 ;  0 "" 2
+  97:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("ldd     r0, Z+0");
+ 120               		.loc 1 97 0
+ 121               	 ;  97 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+ 122 0030 0080      		ldd     r0, Z+0
+ 123               	 ;  0 "" 2
+  98:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("out     0x3d, r0");
+ 124               		.loc 1 98 0
+ 125               	 ;  98 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+ 126 0032 0DBE      		out     0x3d, r0
+ 127               	 ;  0 "" 2
+  99:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("ldd     r0, Z+1");
+ 128               		.loc 1 99 0
+ 129               	 ;  99 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+ 130 0034 0180      		ldd     r0, Z+1
+ 131               	 ;  0 "" 2
+ 100:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("out     0x3e, r0");
+ 132               		.loc 1 100 0
+ 133               	 ;  100 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+ 134 0036 0EBE      		out     0x3e, r0
+ 135               	 ;  0 "" 2
+ 101:ChibiOS/os/nil/ports/AVR/nilcore.c **** 
+ 102:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("pop     r29");
+ 136               		.loc 1 102 0
+ 137               	 ;  102 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+ 138 0038 DF91      		pop     r29
+ 139               	 ;  0 "" 2
+ 103:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("pop     r28");
+ 140               		.loc 1 103 0
+ 141               	 ;  103 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+ 142 003a CF91      		pop     r28
+ 143               	 ;  0 "" 2
+ 104:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("pop     r17");
+ 144               		.loc 1 104 0
+ 145               	 ;  104 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+ 146 003c 1F91      		pop     r17
+ 147               	 ;  0 "" 2
+ 105:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("pop     r16");
+ 148               		.loc 1 105 0
+ 149               	 ;  105 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+ 150 003e 0F91      		pop     r16
+ 151               	 ;  0 "" 2
+ 106:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("pop     r15");
+ 152               		.loc 1 106 0
+ 153               	 ;  106 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+ 154 0040 FF90      		pop     r15
+ 155               	 ;  0 "" 2
+ 107:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("pop     r14");
+ 156               		.loc 1 107 0
+ 157               	 ;  107 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+ 158 0042 EF90      		pop     r14
+ 159               	 ;  0 "" 2
+ 108:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("pop     r13");
+ 160               		.loc 1 108 0
+ 161               	 ;  108 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+ 162 0044 DF90      		pop     r13
+ 163               	 ;  0 "" 2
+ 109:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("pop     r12");
+ 164               		.loc 1 109 0
+ 165               	 ;  109 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+ 166 0046 CF90      		pop     r12
+ 167               	 ;  0 "" 2
+ 110:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("pop     r11");
+ 168               		.loc 1 110 0
+ 169               	 ;  110 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+ 170 0048 BF90      		pop     r11
+ 171               	 ;  0 "" 2
+ 111:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("pop     r10");
+ 172               		.loc 1 111 0
+ 173               	 ;  111 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+ 174 004a AF90      		pop     r10
+ 175               	 ;  0 "" 2
+ 112:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("pop     r9");
+ 176               		.loc 1 112 0
+ 177               	 ;  112 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+ 178 004c 9F90      		pop     r9
+ 179               	 ;  0 "" 2
+ 113:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("pop     r8");
+ 180               		.loc 1 113 0
+ 181               	 ;  113 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+ 182 004e 8F90      		pop     r8
+ 183               	 ;  0 "" 2
+ 114:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("pop     r7");
+ 184               		.loc 1 114 0
+ 185               	 ;  114 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+ 186 0050 7F90      		pop     r7
+ 187               	 ;  0 "" 2
+ 115:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("pop     r6");
+ 188               		.loc 1 115 0
+ 189               	 ;  115 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+ 190 0052 6F90      		pop     r6
+ 191               	 ;  0 "" 2
+ 116:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("pop     r5");
+ 192               		.loc 1 116 0
+ 193               	 ;  116 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+ 194 0054 5F90      		pop     r5
+ 195               	 ;  0 "" 2
+ 117:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("pop     r4");
+ 196               		.loc 1 117 0
+ 197               	 ;  117 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+ 198 0056 4F90      		pop     r4
+ 199               	 ;  0 "" 2
+ 118:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("pop     r3");
+ 200               		.loc 1 118 0
+ 201               	 ;  118 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+ 202 0058 3F90      		pop     r3
+ 203               	 ;  0 "" 2
+ 119:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("pop     r2");
+ 204               		.loc 1 119 0
+ 205               	 ;  119 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+ 206 005a 2F90      		pop     r2
+ 207               	 ;  0 "" 2
+ 120:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("ret");
+ 208               		.loc 1 120 0
+ 209               	 ;  120 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+ 210 005c 0895      		ret
+ 211               	 ;  0 "" 2
+ 212               	/* epilogue start */
+ 121:ChibiOS/os/nil/ports/AVR/nilcore.c **** }
+ 213               		.loc 1 121 0
+ 214               	/* #NOAPP */
+ 215               		.cfi_endproc
+ 216               	.LFE24:
+ 218               		.section	.text._port_thread_start,"ax",@progbits
+ 219               	.global	_port_thread_start
+ 221               	_port_thread_start:
+ 222               	.LFB25:
+ 122:ChibiOS/os/nil/ports/AVR/nilcore.c **** 
+ 123:ChibiOS/os/nil/ports/AVR/nilcore.c **** /**
+ 124:ChibiOS/os/nil/ports/AVR/nilcore.c ****  * @brief   Start a thread by invoking its work function.
+ 125:ChibiOS/os/nil/ports/AVR/nilcore.c ****  * @details If the work function returns @p chThdExit() is automatically
+ 126:ChibiOS/os/nil/ports/AVR/nilcore.c ****  *          invoked.
+ 127:ChibiOS/os/nil/ports/AVR/nilcore.c ****  */
+ 128:ChibiOS/os/nil/ports/AVR/nilcore.c **** void _port_thread_start(void) {
+ 223               		.loc 1 128 0
+ 224               		.cfi_startproc
+ 225               	/* prologue: function */
+ 226               	/* frame size = 0 */
+ 227               	/* stack size = 0 */
+ 228               	.L__stack_usage = 0
+ 229               	.LBB4:
+ 230               	.LBB5:
+ 231               		.file 2 "ChibiOS/os/nil/ports/AVR/nilcore.h"
+   1:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*
+   2:ChibiOS/os/nil/ports/AVR/nilcore.h ****     ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio.
+   3:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+   4:ChibiOS/os/nil/ports/AVR/nilcore.h ****     This file is part of ChibiOS.
+   5:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+   6:ChibiOS/os/nil/ports/AVR/nilcore.h ****     ChibiOS is free software; you can redistribute it and/or modify
+   7:ChibiOS/os/nil/ports/AVR/nilcore.h ****     it under the terms of the GNU General Public License as published by
+   8:ChibiOS/os/nil/ports/AVR/nilcore.h ****     the Free Software Foundation; either version 3 of the License, or
+   9:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (at your option) any later version.
+  10:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  11:ChibiOS/os/nil/ports/AVR/nilcore.h ****     ChibiOS is distributed in the hope that it will be useful,
+  12:ChibiOS/os/nil/ports/AVR/nilcore.h ****     but WITHOUT ANY WARRANTY; without even the implied warranty of
+  13:ChibiOS/os/nil/ports/AVR/nilcore.h ****     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  14:ChibiOS/os/nil/ports/AVR/nilcore.h ****     GNU General Public License for more details.
+  15:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  16:ChibiOS/os/nil/ports/AVR/nilcore.h ****     You should have received a copy of the GNU General Public License
+  17:ChibiOS/os/nil/ports/AVR/nilcore.h ****     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  18:ChibiOS/os/nil/ports/AVR/nilcore.h **** */
+  19:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  20:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  21:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @file    AVR/nilcore.h
+  22:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   AVR port macros and structures.
+  23:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *
+  24:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @addtogroup AVR_CORE
+  25:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @{
+  26:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  27:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  28:ChibiOS/os/nil/ports/AVR/nilcore.h **** #ifndef _NILCORE_H_
+  29:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define _NILCORE_H_
+  30:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  31:ChibiOS/os/nil/ports/AVR/nilcore.h **** #include <avr/io.h>
+  32:ChibiOS/os/nil/ports/AVR/nilcore.h **** #include <avr/interrupt.h>
+  33:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  34:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+  35:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* Module constants.                                                         */
+  36:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+  37:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  38:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  39:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @name    Architecture and Compiler
+  40:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @{
+  41:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  42:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  43:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Macro defining the port architecture.
+  44:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  45:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_ARCHITECTURE_AVR
+  46:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  47:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  48:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Name of the implemented architecture.
+  49:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  50:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_ARCHITECTURE_NAME          "AVR"
+  51:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  52:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  53:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Name of the architecture variant.
+  54:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  55:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_CORE_VARIANT_NAME          "MegaAVR"
+  56:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  57:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  58:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Compiler name and version.
+  59:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  60:ChibiOS/os/nil/ports/AVR/nilcore.h **** #if defined(__GNUC__) || defined(__DOXYGEN__)
+  61:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_COMPILER_NAME              "GCC " __VERSION__
+  62:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  63:ChibiOS/os/nil/ports/AVR/nilcore.h **** #else
+  64:ChibiOS/os/nil/ports/AVR/nilcore.h **** #error "unsupported compiler"
+  65:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif
+  66:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  67:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  68:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Port-specific information string.
+  69:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  70:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_INFO                       "16 bits code addressing"
+  71:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  72:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  73:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   This port supports a realtime counter.
+  74:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  75:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_SUPPORTS_RT                FALSE
+  76:ChibiOS/os/nil/ports/AVR/nilcore.h **** /** @} */
+  77:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  78:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+  79:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* Module pre-compile time settings.                                         */
+  80:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+  81:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  82:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  83:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Stack size for the system idle thread.
+  84:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @details This size depends on the idle thread implementation, usually
+  85:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          the idle thread should take no more space than those reserved
+  86:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          by @p PORT_INT_REQUIRED_STACK.
+  87:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @note    In this port it is set to 8.
+  88:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  89:ChibiOS/os/nil/ports/AVR/nilcore.h **** #if !defined(PORT_IDLE_THREAD_STACK_SIZE) || defined(__DOXYGEN__)
+  90:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_IDLE_THREAD_STACK_SIZE     8
+  91:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif
+  92:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  93:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  94:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Per-thread stack overhead for interrupts servicing.
+  95:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @details This constant is used in the calculation of the correct working
+  96:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          area size.
+  97:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @note    In this port the default is 32 bytes per thread.
+  98:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  99:ChibiOS/os/nil/ports/AVR/nilcore.h **** #if !defined(PORT_INT_REQUIRED_STACK) || defined(__DOXYGEN__)
+ 100:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_INT_REQUIRED_STACK         32
+ 101:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif
+ 102:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 103:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 104:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Enables an alternative timer implementation.
+ 105:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @details Usually the port uses a timer interface defined in the file
+ 106:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          @p nilcore_timer.h, if this option is enabled then the file
+ 107:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          @p nilcore_timer_alt.h is included instead.
+ 108:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 109:ChibiOS/os/nil/ports/AVR/nilcore.h **** #if !defined(PORT_USE_ALT_TIMER)
+ 110:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_USE_ALT_TIMER              FALSE
+ 111:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif
+ 112:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 113:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 114:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* Derived constants and error checks.                                       */
+ 115:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 116:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 117:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 118:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* Module data structures and types.                                         */
+ 119:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 120:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 121:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* The following code is not processed when the file is included from an
+ 122:ChibiOS/os/nil/ports/AVR/nilcore.h ****    asm module.*/
+ 123:ChibiOS/os/nil/ports/AVR/nilcore.h **** #if !defined(_FROM_ASM_)
+ 124:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 125:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 126:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Type of stack and memory alignment enforcement.
+ 127:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 128:ChibiOS/os/nil/ports/AVR/nilcore.h **** typedef uint8_t stkalign_t;
+ 129:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 130:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 131:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   System saved context.
+ 132:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @details This structure represents the inner stack frame during a context
+ 133:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          switching.
+ 134:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 135:ChibiOS/os/nil/ports/AVR/nilcore.h **** struct port_intctx {
+ 136:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       _next;
+ 137:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r29;
+ 138:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r28;
+ 139:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r17;
+ 140:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r16;
+ 141:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r15;
+ 142:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r14;
+ 143:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r13;
+ 144:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r12;
+ 145:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r11;
+ 146:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r10;
+ 147:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r9;
+ 148:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r8;
+ 149:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r7;
+ 150:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r6;
+ 151:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r5;
+ 152:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r4;
+ 153:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r3;
+ 154:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r2;
+ 155:ChibiOS/os/nil/ports/AVR/nilcore.h **** #ifdef __AVR_3_BYTE_PC__
+ 156:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       pcx;
+ 157:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif
+ 158:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       pcl;
+ 159:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       pch;
+ 160:ChibiOS/os/nil/ports/AVR/nilcore.h **** };
+ 161:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 162:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif /* !defined(_FROM_ASM_) */
+ 163:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 164:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 165:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* Module macros.                                                            */
+ 166:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 167:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 168:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 169:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Platform dependent thread stack setup.
+ 170:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @details This code usually setup the context switching frame represented
+ 171:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          by an @p port_intctx structure.
+ 172:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 173:ChibiOS/os/nil/ports/AVR/nilcore.h **** #ifdef __AVR_3_BYTE_PC__
+ 174:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_SETUP_CONTEXT(tp, wend, pf, arg) {                             \
+ 175:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp = (struct port_intctx*)(((uint8_t *)(wend)) -                \
+ 176:ChibiOS/os/nil/ports/AVR/nilcore.h ****                                          sizeof(struct port_intctx));       \
+ 177:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->r2  = (int)pf;                                              \
+ 178:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->r3  = (int)pf >> 8;                                         \
+ 179:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->r4  = (int)arg;                                             \
+ 180:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->r5  = (int)arg >> 8;                                        \
+ 181:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->pcx = (int)0;                                               \
+ 182:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->pcl = (int)_port_thread_start >> 8;                         \
+ 183:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->pch = (int)_port_thread_start;                              \
+ 184:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 185:ChibiOS/os/nil/ports/AVR/nilcore.h **** #else /* __AVR_3_BYTE_PC__ */
+ 186:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_SETUP_CONTEXT(tp, wend, pf, arg) {                             \
+ 187:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp = (struct port_intctx*)(((uint8_t *)(wend)) -                \
+ 188:ChibiOS/os/nil/ports/AVR/nilcore.h ****                                          sizeof(struct port_intctx));       \
+ 189:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->r2  = (int)pf;                                              \
+ 190:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->r3  = (int)pf >> 8;                                         \
+ 191:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->r4  = (int)arg;                                             \
+ 192:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->r5  = (int)arg >> 8;                                        \
+ 193:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->pcl = (int)_port_thread_start >> 8;                         \
+ 194:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->pch = (int)_port_thread_start;                              \
+ 195:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 196:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif /* __AVR_3_BYTE_PC__ */
+ 197:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 198:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Computes the thread working area global size.
+ 199:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @note    There is no need to perform alignments in this macro.
+ 200:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 201:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_WA_SIZE(n) ((sizeof(struct port_intctx) - 1) +                 \
+ 202:ChibiOS/os/nil/ports/AVR/nilcore.h ****                          (n) + (PORT_INT_REQUIRED_STACK))
+ 203:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 204:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 205:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   IRQ prologue code.
+ 206:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @details This macro must be inserted at the start of all IRQ handlers
+ 207:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          enabled to invoke system APIs.
+ 208:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @note    This code tricks the compiler to save all the specified registers
+ 209:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          by "touching" them.
+ 210:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 211:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_IRQ_PROLOGUE() {                                               \
+ 212:ChibiOS/os/nil/ports/AVR/nilcore.h ****   asm ("" : : : "r18", "r19", "r20", "r21", "r22", "r23", "r24",            \
+ 213:ChibiOS/os/nil/ports/AVR/nilcore.h ****                 "r25", "r26", "r27", "r30", "r31");                         \
+ 214:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 215:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 216:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 217:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   IRQ epilogue code.
+ 218:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @details This macro must be inserted at the end of all IRQ handlers
+ 219:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          enabled to invoke system APIs.
+ 220:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 221:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_IRQ_EPILOGUE() chSchRescheduleS()
+ 222:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 223:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 224:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   IRQ handler function declaration.
+ 225:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @note    @p id can be a function name or a vector number depending on the
+ 226:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          port implementation.
+ 227:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 228:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_IRQ_HANDLER(id) ISR(id)
+ 229:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 230:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 231:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Fast IRQ handler function declaration.
+ 232:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @note    @p id can be a function name or a vector number depending on the
+ 233:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          port implementation.
+ 234:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 235:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_FAST_IRQ_HANDLER(id) ISR(id)
+ 236:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 237:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 238:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Performs a context switch between two threads.
+ 239:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @details This is the most critical code in any port, this function
+ 240:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          is responsible for the context switch between 2 threads.
+ 241:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @note    The implementation of this code affects <b>directly</b> the context
+ 242:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          switch performance so optimize here as much as you can.
+ 243:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *
+ 244:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @param[in] ntp       the thread to be switched in
+ 245:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @param[in] otp       the thread to be switched out
+ 246:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 247:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define port_switch(ntp, otp) _port_switch(ntp, otp)
+ 248:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 249:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 250:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* External declarations.                                                    */
+ 251:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 252:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 253:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* The following code is not processed when the file is included from an
+ 254:ChibiOS/os/nil/ports/AVR/nilcore.h ****    asm module.*/
+ 255:ChibiOS/os/nil/ports/AVR/nilcore.h **** #if !defined(_FROM_ASM_)
+ 256:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 257:ChibiOS/os/nil/ports/AVR/nilcore.h **** #ifdef __cplusplus
+ 258:ChibiOS/os/nil/ports/AVR/nilcore.h **** extern "C" {
+ 259:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif
+ 260:ChibiOS/os/nil/ports/AVR/nilcore.h ****   void _port_irq_epilogue(void);
+ 261:ChibiOS/os/nil/ports/AVR/nilcore.h ****   void _port_switch(thread_t *ntp, thread_t *otp);
+ 262:ChibiOS/os/nil/ports/AVR/nilcore.h ****   void _port_thread_start(void);
+ 263:ChibiOS/os/nil/ports/AVR/nilcore.h **** #ifdef __cplusplus
+ 264:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 265:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif
+ 266:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 267:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif /* !defined(_FROM_ASM_) */
+ 268:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 269:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 270:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* Module inline functions.                                                  */
+ 271:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 272:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 273:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* The following code is not processed when the file is included from an
+ 274:ChibiOS/os/nil/ports/AVR/nilcore.h ****    asm module.*/
+ 275:ChibiOS/os/nil/ports/AVR/nilcore.h **** #if !defined(_FROM_ASM_)
+ 276:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 277:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 278:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Port-related initialization code.
+ 279:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 280:ChibiOS/os/nil/ports/AVR/nilcore.h **** static inline void port_init(void) {
+ 281:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 282:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 283:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 284:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 285:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Returns a word encoding the current interrupts status.
+ 286:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *
+ 287:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @return              The interrupts status.
+ 288:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 289:ChibiOS/os/nil/ports/AVR/nilcore.h **** static inline syssts_t port_get_irq_status(void) {
+ 290:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 291:ChibiOS/os/nil/ports/AVR/nilcore.h ****   return 0;
+ 292:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 293:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 294:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 295:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Checks the interrupt status.
+ 296:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *
+ 297:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @param[in] sts       the interrupt status word
+ 298:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *
+ 299:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @return              The interrupt status.
+ 300:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @retvel false        the word specified a disabled interrupts status.
+ 301:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @retvel true         the word specified an enabled interrupts status.
+ 302:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 303:ChibiOS/os/nil/ports/AVR/nilcore.h **** static inline bool port_irq_enabled(syssts_t sts) {
+ 304:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 305:ChibiOS/os/nil/ports/AVR/nilcore.h ****   return false;
+ 306:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 307:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 308:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 309:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Determines the current execution context.
+ 310:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *
+ 311:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @return              The execution context.
+ 312:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @retval false        not running in ISR mode.
+ 313:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @retval true         running in ISR mode.
+ 314:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 315:ChibiOS/os/nil/ports/AVR/nilcore.h **** static inline bool port_is_isr_context(void) {
+ 316:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 317:ChibiOS/os/nil/ports/AVR/nilcore.h ****   return false;
+ 318:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 319:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 320:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 321:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Kernel-lock action.
+ 322:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 323:ChibiOS/os/nil/ports/AVR/nilcore.h **** static inline void port_lock(void) {
+ 324:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 325:ChibiOS/os/nil/ports/AVR/nilcore.h ****   asm volatile ("cli" : : : "memory");
+ 326:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 327:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 328:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 329:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Kernel-unlock action.
+ 330:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 331:ChibiOS/os/nil/ports/AVR/nilcore.h **** static inline void port_unlock(void) {
+ 332:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 333:ChibiOS/os/nil/ports/AVR/nilcore.h ****   asm volatile ("sei" : : : "memory");
+ 232               		.loc 2 333 0
+ 233               	/* #APP */
+ 234               	 ;  333 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 235 0000 7894      		sei
+ 236               	 ;  0 "" 2
+ 237               	/* #NOAPP */
+ 238               	.LBE5:
+ 239               	.LBE4:
+ 129:ChibiOS/os/nil/ports/AVR/nilcore.c **** 
+ 130:ChibiOS/os/nil/ports/AVR/nilcore.c ****   chSysUnlock();
+ 131:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("movw    r24, r4");
+ 240               		.loc 1 131 0
+ 241               	/* #APP */
+ 242               	 ;  131 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+ 243 0002 C201      		movw    r24, r4
+ 244               	 ;  0 "" 2
+ 132:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("movw    r30, r2");
+ 245               		.loc 1 132 0
+ 246               	 ;  132 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+ 247 0004 F101      		movw    r30, r2
+ 248               	 ;  0 "" 2
+ 133:ChibiOS/os/nil/ports/AVR/nilcore.c ****   asm volatile ("icall");
+ 249               		.loc 1 133 0
+ 250               	 ;  133 "ChibiOS/os/nil/ports/AVR/nilcore.c" 1
+ 251 0006 0995      		icall
+ 252               	 ;  0 "" 2
+ 134:ChibiOS/os/nil/ports/AVR/nilcore.c ****   chSysHalt(0);
+ 253               		.loc 1 134 0
+ 254               	/* #NOAPP */
+ 255 0008 80E0      		ldi r24,0
+ 256 000a 90E0      		ldi r25,0
+ 257 000c 0C94 0000 		jmp chSysHalt
+ 258               	.LVL1:
+ 259               		.cfi_endproc
+ 260               	.LFE25:
+ 262               		.text
+ 263               	.Letext0:
+ 264               		.file 3 "ChibiOS/os/nil/include/nil.h"
+ 265               		.file 4 "c:\\program files (x86)\\atmel\\studio\\7.0\\toolchain\\avr8\\avr8-gnu-toolchain\\avr\\in
+ 266               		.file 5 "ChibiOS/os/nil/ports/AVR/compilers/GCC/niltypes.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 nilcore.c
+C:\Users\Noah\AppData\Local\Temp\ccsEAsYj.s:2      *ABS*:0000003e __SP_H__
+C:\Users\Noah\AppData\Local\Temp\ccsEAsYj.s:3      *ABS*:0000003d __SP_L__
+C:\Users\Noah\AppData\Local\Temp\ccsEAsYj.s:4      *ABS*:0000003f __SREG__
+C:\Users\Noah\AppData\Local\Temp\ccsEAsYj.s:5      *ABS*:00000000 __tmp_reg__
+C:\Users\Noah\AppData\Local\Temp\ccsEAsYj.s:6      *ABS*:00000001 __zero_reg__
+C:\Users\Noah\AppData\Local\Temp\ccsEAsYj.s:13     .text._port_switch:00000000 _port_switch
+C:\Users\Noah\AppData\Local\Temp\ccsEAsYj.s:221    .text._port_thread_start:00000000 _port_thread_start
+
+UNDEFINED SYMBOLS
+chSysHalt

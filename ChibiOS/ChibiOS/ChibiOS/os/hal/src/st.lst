@@ -1,0 +1,406 @@
+   1               		.file	"st.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               		.section	.text.stInit,"ax",@progbits
+  11               	.global	stInit
+  13               	stInit:
+  14               	.LFB53:
+  15               		.file 1 "ChibiOS/os/hal/src/st.c"
+   1:ChibiOS/os/hal/src/st.c **** /*
+   2:ChibiOS/os/hal/src/st.c ****     ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio
+   3:ChibiOS/os/hal/src/st.c **** 
+   4:ChibiOS/os/hal/src/st.c ****     Licensed under the Apache License, Version 2.0 (the "License");
+   5:ChibiOS/os/hal/src/st.c ****     you may not use this file except in compliance with the License.
+   6:ChibiOS/os/hal/src/st.c ****     You may obtain a copy of the License at
+   7:ChibiOS/os/hal/src/st.c **** 
+   8:ChibiOS/os/hal/src/st.c ****         http://www.apache.org/licenses/LICENSE-2.0
+   9:ChibiOS/os/hal/src/st.c **** 
+  10:ChibiOS/os/hal/src/st.c ****     Unless required by applicable law or agreed to in writing, software
+  11:ChibiOS/os/hal/src/st.c ****     distributed under the License is distributed on an "AS IS" BASIS,
+  12:ChibiOS/os/hal/src/st.c ****     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  13:ChibiOS/os/hal/src/st.c ****     See the License for the specific language governing permissions and
+  14:ChibiOS/os/hal/src/st.c ****     limitations under the License.
+  15:ChibiOS/os/hal/src/st.c **** */
+  16:ChibiOS/os/hal/src/st.c **** 
+  17:ChibiOS/os/hal/src/st.c **** /**
+  18:ChibiOS/os/hal/src/st.c ****  * @file    st.c
+  19:ChibiOS/os/hal/src/st.c ****  * @brief   ST Driver code.
+  20:ChibiOS/os/hal/src/st.c ****  *
+  21:ChibiOS/os/hal/src/st.c ****  * @addtogroup ST
+  22:ChibiOS/os/hal/src/st.c ****  * @{
+  23:ChibiOS/os/hal/src/st.c ****  */
+  24:ChibiOS/os/hal/src/st.c **** 
+  25:ChibiOS/os/hal/src/st.c **** #include "hal.h"
+  26:ChibiOS/os/hal/src/st.c **** 
+  27:ChibiOS/os/hal/src/st.c **** #if (OSAL_ST_MODE != OSAL_ST_MODE_NONE) || defined(__DOXYGEN__)
+  28:ChibiOS/os/hal/src/st.c **** 
+  29:ChibiOS/os/hal/src/st.c **** /*===========================================================================*/
+  30:ChibiOS/os/hal/src/st.c **** /* Driver local definitions.                                                 */
+  31:ChibiOS/os/hal/src/st.c **** /*===========================================================================*/
+  32:ChibiOS/os/hal/src/st.c **** 
+  33:ChibiOS/os/hal/src/st.c **** /*===========================================================================*/
+  34:ChibiOS/os/hal/src/st.c **** /* Driver exported variables.                                                */
+  35:ChibiOS/os/hal/src/st.c **** /*===========================================================================*/
+  36:ChibiOS/os/hal/src/st.c **** 
+  37:ChibiOS/os/hal/src/st.c **** /*===========================================================================*/
+  38:ChibiOS/os/hal/src/st.c **** /* Driver local types.                                                       */
+  39:ChibiOS/os/hal/src/st.c **** /*===========================================================================*/
+  40:ChibiOS/os/hal/src/st.c **** 
+  41:ChibiOS/os/hal/src/st.c **** /*===========================================================================*/
+  42:ChibiOS/os/hal/src/st.c **** /* Driver local variables.                                                   */
+  43:ChibiOS/os/hal/src/st.c **** /*===========================================================================*/
+  44:ChibiOS/os/hal/src/st.c **** 
+  45:ChibiOS/os/hal/src/st.c **** /*===========================================================================*/
+  46:ChibiOS/os/hal/src/st.c **** /* Driver local functions.                                                   */
+  47:ChibiOS/os/hal/src/st.c **** /*===========================================================================*/
+  48:ChibiOS/os/hal/src/st.c **** 
+  49:ChibiOS/os/hal/src/st.c **** /*===========================================================================*/
+  50:ChibiOS/os/hal/src/st.c **** /* Driver exported functions.                                                */
+  51:ChibiOS/os/hal/src/st.c **** /*===========================================================================*/
+  52:ChibiOS/os/hal/src/st.c **** 
+  53:ChibiOS/os/hal/src/st.c **** /**
+  54:ChibiOS/os/hal/src/st.c ****  * @brief   ST Driver initialization.
+  55:ChibiOS/os/hal/src/st.c ****  * @note    This function is implicitly invoked by @p halInit(), there is
+  56:ChibiOS/os/hal/src/st.c ****  *          no need to explicitly initialize the driver.
+  57:ChibiOS/os/hal/src/st.c ****  *
+  58:ChibiOS/os/hal/src/st.c ****  * @init
+  59:ChibiOS/os/hal/src/st.c ****  */
+  60:ChibiOS/os/hal/src/st.c **** void stInit(void) {
+  16               		.loc 1 60 0
+  17               		.cfi_startproc
+  18               	/* prologue: function */
+  19               	/* frame size = 0 */
+  20               	/* stack size = 0 */
+  21               	.L__stack_usage = 0
+  61:ChibiOS/os/hal/src/st.c **** 
+  62:ChibiOS/os/hal/src/st.c ****   st_lld_init();
+  22               		.loc 1 62 0
+  23 0000 0C94 0000 		jmp st_lld_init
+  24               	.LVL0:
+  25               		.cfi_endproc
+  26               	.LFE53:
+  28               		.section	.text.stStartAlarm,"ax",@progbits
+  29               	.global	stStartAlarm
+  31               	stStartAlarm:
+  32               	.LFB54:
+  63:ChibiOS/os/hal/src/st.c **** }
+  64:ChibiOS/os/hal/src/st.c **** 
+  65:ChibiOS/os/hal/src/st.c **** 
+  66:ChibiOS/os/hal/src/st.c **** /**
+  67:ChibiOS/os/hal/src/st.c ****  * @brief   Starts the alarm.
+  68:ChibiOS/os/hal/src/st.c ****  * @note    Makes sure that no spurious alarms are triggered after
+  69:ChibiOS/os/hal/src/st.c ****  *          this call.
+  70:ChibiOS/os/hal/src/st.c ****  * @note    This functionality is only available in free running mode, the
+  71:ChibiOS/os/hal/src/st.c ****  *          behavior in periodic mode is undefined.
+  72:ChibiOS/os/hal/src/st.c ****  *
+  73:ChibiOS/os/hal/src/st.c ****  * @param[in] abstime   the time to be set for the first alarm
+  74:ChibiOS/os/hal/src/st.c ****  *
+  75:ChibiOS/os/hal/src/st.c ****  * @api
+  76:ChibiOS/os/hal/src/st.c ****  */
+  77:ChibiOS/os/hal/src/st.c **** void stStartAlarm(systime_t abstime) {
+  33               		.loc 1 77 0
+  34               		.cfi_startproc
+  35               	.LVL1:
+  36               	/* prologue: function */
+  37               	/* frame size = 0 */
+  38               	/* stack size = 0 */
+  39               	.L__stack_usage = 0
+  40               	.LBB10:
+  41               	.LBB11:
+  42               		.file 2 "ChibiOS/os/hal/ports/AVR/st_lld.h"
+   1:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*
+   2:ChibiOS/os/hal/ports/AVR/st_lld.h ****     ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio
+   3:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+   4:ChibiOS/os/hal/ports/AVR/st_lld.h ****     Licensed under the Apache License, Version 2.0 (the "License");
+   5:ChibiOS/os/hal/ports/AVR/st_lld.h ****     you may not use this file except in compliance with the License.
+   6:ChibiOS/os/hal/ports/AVR/st_lld.h ****     You may obtain a copy of the License at
+   7:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+   8:ChibiOS/os/hal/ports/AVR/st_lld.h ****         http://www.apache.org/licenses/LICENSE-2.0
+   9:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  10:ChibiOS/os/hal/ports/AVR/st_lld.h ****     Unless required by applicable law or agreed to in writing, software
+  11:ChibiOS/os/hal/ports/AVR/st_lld.h ****     distributed under the License is distributed on an "AS IS" BASIS,
+  12:ChibiOS/os/hal/ports/AVR/st_lld.h ****     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  13:ChibiOS/os/hal/ports/AVR/st_lld.h ****     See the License for the specific language governing permissions and
+  14:ChibiOS/os/hal/ports/AVR/st_lld.h ****     limitations under the License.
+  15:ChibiOS/os/hal/ports/AVR/st_lld.h **** */
+  16:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  17:ChibiOS/os/hal/ports/AVR/st_lld.h **** /**
+  18:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @file    AVR/st_lld.h
+  19:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @brief   ST Driver subsystem low level driver header.
+  20:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @details This header is designed to be include-able without having to
+  21:ChibiOS/os/hal/ports/AVR/st_lld.h ****  *          include other files from the HAL.
+  22:ChibiOS/os/hal/ports/AVR/st_lld.h ****  *
+  23:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @addtogroup AVR
+  24:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @{
+  25:ChibiOS/os/hal/ports/AVR/st_lld.h ****  */
+  26:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  27:ChibiOS/os/hal/ports/AVR/st_lld.h **** #ifndef _ST_LLD_H_
+  28:ChibiOS/os/hal/ports/AVR/st_lld.h **** #define _ST_LLD_H_
+  29:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  30:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  31:ChibiOS/os/hal/ports/AVR/st_lld.h **** /* Driver constants.                                                         */
+  32:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  33:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  34:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  35:ChibiOS/os/hal/ports/AVR/st_lld.h **** /* Driver pre-compile time settings.                                         */
+  36:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  37:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  38:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*
+  39:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * TODO: for models that have many timers,
+  40:ChibiOS/os/hal/ports/AVR/st_lld.h ****  *       could add AVR_ST_USE_TIMER
+  41:ChibiOS/os/hal/ports/AVR/st_lld.h ****  */
+  42:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  43:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  44:ChibiOS/os/hal/ports/AVR/st_lld.h **** /* Derived constants and error checks.                                       */
+  45:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  46:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  47:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*
+  48:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * TODO: error checks for valid timer selected
+  49:ChibiOS/os/hal/ports/AVR/st_lld.h ****  */
+  50:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  51:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  52:ChibiOS/os/hal/ports/AVR/st_lld.h **** /* Driver data structures and types.                                         */
+  53:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  54:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  55:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  56:ChibiOS/os/hal/ports/AVR/st_lld.h **** /* Driver macros.                                                            */
+  57:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  58:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  59:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  60:ChibiOS/os/hal/ports/AVR/st_lld.h **** /* External declarations.                                                    */
+  61:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  62:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  63:ChibiOS/os/hal/ports/AVR/st_lld.h **** #ifdef __cplusplus
+  64:ChibiOS/os/hal/ports/AVR/st_lld.h **** extern "C" {
+  65:ChibiOS/os/hal/ports/AVR/st_lld.h **** #endif
+  66:ChibiOS/os/hal/ports/AVR/st_lld.h ****   void st_lld_init(void);
+  67:ChibiOS/os/hal/ports/AVR/st_lld.h **** #ifdef __cplusplus
+  68:ChibiOS/os/hal/ports/AVR/st_lld.h **** }
+  69:ChibiOS/os/hal/ports/AVR/st_lld.h **** #endif
+  70:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  71:ChibiOS/os/hal/ports/AVR/st_lld.h **** #ifdef __AVR_ATmega128__
+  72:ChibiOS/os/hal/ports/AVR/st_lld.h **** #define TIFR_REG TIFR
+  73:ChibiOS/os/hal/ports/AVR/st_lld.h **** #define TIMSK_REG TIMSK
+  74:ChibiOS/os/hal/ports/AVR/st_lld.h **** #else
+  75:ChibiOS/os/hal/ports/AVR/st_lld.h **** #define TIFR_REG TIFR1
+  76:ChibiOS/os/hal/ports/AVR/st_lld.h **** #define TIMSK_REG TIMSK1
+  77:ChibiOS/os/hal/ports/AVR/st_lld.h **** #endif
+  78:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  79:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  80:ChibiOS/os/hal/ports/AVR/st_lld.h **** /* Driver inline functions.                                                  */
+  81:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  82:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  83:ChibiOS/os/hal/ports/AVR/st_lld.h **** /**
+  84:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @brief   Returns the time counter value.
+  85:ChibiOS/os/hal/ports/AVR/st_lld.h ****  *
+  86:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @return              The counter value.
+  87:ChibiOS/os/hal/ports/AVR/st_lld.h ****  *
+  88:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @notapi
+  89:ChibiOS/os/hal/ports/AVR/st_lld.h ****  */
+  90:ChibiOS/os/hal/ports/AVR/st_lld.h **** static inline systime_t st_lld_get_counter(void) {
+  91:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  92:ChibiOS/os/hal/ports/AVR/st_lld.h ****   return (systime_t) TCNT1;
+  93:ChibiOS/os/hal/ports/AVR/st_lld.h **** }
+  94:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  95:ChibiOS/os/hal/ports/AVR/st_lld.h **** /**
+  96:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @brief   Starts the alarm.
+  97:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @note    Makes sure that no spurious alarms are triggered after
+  98:ChibiOS/os/hal/ports/AVR/st_lld.h ****  *          this call.
+  99:ChibiOS/os/hal/ports/AVR/st_lld.h ****  *
+ 100:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @param[in] time      the time to be set for the first alarm
+ 101:ChibiOS/os/hal/ports/AVR/st_lld.h ****  *
+ 102:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @notapi
+ 103:ChibiOS/os/hal/ports/AVR/st_lld.h ****  */
+ 104:ChibiOS/os/hal/ports/AVR/st_lld.h **** static inline void st_lld_start_alarm(systime_t time) {
+ 105:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+ 106:ChibiOS/os/hal/ports/AVR/st_lld.h ****   OCR1A = (uint16_t) time;
+  43               		.loc 2 106 0
+  44 0000 9093 8900 		sts 136+1,r25
+  45 0004 8093 8800 		sts 136,r24
+ 107:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+ 108:ChibiOS/os/hal/ports/AVR/st_lld.h ****   /* Reset pending. */
+ 109:ChibiOS/os/hal/ports/AVR/st_lld.h ****   TIFR_REG = _BV(OCF1A);
+  46               		.loc 2 109 0
+  47 0008 82E0      		ldi r24,lo8(2)
+  48               	.LVL2:
+  49 000a 86BB      		out 0x16,r24
+  50               	.LVL3:
+ 110:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+ 111:ChibiOS/os/hal/ports/AVR/st_lld.h ****   /* enable interrupt */
+ 112:ChibiOS/os/hal/ports/AVR/st_lld.h ****   TIMSK_REG = _BV(OCIE1A);
+  51               		.loc 2 112 0
+  52 000c 8093 6F00 		sts 111,r24
+  53 0010 0895      		ret
+  54               	.LBE11:
+  55               	.LBE10:
+  56               		.cfi_endproc
+  57               	.LFE54:
+  59               		.section	.text.stStopAlarm,"ax",@progbits
+  60               	.global	stStopAlarm
+  62               	stStopAlarm:
+  63               	.LFB55:
+  78:ChibiOS/os/hal/src/st.c **** 
+  79:ChibiOS/os/hal/src/st.c ****   osalDbgAssert(stIsAlarmActive() == false, "already active");
+  80:ChibiOS/os/hal/src/st.c **** 
+  81:ChibiOS/os/hal/src/st.c ****   st_lld_start_alarm(abstime);
+  82:ChibiOS/os/hal/src/st.c **** }
+  83:ChibiOS/os/hal/src/st.c **** 
+  84:ChibiOS/os/hal/src/st.c **** /**
+  85:ChibiOS/os/hal/src/st.c ****  * @brief   Stops the alarm interrupt.
+  86:ChibiOS/os/hal/src/st.c ****  * @note    This functionality is only available in free running mode, the
+  87:ChibiOS/os/hal/src/st.c ****  *          behavior in periodic mode is undefined.
+  88:ChibiOS/os/hal/src/st.c ****  *
+  89:ChibiOS/os/hal/src/st.c ****  * @api
+  90:ChibiOS/os/hal/src/st.c ****  */
+  91:ChibiOS/os/hal/src/st.c **** void stStopAlarm(void) {
+  64               		.loc 1 91 0
+  65               		.cfi_startproc
+  66               	/* prologue: function */
+  67               	/* frame size = 0 */
+  68               	/* stack size = 0 */
+  69               	.L__stack_usage = 0
+  70               	.LBB12:
+  71               	.LBB13:
+ 113:ChibiOS/os/hal/ports/AVR/st_lld.h **** }
+ 114:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+ 115:ChibiOS/os/hal/ports/AVR/st_lld.h **** /**
+ 116:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @brief   Stops the alarm interrupt.
+ 117:ChibiOS/os/hal/ports/AVR/st_lld.h ****  *
+ 118:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @notapi
+ 119:ChibiOS/os/hal/ports/AVR/st_lld.h ****  */
+ 120:ChibiOS/os/hal/ports/AVR/st_lld.h **** static inline void st_lld_stop_alarm(void) {
+ 121:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+ 122:ChibiOS/os/hal/ports/AVR/st_lld.h ****   TIMSK_REG = 0;
+  72               		.loc 2 122 0
+  73 0000 1092 6F00 		sts 111,__zero_reg__
+  74 0004 0895      		ret
+  75               	.LBE13:
+  76               	.LBE12:
+  77               		.cfi_endproc
+  78               	.LFE55:
+  80               		.section	.text.stSetAlarm,"ax",@progbits
+  81               	.global	stSetAlarm
+  83               	stSetAlarm:
+  84               	.LFB56:
+  92:ChibiOS/os/hal/src/st.c **** 
+  93:ChibiOS/os/hal/src/st.c ****   st_lld_stop_alarm();
+  94:ChibiOS/os/hal/src/st.c **** }
+  95:ChibiOS/os/hal/src/st.c **** 
+  96:ChibiOS/os/hal/src/st.c **** /**
+  97:ChibiOS/os/hal/src/st.c ****  * @brief   Sets the alarm time.
+  98:ChibiOS/os/hal/src/st.c ****  * @note    This functionality is only available in free running mode, the
+  99:ChibiOS/os/hal/src/st.c ****  *          behavior in periodic mode is undefined.
+ 100:ChibiOS/os/hal/src/st.c ****  *
+ 101:ChibiOS/os/hal/src/st.c ****  * @param[in] abstime   the time to be set for the next alarm
+ 102:ChibiOS/os/hal/src/st.c ****  *
+ 103:ChibiOS/os/hal/src/st.c ****  * @api
+ 104:ChibiOS/os/hal/src/st.c ****  */
+ 105:ChibiOS/os/hal/src/st.c **** void stSetAlarm(systime_t abstime) {
+  85               		.loc 1 105 0
+  86               		.cfi_startproc
+  87               	.LVL4:
+  88               	/* prologue: function */
+  89               	/* frame size = 0 */
+  90               	/* stack size = 0 */
+  91               	.L__stack_usage = 0
+  92               	.LBB14:
+  93               	.LBB15:
+ 123:ChibiOS/os/hal/ports/AVR/st_lld.h **** }
+ 124:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+ 125:ChibiOS/os/hal/ports/AVR/st_lld.h **** /**
+ 126:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @brief   Sets the alarm time.
+ 127:ChibiOS/os/hal/ports/AVR/st_lld.h ****  *
+ 128:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @param[in] time      the time to be set for the next alarm
+ 129:ChibiOS/os/hal/ports/AVR/st_lld.h ****  *
+ 130:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @notapi
+ 131:ChibiOS/os/hal/ports/AVR/st_lld.h ****  */
+ 132:ChibiOS/os/hal/ports/AVR/st_lld.h **** static inline void st_lld_set_alarm(systime_t time) {
+ 133:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+ 134:ChibiOS/os/hal/ports/AVR/st_lld.h ****   OCR1A = (uint16_t) time;
+  94               		.loc 2 134 0
+  95 0000 9093 8900 		sts 136+1,r25
+  96 0004 8093 8800 		sts 136,r24
+  97 0008 0895      		ret
+  98               	.LBE15:
+  99               	.LBE14:
+ 100               		.cfi_endproc
+ 101               	.LFE56:
+ 103               		.section	.text.stGetAlarm,"ax",@progbits
+ 104               	.global	stGetAlarm
+ 106               	stGetAlarm:
+ 107               	.LFB57:
+ 106:ChibiOS/os/hal/src/st.c **** 
+ 107:ChibiOS/os/hal/src/st.c ****   osalDbgAssert(stIsAlarmActive() != false, "not active");
+ 108:ChibiOS/os/hal/src/st.c **** 
+ 109:ChibiOS/os/hal/src/st.c ****   st_lld_set_alarm(abstime);
+ 110:ChibiOS/os/hal/src/st.c **** }
+ 111:ChibiOS/os/hal/src/st.c **** 
+ 112:ChibiOS/os/hal/src/st.c **** /**
+ 113:ChibiOS/os/hal/src/st.c ****  * @brief   Returns the current alarm time.
+ 114:ChibiOS/os/hal/src/st.c ****  * @note    This functionality is only available in free running mode, the
+ 115:ChibiOS/os/hal/src/st.c ****  *          behavior in periodic mode is undefined.
+ 116:ChibiOS/os/hal/src/st.c ****  *
+ 117:ChibiOS/os/hal/src/st.c ****  * @return              The currently set alarm time.
+ 118:ChibiOS/os/hal/src/st.c ****  *
+ 119:ChibiOS/os/hal/src/st.c ****  * @api
+ 120:ChibiOS/os/hal/src/st.c ****  */
+ 121:ChibiOS/os/hal/src/st.c **** systime_t stGetAlarm(void) {
+ 108               		.loc 1 121 0
+ 109               		.cfi_startproc
+ 110               	/* prologue: function */
+ 111               	/* frame size = 0 */
+ 112               	/* stack size = 0 */
+ 113               	.L__stack_usage = 0
+ 114               	.LBB16:
+ 115               	.LBB17:
+ 135:ChibiOS/os/hal/ports/AVR/st_lld.h **** }
+ 136:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+ 137:ChibiOS/os/hal/ports/AVR/st_lld.h **** /**
+ 138:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @brief   Returns the current alarm time.
+ 139:ChibiOS/os/hal/ports/AVR/st_lld.h ****  *
+ 140:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @return              The currently set alarm time.
+ 141:ChibiOS/os/hal/ports/AVR/st_lld.h ****  *
+ 142:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @notapi
+ 143:ChibiOS/os/hal/ports/AVR/st_lld.h ****  */
+ 144:ChibiOS/os/hal/ports/AVR/st_lld.h **** static inline systime_t st_lld_get_alarm(void) {
+ 145:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+ 146:ChibiOS/os/hal/ports/AVR/st_lld.h ****   return (systime_t) OCR1A;
+ 116               		.loc 2 146 0
+ 117 0000 8091 8800 		lds r24,136
+ 118 0004 9091 8900 		lds r25,136+1
+ 119               	.LBE17:
+ 120               	.LBE16:
+ 122:ChibiOS/os/hal/src/st.c **** 
+ 123:ChibiOS/os/hal/src/st.c ****   osalDbgAssert(stIsAlarmActive() != false, "not active");
+ 124:ChibiOS/os/hal/src/st.c **** 
+ 125:ChibiOS/os/hal/src/st.c ****   return st_lld_get_alarm();
+ 126:ChibiOS/os/hal/src/st.c **** }
+ 121               		.loc 1 126 0
+ 122 0008 0895      		ret
+ 123               		.cfi_endproc
+ 124               	.LFE57:
+ 126               		.text
+ 127               	.Letext0:
+ 128               		.file 3 "c:\\program files (x86)\\atmel\\studio\\7.0\\toolchain\\avr8\\avr8-gnu-toolchain\\avr\\in
+ 129               		.file 4 "ChibiOS/os/nil/ports/AVR/compilers/GCC/niltypes.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 st.c
+C:\Users\Noah\AppData\Local\Temp\cc9wK62g.s:2      *ABS*:0000003e __SP_H__
+C:\Users\Noah\AppData\Local\Temp\cc9wK62g.s:3      *ABS*:0000003d __SP_L__
+C:\Users\Noah\AppData\Local\Temp\cc9wK62g.s:4      *ABS*:0000003f __SREG__
+C:\Users\Noah\AppData\Local\Temp\cc9wK62g.s:5      *ABS*:00000000 __tmp_reg__
+C:\Users\Noah\AppData\Local\Temp\cc9wK62g.s:6      *ABS*:00000001 __zero_reg__
+C:\Users\Noah\AppData\Local\Temp\cc9wK62g.s:13     .text.stInit:00000000 stInit
+C:\Users\Noah\AppData\Local\Temp\cc9wK62g.s:31     .text.stStartAlarm:00000000 stStartAlarm
+C:\Users\Noah\AppData\Local\Temp\cc9wK62g.s:62     .text.stStopAlarm:00000000 stStopAlarm
+C:\Users\Noah\AppData\Local\Temp\cc9wK62g.s:83     .text.stSetAlarm:00000000 stSetAlarm
+C:\Users\Noah\AppData\Local\Temp\cc9wK62g.s:106    .text.stGetAlarm:00000000 stGetAlarm
+
+UNDEFINED SYMBOLS
+st_lld_init

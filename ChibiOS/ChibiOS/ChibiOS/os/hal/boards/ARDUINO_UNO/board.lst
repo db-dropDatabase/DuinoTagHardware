@@ -1,0 +1,100 @@
+   1               		.file	"board.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               		.section	.text.boardInit,"ax",@progbits
+  11               	.global	boardInit
+  13               	boardInit:
+  14               	.LFB53:
+  15               		.file 1 "ChibiOS/os/hal/boards/ARDUINO_UNO/board.c"
+   1:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c **** /*
+   2:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c ****     ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio
+   3:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c **** 
+   4:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c ****     Licensed under the Apache License, Version 2.0 (the "License");
+   5:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c ****     you may not use this file except in compliance with the License.
+   6:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c ****     You may obtain a copy of the License at
+   7:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c **** 
+   8:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c ****         http://www.apache.org/licenses/LICENSE-2.0
+   9:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c **** 
+  10:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c ****     Unless required by applicable law or agreed to in writing, software
+  11:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c ****     distributed under the License is distributed on an "AS IS" BASIS,
+  12:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c ****     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  13:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c ****     See the License for the specific language governing permissions and
+  14:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c ****     limitations under the License.
+  15:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c **** */
+  16:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c **** 
+  17:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c **** #include "hal.h"
+  18:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c **** 
+  19:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c **** /**
+  20:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c ****  * @brief   PAL setup.
+  21:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c ****  * @details Digital I/O ports static configuration as defined in @p board.h.
+  22:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c ****  *          This variable is used by the HAL when initializing the PAL driver.
+  23:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c ****  */
+  24:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c **** #if HAL_USE_PAL || defined(__DOXYGEN__)
+  25:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c **** const PALConfig pal_default_config =
+  26:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c **** {
+  27:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c **** #if defined(PORTB)
+  28:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c ****   {VAL_PORTB, VAL_DDRB},
+  29:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c **** #endif
+  30:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c **** #if defined(PORTC)
+  31:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c ****   {VAL_PORTC, VAL_DDRC},
+  32:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c **** #endif
+  33:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c **** #if defined(PORTD)
+  34:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c ****   {VAL_PORTD, VAL_DDRD},
+  35:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c **** #endif
+  36:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c **** };
+  37:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c **** #endif /* HAL_USE_PAL */
+  38:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c **** 
+  39:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c **** /**
+  40:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c ****  * Board-specific initialization code.
+  41:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c ****  */
+  42:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c **** void boardInit(void) {
+  16               		.loc 1 42 0
+  17               		.cfi_startproc
+  18               	/* prologue: function */
+  19               	/* frame size = 0 */
+  20               	/* stack size = 0 */
+  21               	.L__stack_usage = 0
+  43:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c **** 
+  44:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c ****   /*
+  45:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c ****    * External interrupts setup, all disabled initially.
+  46:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c ****    */
+  47:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c ****   EICRA  = 0x00;
+  22               		.loc 1 47 0
+  23 0000 1092 6900 		sts 105,__zero_reg__
+  48:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c ****   EIMSK  = 0x00;
+  24               		.loc 1 48 0
+  25 0004 1DBA      		out 0x1d,__zero_reg__
+  26 0006 0895      		ret
+  27               		.cfi_endproc
+  28               	.LFE53:
+  30               	.global	pal_default_config
+  31               		.section	.rodata.pal_default_config,"a",@progbits
+  34               	pal_default_config:
+  35 0000 FF        		.byte	-1
+  36 0001 20        		.byte	32
+  37 0002 FF        		.byte	-1
+  38 0003 00        		.byte	0
+  39 0004 FF        		.byte	-1
+  40 0005 02        		.byte	2
+  41               		.text
+  42               	.Letext0:
+  43               		.file 2 "ChibiOS/os/hal/ports/AVR/pal_lld.h"
+  44               		.file 3 "c:\\program files (x86)\\atmel\\studio\\7.0\\toolchain\\avr8\\avr8-gnu-toolchain\\avr\\in
+DEFINED SYMBOLS
+                            *ABS*:00000000 board.c
+C:\Users\Noah\AppData\Local\Temp\ccWadILV.s:2      *ABS*:0000003e __SP_H__
+C:\Users\Noah\AppData\Local\Temp\ccWadILV.s:3      *ABS*:0000003d __SP_L__
+C:\Users\Noah\AppData\Local\Temp\ccWadILV.s:4      *ABS*:0000003f __SREG__
+C:\Users\Noah\AppData\Local\Temp\ccWadILV.s:5      *ABS*:00000000 __tmp_reg__
+C:\Users\Noah\AppData\Local\Temp\ccWadILV.s:6      *ABS*:00000001 __zero_reg__
+C:\Users\Noah\AppData\Local\Temp\ccWadILV.s:13     .text.boardInit:00000000 boardInit
+C:\Users\Noah\AppData\Local\Temp\ccWadILV.s:34     .rodata.pal_default_config:00000000 pal_default_config
+
+UNDEFINED SYMBOLS
+__do_copy_data

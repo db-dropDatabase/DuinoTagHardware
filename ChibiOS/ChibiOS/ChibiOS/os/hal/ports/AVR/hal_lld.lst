@@ -1,0 +1,87 @@
+   1               		.file	"hal_lld.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               		.section	.text.hal_lld_init,"ax",@progbits
+  11               	.global	hal_lld_init
+  13               	hal_lld_init:
+  14               	.LFB53:
+  15               		.file 1 "ChibiOS/os/hal/ports/AVR/hal_lld.c"
+   1:ChibiOS/os/hal/ports/AVR/hal_lld.c **** /*
+   2:ChibiOS/os/hal/ports/AVR/hal_lld.c ****     ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio
+   3:ChibiOS/os/hal/ports/AVR/hal_lld.c **** 
+   4:ChibiOS/os/hal/ports/AVR/hal_lld.c ****     Licensed under the Apache License, Version 2.0 (the "License");
+   5:ChibiOS/os/hal/ports/AVR/hal_lld.c ****     you may not use this file except in compliance with the License.
+   6:ChibiOS/os/hal/ports/AVR/hal_lld.c ****     You may obtain a copy of the License at
+   7:ChibiOS/os/hal/ports/AVR/hal_lld.c **** 
+   8:ChibiOS/os/hal/ports/AVR/hal_lld.c ****         http://www.apache.org/licenses/LICENSE-2.0
+   9:ChibiOS/os/hal/ports/AVR/hal_lld.c **** 
+  10:ChibiOS/os/hal/ports/AVR/hal_lld.c ****     Unless required by applicable law or agreed to in writing, software
+  11:ChibiOS/os/hal/ports/AVR/hal_lld.c ****     distributed under the License is distributed on an "AS IS" BASIS,
+  12:ChibiOS/os/hal/ports/AVR/hal_lld.c ****     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  13:ChibiOS/os/hal/ports/AVR/hal_lld.c ****     See the License for the specific language governing permissions and
+  14:ChibiOS/os/hal/ports/AVR/hal_lld.c ****     limitations under the License.
+  15:ChibiOS/os/hal/ports/AVR/hal_lld.c **** */
+  16:ChibiOS/os/hal/ports/AVR/hal_lld.c **** 
+  17:ChibiOS/os/hal/ports/AVR/hal_lld.c **** /**
+  18:ChibiOS/os/hal/ports/AVR/hal_lld.c ****  * @file    AVR/hal_lld.c
+  19:ChibiOS/os/hal/ports/AVR/hal_lld.c ****  * @brief   AVR HAL subsystem low level driver code.
+  20:ChibiOS/os/hal/ports/AVR/hal_lld.c ****  *
+  21:ChibiOS/os/hal/ports/AVR/hal_lld.c ****  * @addtogroup HAL
+  22:ChibiOS/os/hal/ports/AVR/hal_lld.c ****  * @{
+  23:ChibiOS/os/hal/ports/AVR/hal_lld.c ****  */
+  24:ChibiOS/os/hal/ports/AVR/hal_lld.c **** 
+  25:ChibiOS/os/hal/ports/AVR/hal_lld.c **** #include "hal.h"
+  26:ChibiOS/os/hal/ports/AVR/hal_lld.c **** 
+  27:ChibiOS/os/hal/ports/AVR/hal_lld.c **** /*===========================================================================*/
+  28:ChibiOS/os/hal/ports/AVR/hal_lld.c **** /* Driver exported variables.                                                */
+  29:ChibiOS/os/hal/ports/AVR/hal_lld.c **** /*===========================================================================*/
+  30:ChibiOS/os/hal/ports/AVR/hal_lld.c **** 
+  31:ChibiOS/os/hal/ports/AVR/hal_lld.c **** /*===========================================================================*/
+  32:ChibiOS/os/hal/ports/AVR/hal_lld.c **** /* Driver local variables and types.                                         */
+  33:ChibiOS/os/hal/ports/AVR/hal_lld.c **** /*===========================================================================*/
+  34:ChibiOS/os/hal/ports/AVR/hal_lld.c **** 
+  35:ChibiOS/os/hal/ports/AVR/hal_lld.c **** /*===========================================================================*/
+  36:ChibiOS/os/hal/ports/AVR/hal_lld.c **** /* Driver local functions.                                                   */
+  37:ChibiOS/os/hal/ports/AVR/hal_lld.c **** /*===========================================================================*/
+  38:ChibiOS/os/hal/ports/AVR/hal_lld.c **** 
+  39:ChibiOS/os/hal/ports/AVR/hal_lld.c **** /*===========================================================================*/
+  40:ChibiOS/os/hal/ports/AVR/hal_lld.c **** /* Driver interrupt handlers.                                                */
+  41:ChibiOS/os/hal/ports/AVR/hal_lld.c **** /*===========================================================================*/
+  42:ChibiOS/os/hal/ports/AVR/hal_lld.c **** 
+  43:ChibiOS/os/hal/ports/AVR/hal_lld.c **** /*===========================================================================*/
+  44:ChibiOS/os/hal/ports/AVR/hal_lld.c **** /* Driver exported functions.                                                */
+  45:ChibiOS/os/hal/ports/AVR/hal_lld.c **** /*===========================================================================*/
+  46:ChibiOS/os/hal/ports/AVR/hal_lld.c **** 
+  47:ChibiOS/os/hal/ports/AVR/hal_lld.c **** /**
+  48:ChibiOS/os/hal/ports/AVR/hal_lld.c ****  * @brief   Low level HAL driver initialization.
+  49:ChibiOS/os/hal/ports/AVR/hal_lld.c ****  *
+  50:ChibiOS/os/hal/ports/AVR/hal_lld.c ****  * @notapi
+  51:ChibiOS/os/hal/ports/AVR/hal_lld.c ****  */
+  52:ChibiOS/os/hal/ports/AVR/hal_lld.c **** void hal_lld_init(void) {
+  16               		.loc 1 52 0
+  17               		.cfi_startproc
+  18               	/* prologue: function */
+  19               	/* frame size = 0 */
+  20               	/* stack size = 0 */
+  21               	.L__stack_usage = 0
+  22 0000 0895      		ret
+  23               		.cfi_endproc
+  24               	.LFE53:
+  26               		.text
+  27               	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 hal_lld.c
+C:\Users\Noah\AppData\Local\Temp\ccOrA5Li.s:2      *ABS*:0000003e __SP_H__
+C:\Users\Noah\AppData\Local\Temp\ccOrA5Li.s:3      *ABS*:0000003d __SP_L__
+C:\Users\Noah\AppData\Local\Temp\ccOrA5Li.s:4      *ABS*:0000003f __SREG__
+C:\Users\Noah\AppData\Local\Temp\ccOrA5Li.s:5      *ABS*:00000000 __tmp_reg__
+C:\Users\Noah\AppData\Local\Temp\ccOrA5Li.s:6      *ABS*:00000001 __zero_reg__
+C:\Users\Noah\AppData\Local\Temp\ccOrA5Li.s:13     .text.hal_lld_init:00000000 hal_lld_init
+
+NO UNDEFINED SYMBOLS

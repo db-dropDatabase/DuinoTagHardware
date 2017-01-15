@@ -1,0 +1,299 @@
+   1               		.file	"osal.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               		.section	.text.osalThreadDequeueNextI,"ax",@progbits
+  11               	.global	osalThreadDequeueNextI
+  13               	osalThreadDequeueNextI:
+  14               	.LFB53:
+  15               		.file 1 "ChibiOS/os/hal/osal/nil/osal.c"
+   1:ChibiOS/os/hal/osal/nil/osal.c **** /*
+   2:ChibiOS/os/hal/osal/nil/osal.c ****     ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio
+   3:ChibiOS/os/hal/osal/nil/osal.c **** 
+   4:ChibiOS/os/hal/osal/nil/osal.c ****     Licensed under the Apache License, Version 2.0 (the "License");
+   5:ChibiOS/os/hal/osal/nil/osal.c ****     you may not use this file except in compliance with the License.
+   6:ChibiOS/os/hal/osal/nil/osal.c ****     You may obtain a copy of the License at
+   7:ChibiOS/os/hal/osal/nil/osal.c **** 
+   8:ChibiOS/os/hal/osal/nil/osal.c ****         http://www.apache.org/licenses/LICENSE-2.0
+   9:ChibiOS/os/hal/osal/nil/osal.c **** 
+  10:ChibiOS/os/hal/osal/nil/osal.c ****     Unless required by applicable law or agreed to in writing, software
+  11:ChibiOS/os/hal/osal/nil/osal.c ****     distributed under the License is distributed on an "AS IS" BASIS,
+  12:ChibiOS/os/hal/osal/nil/osal.c ****     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  13:ChibiOS/os/hal/osal/nil/osal.c ****     See the License for the specific language governing permissions and
+  14:ChibiOS/os/hal/osal/nil/osal.c ****     limitations under the License.
+  15:ChibiOS/os/hal/osal/nil/osal.c **** */
+  16:ChibiOS/os/hal/osal/nil/osal.c **** 
+  17:ChibiOS/os/hal/osal/nil/osal.c **** /**
+  18:ChibiOS/os/hal/osal/nil/osal.c ****  * @file    osal.c
+  19:ChibiOS/os/hal/osal/nil/osal.c ****  * @brief   OSAL module code.
+  20:ChibiOS/os/hal/osal/nil/osal.c ****  *
+  21:ChibiOS/os/hal/osal/nil/osal.c ****  * @addtogroup OSAL
+  22:ChibiOS/os/hal/osal/nil/osal.c ****  * @{
+  23:ChibiOS/os/hal/osal/nil/osal.c ****  */
+  24:ChibiOS/os/hal/osal/nil/osal.c **** 
+  25:ChibiOS/os/hal/osal/nil/osal.c **** #include "osal.h"
+  26:ChibiOS/os/hal/osal/nil/osal.c **** 
+  27:ChibiOS/os/hal/osal/nil/osal.c **** /*===========================================================================*/
+  28:ChibiOS/os/hal/osal/nil/osal.c **** /* Module local definitions.                                                 */
+  29:ChibiOS/os/hal/osal/nil/osal.c **** /*===========================================================================*/
+  30:ChibiOS/os/hal/osal/nil/osal.c **** 
+  31:ChibiOS/os/hal/osal/nil/osal.c **** /*===========================================================================*/
+  32:ChibiOS/os/hal/osal/nil/osal.c **** /* Module exported variables.                                                */
+  33:ChibiOS/os/hal/osal/nil/osal.c **** /*===========================================================================*/
+  34:ChibiOS/os/hal/osal/nil/osal.c **** 
+  35:ChibiOS/os/hal/osal/nil/osal.c **** /*===========================================================================*/
+  36:ChibiOS/os/hal/osal/nil/osal.c **** /* Module local types.                                                       */
+  37:ChibiOS/os/hal/osal/nil/osal.c **** /*===========================================================================*/
+  38:ChibiOS/os/hal/osal/nil/osal.c **** 
+  39:ChibiOS/os/hal/osal/nil/osal.c **** /*===========================================================================*/
+  40:ChibiOS/os/hal/osal/nil/osal.c **** /* Module local variables.                                                   */
+  41:ChibiOS/os/hal/osal/nil/osal.c **** /*===========================================================================*/
+  42:ChibiOS/os/hal/osal/nil/osal.c **** 
+  43:ChibiOS/os/hal/osal/nil/osal.c **** /*===========================================================================*/
+  44:ChibiOS/os/hal/osal/nil/osal.c **** /* Module local functions.                                                   */
+  45:ChibiOS/os/hal/osal/nil/osal.c **** /*===========================================================================*/
+  46:ChibiOS/os/hal/osal/nil/osal.c **** 
+  47:ChibiOS/os/hal/osal/nil/osal.c **** /*===========================================================================*/
+  48:ChibiOS/os/hal/osal/nil/osal.c **** /* Module exported functions.                                                */
+  49:ChibiOS/os/hal/osal/nil/osal.c **** /*===========================================================================*/
+  50:ChibiOS/os/hal/osal/nil/osal.c **** 
+  51:ChibiOS/os/hal/osal/nil/osal.c **** /**
+  52:ChibiOS/os/hal/osal/nil/osal.c ****  * @brief   Dequeues and wakes up one thread from the queue, if any.
+  53:ChibiOS/os/hal/osal/nil/osal.c ****  *
+  54:ChibiOS/os/hal/osal/nil/osal.c ****  * @param[in] tqp       pointer to the threads queue object
+  55:ChibiOS/os/hal/osal/nil/osal.c ****  * @param[in] msg       the message code
+  56:ChibiOS/os/hal/osal/nil/osal.c ****  *
+  57:ChibiOS/os/hal/osal/nil/osal.c ****  * @iclass
+  58:ChibiOS/os/hal/osal/nil/osal.c ****  */
+  59:ChibiOS/os/hal/osal/nil/osal.c **** void osalThreadDequeueNextI(threads_queue_t *tqp, msg_t msg) {
+  16               		.loc 1 59 0
+  17               		.cfi_startproc
+  18               	.LVL0:
+  19               	/* prologue: function */
+  20               	/* frame size = 0 */
+  21               	/* stack size = 0 */
+  22               	.L__stack_usage = 0
+  60:ChibiOS/os/hal/osal/nil/osal.c ****   semaphore_t *sp = &tqp->sem;
+  61:ChibiOS/os/hal/osal/nil/osal.c **** 
+  62:ChibiOS/os/hal/osal/nil/osal.c ****   if (chSemGetCounterI(&tqp->sem) < (cnt_t)0) {
+  23               		.loc 1 62 0
+  24 0000 DC01      		movw r26,r24
+  25 0002 2C91      		ld r18,X
+  26 0004 27FF      		sbrs r18,7
+  27 0006 0895      		ret
+  28               	.L7:
+  29               	.LVL1:
+  30               	.LBB2:
+  63:ChibiOS/os/hal/osal/nil/osal.c ****     thread_t *tp = nil.threads;
+  64:ChibiOS/os/hal/osal/nil/osal.c ****     while (true) {
+  65:ChibiOS/os/hal/osal/nil/osal.c ****       /* Is this thread waiting on this semaphore?*/
+  66:ChibiOS/os/hal/osal/nil/osal.c ****       if (tp->u1.semp == sp) {
+  31               		.loc 1 66 0
+  32 0008 2091 0000 		lds r18,nil+11
+  33 000c 3091 0000 		lds r19,nil+11+1
+  34 0010 E0E0      		ldi r30,lo8(nil+8)
+  35 0012 F0E0      		ldi r31,hi8(nil+8)
+  36               	.LVL2:
+  37 0014 2817      		cp r18,r24
+  38 0016 3907      		cpc r19,r25
+  39 0018 01F0      		breq .L4
+  40               	.L3:
+  67:ChibiOS/os/hal/osal/nil/osal.c ****         sp->cnt++;
+  68:ChibiOS/os/hal/osal/nil/osal.c **** 
+  69:ChibiOS/os/hal/osal/nil/osal.c ****         chDbgAssert(NIL_THD_IS_WTSEM(tp), "not waiting");
+  70:ChibiOS/os/hal/osal/nil/osal.c **** 
+  71:ChibiOS/os/hal/osal/nil/osal.c ****         (void) chSchReadyI(tp, msg);
+  72:ChibiOS/os/hal/osal/nil/osal.c ****         return;
+  73:ChibiOS/os/hal/osal/nil/osal.c ****       }
+  74:ChibiOS/os/hal/osal/nil/osal.c ****       tp++;
+  41               		.loc 1 74 0
+  42 001a 3896      		adiw r30,8
+  43               	.LVL3:
+  66:ChibiOS/os/hal/osal/nil/osal.c ****         sp->cnt++;
+  44               		.loc 1 66 0
+  45 001c 2381      		ldd r18,Z+3
+  46 001e 3481      		ldd r19,Z+4
+  47 0020 2817      		cp r18,r24
+  48 0022 3907      		cpc r19,r25
+  49 0024 01F4      		brne .L3
+  50               	.L4:
+  67:ChibiOS/os/hal/osal/nil/osal.c ****         sp->cnt++;
+  51               		.loc 1 67 0
+  52 0026 DC01      		movw r26,r24
+  53 0028 2C91      		ld r18,X
+  54 002a 2F5F      		subi r18,lo8(-(1))
+  55 002c 2C93      		st X,r18
+  71:ChibiOS/os/hal/osal/nil/osal.c ****         return;
+  56               		.loc 1 71 0
+  57 002e CF01      		movw r24,r30
+  58               	.LVL4:
+  59 0030 0C94 0000 		jmp chSchReadyI
+  60               	.LVL5:
+  61               	.LBE2:
+  62               		.cfi_endproc
+  63               	.LFE53:
+  65               		.section	.text.osalThreadDequeueAllI,"ax",@progbits
+  66               	.global	osalThreadDequeueAllI
+  68               	osalThreadDequeueAllI:
+  69               	.LFB54:
+  75:ChibiOS/os/hal/osal/nil/osal.c **** 
+  76:ChibiOS/os/hal/osal/nil/osal.c ****       chDbgAssert(tp < &nil.threads[NIL_CFG_NUM_THREADS],
+  77:ChibiOS/os/hal/osal/nil/osal.c ****                   "pointer out of range");
+  78:ChibiOS/os/hal/osal/nil/osal.c ****     }
+  79:ChibiOS/os/hal/osal/nil/osal.c ****   }
+  80:ChibiOS/os/hal/osal/nil/osal.c **** }
+  81:ChibiOS/os/hal/osal/nil/osal.c **** 
+  82:ChibiOS/os/hal/osal/nil/osal.c **** /**
+  83:ChibiOS/os/hal/osal/nil/osal.c ****  * @brief   Dequeues and wakes up all threads from the queue.
+  84:ChibiOS/os/hal/osal/nil/osal.c ****  *
+  85:ChibiOS/os/hal/osal/nil/osal.c ****  * @param[in] tqp       pointer to the threads queue object
+  86:ChibiOS/os/hal/osal/nil/osal.c ****  * @param[in] msg       the message code
+  87:ChibiOS/os/hal/osal/nil/osal.c ****  *
+  88:ChibiOS/os/hal/osal/nil/osal.c ****  * @iclass
+  89:ChibiOS/os/hal/osal/nil/osal.c ****  */
+  90:ChibiOS/os/hal/osal/nil/osal.c **** void osalThreadDequeueAllI(threads_queue_t *tqp, msg_t msg) {
+  70               		.loc 1 90 0
+  71               		.cfi_startproc
+  72               	.LVL6:
+  73 0000 CF92      		push r12
+  74               	.LCFI0:
+  75               		.cfi_def_cfa_offset 3
+  76               		.cfi_offset 12, -2
+  77 0002 DF92      		push r13
+  78               	.LCFI1:
+  79               		.cfi_def_cfa_offset 4
+  80               		.cfi_offset 13, -3
+  81 0004 FF92      		push r15
+  82               	.LCFI2:
+  83               		.cfi_def_cfa_offset 5
+  84               		.cfi_offset 15, -4
+  85 0006 0F93      		push r16
+  86               	.LCFI3:
+  87               		.cfi_def_cfa_offset 6
+  88               		.cfi_offset 16, -5
+  89 0008 1F93      		push r17
+  90               	.LCFI4:
+  91               		.cfi_def_cfa_offset 7
+  92               		.cfi_offset 17, -6
+  93 000a CF93      		push r28
+  94               	.LCFI5:
+  95               		.cfi_def_cfa_offset 8
+  96               		.cfi_offset 28, -7
+  97 000c DF93      		push r29
+  98               	.LCFI6:
+  99               		.cfi_def_cfa_offset 9
+ 100               		.cfi_offset 29, -8
+ 101               	/* prologue: function */
+ 102               	/* frame size = 0 */
+ 103               	/* stack size = 7 */
+ 104               	.L__stack_usage = 7
+ 105               	.LVL7:
+  91:ChibiOS/os/hal/osal/nil/osal.c ****   semaphore_t *sp = &tqp->sem;
+  92:ChibiOS/os/hal/osal/nil/osal.c ****   thread_t *tp;
+  93:ChibiOS/os/hal/osal/nil/osal.c ****   cnt_t cnt;
+  94:ChibiOS/os/hal/osal/nil/osal.c **** 
+  95:ChibiOS/os/hal/osal/nil/osal.c ****   cnt = sp->cnt;
+ 106               		.loc 1 95 0
+ 107 000e FC01      		movw r30,r24
+ 108 0010 F080      		ld r15,Z
+ 109               	.LVL8:
+  96:ChibiOS/os/hal/osal/nil/osal.c ****   sp->cnt = (cnt_t)0;
+ 110               		.loc 1 96 0
+ 111 0012 1082      		st Z,__zero_reg__
+ 112               	.LVL9:
+  97:ChibiOS/os/hal/osal/nil/osal.c ****   tp = nil.threads;
+  98:ChibiOS/os/hal/osal/nil/osal.c ****   while (cnt < (cnt_t)0) {
+ 113               		.loc 1 98 0
+ 114 0014 F7FE      		sbrs r15,7
+ 115 0016 00C0      		rjmp .L8
+ 116 0018 6B01      		movw r12,r22
+ 117 001a 8C01      		movw r16,r24
+ 118 001c C0E0      		ldi r28,lo8(nil+8)
+ 119 001e D0E0      		ldi r29,hi8(nil+8)
+ 120               	.LVL10:
+ 121 0020 00C0      		rjmp .L10
+ 122               	.LVL11:
+ 123               	.L11:
+  99:ChibiOS/os/hal/osal/nil/osal.c **** 
+ 100:ChibiOS/os/hal/osal/nil/osal.c ****     chDbgAssert(tp < &nil.threads[NIL_CFG_NUM_THREADS],
+ 101:ChibiOS/os/hal/osal/nil/osal.c ****                 "pointer out of range");
+ 102:ChibiOS/os/hal/osal/nil/osal.c **** 
+ 103:ChibiOS/os/hal/osal/nil/osal.c ****     /* Is this thread waiting on this semaphore?*/
+ 104:ChibiOS/os/hal/osal/nil/osal.c ****     if (tp->u1.semp == sp) {
+ 105:ChibiOS/os/hal/osal/nil/osal.c **** 
+ 106:ChibiOS/os/hal/osal/nil/osal.c ****       chDbgAssert(NIL_THD_IS_WTSEM(tp), "not waiting");
+ 107:ChibiOS/os/hal/osal/nil/osal.c **** 
+ 108:ChibiOS/os/hal/osal/nil/osal.c ****       cnt++;
+ 109:ChibiOS/os/hal/osal/nil/osal.c ****       (void) chSchReadyI(tp, msg);
+ 110:ChibiOS/os/hal/osal/nil/osal.c ****     }
+ 111:ChibiOS/os/hal/osal/nil/osal.c ****     tp++;
+ 124               		.loc 1 111 0
+ 125 0022 2896      		adiw r28,8
+ 126               	.LVL12:
+ 127               	.L10:
+ 104:ChibiOS/os/hal/osal/nil/osal.c **** 
+ 128               		.loc 1 104 0
+ 129 0024 2B81      		ldd r18,Y+3
+ 130 0026 3C81      		ldd r19,Y+4
+ 131 0028 2017      		cp r18,r16
+ 132 002a 3107      		cpc r19,r17
+ 133 002c 01F4      		brne .L11
+ 108:ChibiOS/os/hal/osal/nil/osal.c ****       (void) chSchReadyI(tp, msg);
+ 134               		.loc 1 108 0
+ 135 002e F394      		inc r15
+ 136               	.LVL13:
+ 109:ChibiOS/os/hal/osal/nil/osal.c ****     }
+ 137               		.loc 1 109 0
+ 138 0030 B601      		movw r22,r12
+ 139 0032 CE01      		movw r24,r28
+ 140 0034 0E94 0000 		call chSchReadyI
+ 141               	.LVL14:
+ 142               		.loc 1 111 0
+ 143 0038 2896      		adiw r28,8
+ 144               	.LVL15:
+  98:ChibiOS/os/hal/osal/nil/osal.c **** 
+ 145               		.loc 1 98 0
+ 146 003a F110      		cpse r15,__zero_reg__
+ 147 003c 00C0      		rjmp .L10
+ 148               	.LVL16:
+ 149               	.L8:
+ 150               	/* epilogue start */
+ 112:ChibiOS/os/hal/osal/nil/osal.c ****   }
+ 113:ChibiOS/os/hal/osal/nil/osal.c **** }
+ 151               		.loc 1 113 0
+ 152 003e DF91      		pop r29
+ 153 0040 CF91      		pop r28
+ 154 0042 1F91      		pop r17
+ 155 0044 0F91      		pop r16
+ 156 0046 FF90      		pop r15
+ 157               	.LVL17:
+ 158 0048 DF90      		pop r13
+ 159 004a CF90      		pop r12
+ 160 004c 0895      		ret
+ 161               		.cfi_endproc
+ 162               	.LFE54:
+ 164               		.text
+ 165               	.Letext0:
+ 166               		.file 2 "c:\\program files (x86)\\atmel\\studio\\7.0\\toolchain\\avr8\\avr8-gnu-toolchain\\avr\\in
+ 167               		.file 3 "ChibiOS/os/nil/include/nil.h"
+ 168               		.file 4 "ChibiOS/os/nil/ports/AVR/compilers/GCC/niltypes.h"
+ 169               		.file 5 "ChibiOS/os/nil/ports/AVR/nilcore.h"
+ 170               		.file 6 "ChibiOS/os/hal/osal/nil/osal.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 osal.c
+C:\Users\Noah\AppData\Local\Temp\ccjnZOPq.s:2      *ABS*:0000003e __SP_H__
+C:\Users\Noah\AppData\Local\Temp\ccjnZOPq.s:3      *ABS*:0000003d __SP_L__
+C:\Users\Noah\AppData\Local\Temp\ccjnZOPq.s:4      *ABS*:0000003f __SREG__
+C:\Users\Noah\AppData\Local\Temp\ccjnZOPq.s:5      *ABS*:00000000 __tmp_reg__
+C:\Users\Noah\AppData\Local\Temp\ccjnZOPq.s:6      *ABS*:00000001 __zero_reg__
+C:\Users\Noah\AppData\Local\Temp\ccjnZOPq.s:13     .text.osalThreadDequeueNextI:00000000 osalThreadDequeueNextI
+C:\Users\Noah\AppData\Local\Temp\ccjnZOPq.s:68     .text.osalThreadDequeueAllI:00000000 osalThreadDequeueAllI
+
+UNDEFINED SYMBOLS
+nil
+chSchReadyI

@@ -1,0 +1,2302 @@
+   1               		.file	"test_sequence_002.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               		.section	.text.test_002_001_setup,"ax",@progbits
+  12               	test_002_001_setup:
+  13               	.LFB53:
+  14               		.file 1 "ChibiOS/test/nil/test_sequence_002.c"
+   1:ChibiOS/test/nil/test_sequence_002.c **** /*
+   2:ChibiOS/test/nil/test_sequence_002.c ****     ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio
+   3:ChibiOS/test/nil/test_sequence_002.c **** 
+   4:ChibiOS/test/nil/test_sequence_002.c ****     Licensed under the Apache License, Version 2.0 (the "License");
+   5:ChibiOS/test/nil/test_sequence_002.c ****     you may not use this file except in compliance with the License.
+   6:ChibiOS/test/nil/test_sequence_002.c ****     You may obtain a copy of the License at
+   7:ChibiOS/test/nil/test_sequence_002.c **** 
+   8:ChibiOS/test/nil/test_sequence_002.c ****         http://www.apache.org/licenses/LICENSE-2.0
+   9:ChibiOS/test/nil/test_sequence_002.c **** 
+  10:ChibiOS/test/nil/test_sequence_002.c ****     Unless required by applicable law or agreed to in writing, software
+  11:ChibiOS/test/nil/test_sequence_002.c ****     distributed under the License is distributed on an "AS IS" BASIS,
+  12:ChibiOS/test/nil/test_sequence_002.c ****     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  13:ChibiOS/test/nil/test_sequence_002.c ****     See the License for the specific language governing permissions and
+  14:ChibiOS/test/nil/test_sequence_002.c ****     limitations under the License.
+  15:ChibiOS/test/nil/test_sequence_002.c **** */
+  16:ChibiOS/test/nil/test_sequence_002.c **** 
+  17:ChibiOS/test/nil/test_sequence_002.c **** #include "hal.h"
+  18:ChibiOS/test/nil/test_sequence_002.c **** #include "ch_test.h"
+  19:ChibiOS/test/nil/test_sequence_002.c **** #include "test_root.h"
+  20:ChibiOS/test/nil/test_sequence_002.c **** 
+  21:ChibiOS/test/nil/test_sequence_002.c **** /**
+  22:ChibiOS/test/nil/test_sequence_002.c ****  * @page test_sequence_002 Synchronization primitives
+  23:ChibiOS/test/nil/test_sequence_002.c ****  *
+  24:ChibiOS/test/nil/test_sequence_002.c ****  * File: @ref test_sequence_002.c
+  25:ChibiOS/test/nil/test_sequence_002.c ****  *
+  26:ChibiOS/test/nil/test_sequence_002.c ****  * <h2>Description</h2>
+  27:ChibiOS/test/nil/test_sequence_002.c ****  * This sequence tests the ChibiOS/NIL functionalities related to
+  28:ChibiOS/test/nil/test_sequence_002.c ****  * threads synchronization.
+  29:ChibiOS/test/nil/test_sequence_002.c ****  *
+  30:ChibiOS/test/nil/test_sequence_002.c ****  * <h2>Test Cases</h2>
+  31:ChibiOS/test/nil/test_sequence_002.c ****  * - @subpage test_002_001
+  32:ChibiOS/test/nil/test_sequence_002.c ****  * - @subpage test_002_002
+  33:ChibiOS/test/nil/test_sequence_002.c ****  * .
+  34:ChibiOS/test/nil/test_sequence_002.c ****  */
+  35:ChibiOS/test/nil/test_sequence_002.c **** 
+  36:ChibiOS/test/nil/test_sequence_002.c **** /****************************************************************************
+  37:ChibiOS/test/nil/test_sequence_002.c ****  * Shared code.
+  38:ChibiOS/test/nil/test_sequence_002.c ****  ****************************************************************************/
+  39:ChibiOS/test/nil/test_sequence_002.c **** 
+  40:ChibiOS/test/nil/test_sequence_002.c **** static semaphore_t sem1;
+  41:ChibiOS/test/nil/test_sequence_002.c **** static thread_reference_t tr1;
+  42:ChibiOS/test/nil/test_sequence_002.c **** 
+  43:ChibiOS/test/nil/test_sequence_002.c **** /****************************************************************************
+  44:ChibiOS/test/nil/test_sequence_002.c ****  * Test cases.
+  45:ChibiOS/test/nil/test_sequence_002.c ****  ****************************************************************************/
+  46:ChibiOS/test/nil/test_sequence_002.c **** 
+  47:ChibiOS/test/nil/test_sequence_002.c **** #if TRUE || defined(__DOXYGEN__)
+  48:ChibiOS/test/nil/test_sequence_002.c **** /**
+  49:ChibiOS/test/nil/test_sequence_002.c ****  * @page test_002_001 Semaphore primitives, no state change
+  50:ChibiOS/test/nil/test_sequence_002.c ****  *
+  51:ChibiOS/test/nil/test_sequence_002.c ****  * <h2>Description</h2>
+  52:ChibiOS/test/nil/test_sequence_002.c ****  * Wait, Signal and Reset primitives are tested. The testing thread does not
+  53:ChibiOS/test/nil/test_sequence_002.c ****  * trigger a state change.
+  54:ChibiOS/test/nil/test_sequence_002.c ****  *
+  55:ChibiOS/test/nil/test_sequence_002.c ****  * <h2>Conditions</h2>
+  56:ChibiOS/test/nil/test_sequence_002.c ****  * None.
+  57:ChibiOS/test/nil/test_sequence_002.c ****  *
+  58:ChibiOS/test/nil/test_sequence_002.c ****  * <h2>Test Steps</h2>
+  59:ChibiOS/test/nil/test_sequence_002.c ****  * - The function chSemWait() is invoked, after return the counter and
+  60:ChibiOS/test/nil/test_sequence_002.c ****  *   the returned message are tested.
+  61:ChibiOS/test/nil/test_sequence_002.c ****  * - The function chSemSignal() is invoked, after return the counter
+  62:ChibiOS/test/nil/test_sequence_002.c ****  *   is tested.
+  63:ChibiOS/test/nil/test_sequence_002.c ****  * - The function chSemReset() is invoked, after return the counter
+  64:ChibiOS/test/nil/test_sequence_002.c ****  *   is tested.
+  65:ChibiOS/test/nil/test_sequence_002.c ****  * .
+  66:ChibiOS/test/nil/test_sequence_002.c ****  */
+  67:ChibiOS/test/nil/test_sequence_002.c **** 
+  68:ChibiOS/test/nil/test_sequence_002.c **** static void test_002_001_setup(void) {
+  15               		.loc 1 68 0
+  16               		.cfi_startproc
+  17               	/* prologue: function */
+  18               	/* frame size = 0 */
+  19               	/* stack size = 0 */
+  20               	.L__stack_usage = 0
+  69:ChibiOS/test/nil/test_sequence_002.c **** 
+  70:ChibiOS/test/nil/test_sequence_002.c ****   chSemObjectInit(&sem1, 1);
+  21               		.loc 1 70 0
+  22 0000 81E0      		ldi r24,lo8(1)
+  23 0002 8093 0000 		sts sem1,r24
+  24 0006 0895      		ret
+  25               		.cfi_endproc
+  26               	.LFE53:
+  28               		.section	.text.test_002_002_setup,"ax",@progbits
+  30               	test_002_002_setup:
+  31               	.LFB56:
+  71:ChibiOS/test/nil/test_sequence_002.c **** }
+  72:ChibiOS/test/nil/test_sequence_002.c **** 
+  73:ChibiOS/test/nil/test_sequence_002.c **** static void test_002_001_teardown(void) {
+  74:ChibiOS/test/nil/test_sequence_002.c **** 
+  75:ChibiOS/test/nil/test_sequence_002.c ****   chSemReset(&sem1, 0);
+  76:ChibiOS/test/nil/test_sequence_002.c **** }
+  77:ChibiOS/test/nil/test_sequence_002.c **** 
+  78:ChibiOS/test/nil/test_sequence_002.c **** static void test_002_001_execute(void) {
+  79:ChibiOS/test/nil/test_sequence_002.c **** 
+  80:ChibiOS/test/nil/test_sequence_002.c ****   /* The function chSemWait() is invoked, after return the counter and
+  81:ChibiOS/test/nil/test_sequence_002.c ****      the returned message are tested.*/
+  82:ChibiOS/test/nil/test_sequence_002.c ****   test_set_step(1);
+  83:ChibiOS/test/nil/test_sequence_002.c ****   {
+  84:ChibiOS/test/nil/test_sequence_002.c ****     msg_t msg;
+  85:ChibiOS/test/nil/test_sequence_002.c **** 
+  86:ChibiOS/test/nil/test_sequence_002.c ****     msg = chSemWait(&sem1);
+  87:ChibiOS/test/nil/test_sequence_002.c ****     test_assert_lock(chSemGetCounterI(&sem1) == 0,
+  88:ChibiOS/test/nil/test_sequence_002.c ****                      "wrong counter value");
+  89:ChibiOS/test/nil/test_sequence_002.c ****     test_assert(MSG_OK == msg,
+  90:ChibiOS/test/nil/test_sequence_002.c ****                 "wrong returned message");
+  91:ChibiOS/test/nil/test_sequence_002.c ****   }
+  92:ChibiOS/test/nil/test_sequence_002.c **** 
+  93:ChibiOS/test/nil/test_sequence_002.c ****   /* The function chSemSignal() is invoked, after return the counter
+  94:ChibiOS/test/nil/test_sequence_002.c ****      is tested.*/
+  95:ChibiOS/test/nil/test_sequence_002.c ****   test_set_step(2);
+  96:ChibiOS/test/nil/test_sequence_002.c ****   {
+  97:ChibiOS/test/nil/test_sequence_002.c ****     chSemSignal(&sem1);
+  98:ChibiOS/test/nil/test_sequence_002.c ****     test_assert_lock(chSemGetCounterI(&sem1) == 1,
+  99:ChibiOS/test/nil/test_sequence_002.c ****                      "wrong counter value");
+ 100:ChibiOS/test/nil/test_sequence_002.c ****   }
+ 101:ChibiOS/test/nil/test_sequence_002.c **** 
+ 102:ChibiOS/test/nil/test_sequence_002.c ****   /* The function chSemReset() is invoked, after return the counter
+ 103:ChibiOS/test/nil/test_sequence_002.c ****      is tested.*/
+ 104:ChibiOS/test/nil/test_sequence_002.c ****   test_set_step(3);
+ 105:ChibiOS/test/nil/test_sequence_002.c ****   {
+ 106:ChibiOS/test/nil/test_sequence_002.c ****     chSemReset(&sem1, 2);
+ 107:ChibiOS/test/nil/test_sequence_002.c ****     test_assert_lock(chSemGetCounterI(&sem1) == 2,
+ 108:ChibiOS/test/nil/test_sequence_002.c ****                      "wrong counter value");
+ 109:ChibiOS/test/nil/test_sequence_002.c ****   }
+ 110:ChibiOS/test/nil/test_sequence_002.c **** }
+ 111:ChibiOS/test/nil/test_sequence_002.c **** 
+ 112:ChibiOS/test/nil/test_sequence_002.c **** static const testcase_t test_002_001 = {
+ 113:ChibiOS/test/nil/test_sequence_002.c ****   "semaphore primitives, no state change",
+ 114:ChibiOS/test/nil/test_sequence_002.c ****   test_002_001_setup,
+ 115:ChibiOS/test/nil/test_sequence_002.c ****   test_002_001_teardown,
+ 116:ChibiOS/test/nil/test_sequence_002.c ****   test_002_001_execute
+ 117:ChibiOS/test/nil/test_sequence_002.c **** };
+ 118:ChibiOS/test/nil/test_sequence_002.c **** #endif /* TRUE */
+ 119:ChibiOS/test/nil/test_sequence_002.c **** 
+ 120:ChibiOS/test/nil/test_sequence_002.c **** #if TRUE || defined(__DOXYGEN__)
+ 121:ChibiOS/test/nil/test_sequence_002.c **** /**
+ 122:ChibiOS/test/nil/test_sequence_002.c ****  * @page test_002_002 Semaphore primitives, with state change
+ 123:ChibiOS/test/nil/test_sequence_002.c ****  *
+ 124:ChibiOS/test/nil/test_sequence_002.c ****  * <h2>Description</h2>
+ 125:ChibiOS/test/nil/test_sequence_002.c ****  * Wait, Signal and Reset primitives are tested. The testing thread
+ 126:ChibiOS/test/nil/test_sequence_002.c ****  * triggers a state change.
+ 127:ChibiOS/test/nil/test_sequence_002.c ****  *
+ 128:ChibiOS/test/nil/test_sequence_002.c ****  * <h2>Conditions</h2>
+ 129:ChibiOS/test/nil/test_sequence_002.c ****  * None.
+ 130:ChibiOS/test/nil/test_sequence_002.c ****  *
+ 131:ChibiOS/test/nil/test_sequence_002.c ****  * <h2>Test Steps</h2>
+ 132:ChibiOS/test/nil/test_sequence_002.c ****  * - The function chSemWait() is invoked, after return the counter and
+ 133:ChibiOS/test/nil/test_sequence_002.c ****  *   the returned message are tested. The semaphore is signaled by another
+ 134:ChibiOS/test/nil/test_sequence_002.c ****  *   thread.
+ 135:ChibiOS/test/nil/test_sequence_002.c ****  * - The function chSemWait() is invoked, after return the counter and
+ 136:ChibiOS/test/nil/test_sequence_002.c ****  *   the returned message are tested. The semaphore is reset by another
+ 137:ChibiOS/test/nil/test_sequence_002.c ****  *   thread.
+ 138:ChibiOS/test/nil/test_sequence_002.c ****  * .
+ 139:ChibiOS/test/nil/test_sequence_002.c ****  */
+ 140:ChibiOS/test/nil/test_sequence_002.c **** 
+ 141:ChibiOS/test/nil/test_sequence_002.c **** static void test_002_002_setup(void) {
+  32               		.loc 1 141 0
+  33               		.cfi_startproc
+  34               	/* prologue: function */
+  35               	/* frame size = 0 */
+  36               	/* stack size = 0 */
+  37               	.L__stack_usage = 0
+ 142:ChibiOS/test/nil/test_sequence_002.c **** 
+ 143:ChibiOS/test/nil/test_sequence_002.c ****   chSemObjectInit(&sem1, 0);
+  38               		.loc 1 143 0
+  39 0000 1092 0000 		sts sem1,__zero_reg__
+  40 0004 0895      		ret
+  41               		.cfi_endproc
+  42               	.LFE56:
+  44               		.section	.text.test_002_003_setup,"ax",@progbits
+  46               	test_002_003_setup:
+  47               	.LFB59:
+ 144:ChibiOS/test/nil/test_sequence_002.c **** }
+ 145:ChibiOS/test/nil/test_sequence_002.c **** 
+ 146:ChibiOS/test/nil/test_sequence_002.c **** static void test_002_002_teardown(void) {
+ 147:ChibiOS/test/nil/test_sequence_002.c **** 
+ 148:ChibiOS/test/nil/test_sequence_002.c ****   chSemReset(&sem1, 0);
+ 149:ChibiOS/test/nil/test_sequence_002.c **** }
+ 150:ChibiOS/test/nil/test_sequence_002.c **** 
+ 151:ChibiOS/test/nil/test_sequence_002.c **** static void test_002_002_execute(void) {
+ 152:ChibiOS/test/nil/test_sequence_002.c **** 
+ 153:ChibiOS/test/nil/test_sequence_002.c ****   /* The function chSemWait() is invoked, after return the counter and
+ 154:ChibiOS/test/nil/test_sequence_002.c ****      the returned message are tested. The semaphore is signaled by another
+ 155:ChibiOS/test/nil/test_sequence_002.c ****      thread.*/
+ 156:ChibiOS/test/nil/test_sequence_002.c ****   test_set_step(1);
+ 157:ChibiOS/test/nil/test_sequence_002.c ****   {
+ 158:ChibiOS/test/nil/test_sequence_002.c ****     msg_t msg;
+ 159:ChibiOS/test/nil/test_sequence_002.c **** 
+ 160:ChibiOS/test/nil/test_sequence_002.c ****     msg = chSemWait(&gsem1);
+ 161:ChibiOS/test/nil/test_sequence_002.c ****     test_assert_lock(chSemGetCounterI(&gsem1) == 0,
+ 162:ChibiOS/test/nil/test_sequence_002.c ****                      "wrong counter value");
+ 163:ChibiOS/test/nil/test_sequence_002.c ****     test_assert(MSG_OK == msg,
+ 164:ChibiOS/test/nil/test_sequence_002.c ****                 "wrong returned message");
+ 165:ChibiOS/test/nil/test_sequence_002.c ****   }
+ 166:ChibiOS/test/nil/test_sequence_002.c **** 
+ 167:ChibiOS/test/nil/test_sequence_002.c ****   /* The function chSemWait() is invoked, after return the counter and
+ 168:ChibiOS/test/nil/test_sequence_002.c ****      the returned message are tested. The semaphore is reset by another
+ 169:ChibiOS/test/nil/test_sequence_002.c ****      thread.*/
+ 170:ChibiOS/test/nil/test_sequence_002.c ****   test_set_step(2);
+ 171:ChibiOS/test/nil/test_sequence_002.c ****   {
+ 172:ChibiOS/test/nil/test_sequence_002.c ****     msg_t msg;
+ 173:ChibiOS/test/nil/test_sequence_002.c **** 
+ 174:ChibiOS/test/nil/test_sequence_002.c ****     msg = chSemWait(&gsem2);
+ 175:ChibiOS/test/nil/test_sequence_002.c ****     test_assert_lock(chSemGetCounterI(&gsem2) == 0,
+ 176:ChibiOS/test/nil/test_sequence_002.c ****                      "wrong counter value");
+ 177:ChibiOS/test/nil/test_sequence_002.c ****     test_assert(MSG_RESET == msg,
+ 178:ChibiOS/test/nil/test_sequence_002.c ****                 "wrong returned message");
+ 179:ChibiOS/test/nil/test_sequence_002.c ****   }
+ 180:ChibiOS/test/nil/test_sequence_002.c **** }
+ 181:ChibiOS/test/nil/test_sequence_002.c **** 
+ 182:ChibiOS/test/nil/test_sequence_002.c **** static const testcase_t test_002_002 = {
+ 183:ChibiOS/test/nil/test_sequence_002.c ****   "semaphore primitives, with state change",
+ 184:ChibiOS/test/nil/test_sequence_002.c ****   test_002_002_setup,
+ 185:ChibiOS/test/nil/test_sequence_002.c ****   test_002_002_teardown,
+ 186:ChibiOS/test/nil/test_sequence_002.c ****   test_002_002_execute
+ 187:ChibiOS/test/nil/test_sequence_002.c **** };
+ 188:ChibiOS/test/nil/test_sequence_002.c **** #endif /* TRUE */
+ 189:ChibiOS/test/nil/test_sequence_002.c **** 
+ 190:ChibiOS/test/nil/test_sequence_002.c **** #if TRUE || defined(__DOXYGEN__)
+ 191:ChibiOS/test/nil/test_sequence_002.c **** /**
+ 192:ChibiOS/test/nil/test_sequence_002.c ****  * @page test_002_003 Semaphores timeout
+ 193:ChibiOS/test/nil/test_sequence_002.c ****  *
+ 194:ChibiOS/test/nil/test_sequence_002.c ****  * <h2>Description</h2>
+ 195:ChibiOS/test/nil/test_sequence_002.c ****  * Timeout on semaphores is tested.
+ 196:ChibiOS/test/nil/test_sequence_002.c ****  *
+ 197:ChibiOS/test/nil/test_sequence_002.c ****  * <h2>Conditions</h2>
+ 198:ChibiOS/test/nil/test_sequence_002.c ****  * None.
+ 199:ChibiOS/test/nil/test_sequence_002.c ****  *
+ 200:ChibiOS/test/nil/test_sequence_002.c ****  * <h2>Test Steps</h2>
+ 201:ChibiOS/test/nil/test_sequence_002.c ****  * - The function chSemWaitTimeout() is invoked, after return the system
+ 202:ChibiOS/test/nil/test_sequence_002.c ****  *   time, the counter and the returned message are tested.
+ 203:ChibiOS/test/nil/test_sequence_002.c ****  * .
+ 204:ChibiOS/test/nil/test_sequence_002.c ****  */
+ 205:ChibiOS/test/nil/test_sequence_002.c **** 
+ 206:ChibiOS/test/nil/test_sequence_002.c **** static void test_002_003_setup(void) {
+  48               		.loc 1 206 0
+  49               		.cfi_startproc
+  50               	/* prologue: function */
+  51               	/* frame size = 0 */
+  52               	/* stack size = 0 */
+  53               	.L__stack_usage = 0
+ 207:ChibiOS/test/nil/test_sequence_002.c **** 
+ 208:ChibiOS/test/nil/test_sequence_002.c ****   chSemObjectInit(&sem1, 0);
+  54               		.loc 1 208 0
+  55 0000 1092 0000 		sts sem1,__zero_reg__
+  56 0004 0895      		ret
+  57               		.cfi_endproc
+  58               	.LFE59:
+  60               		.section	.text.test_002_004_setup,"ax",@progbits
+  62               	test_002_004_setup:
+  63               	.LFB62:
+ 209:ChibiOS/test/nil/test_sequence_002.c **** }
+ 210:ChibiOS/test/nil/test_sequence_002.c **** 
+ 211:ChibiOS/test/nil/test_sequence_002.c **** static void test_002_003_teardown(void) {
+ 212:ChibiOS/test/nil/test_sequence_002.c **** 
+ 213:ChibiOS/test/nil/test_sequence_002.c ****   chSemReset(&sem1, 0);
+ 214:ChibiOS/test/nil/test_sequence_002.c **** }
+ 215:ChibiOS/test/nil/test_sequence_002.c **** 
+ 216:ChibiOS/test/nil/test_sequence_002.c **** static void test_002_003_execute(void) {
+ 217:ChibiOS/test/nil/test_sequence_002.c ****   systime_t time;
+ 218:ChibiOS/test/nil/test_sequence_002.c ****   msg_t msg;
+ 219:ChibiOS/test/nil/test_sequence_002.c **** 
+ 220:ChibiOS/test/nil/test_sequence_002.c ****   /* The function chSemWaitTimeout() is invoked, after return the system
+ 221:ChibiOS/test/nil/test_sequence_002.c ****      time, the counter and the returned message are tested.*/
+ 222:ChibiOS/test/nil/test_sequence_002.c ****   test_set_step(1);
+ 223:ChibiOS/test/nil/test_sequence_002.c ****   {
+ 224:ChibiOS/test/nil/test_sequence_002.c ****     time = chVTGetSystemTimeX();
+ 225:ChibiOS/test/nil/test_sequence_002.c ****     msg = chSemWaitTimeout(&sem1, MS2ST(1000));
+ 226:ChibiOS/test/nil/test_sequence_002.c ****     test_assert_time_window(time + MS2ST(1000),
+ 227:ChibiOS/test/nil/test_sequence_002.c ****                             time + MS2ST(1000) + 1,
+ 228:ChibiOS/test/nil/test_sequence_002.c ****                             "out of time window");
+ 229:ChibiOS/test/nil/test_sequence_002.c ****     test_assert_lock(chSemGetCounterI(&sem1) == 0,
+ 230:ChibiOS/test/nil/test_sequence_002.c ****                      "wrong counter value");
+ 231:ChibiOS/test/nil/test_sequence_002.c ****     test_assert(MSG_TIMEOUT == msg,
+ 232:ChibiOS/test/nil/test_sequence_002.c ****                 "wrong timeout message");
+ 233:ChibiOS/test/nil/test_sequence_002.c ****   }
+ 234:ChibiOS/test/nil/test_sequence_002.c **** 
+ 235:ChibiOS/test/nil/test_sequence_002.c ****   /* The function chSemWaitTimeout() is invoked, after return the system
+ 236:ChibiOS/test/nil/test_sequence_002.c ****      time, the counter and the returned message are tested.*/
+ 237:ChibiOS/test/nil/test_sequence_002.c ****   test_set_step(2);
+ 238:ChibiOS/test/nil/test_sequence_002.c ****   {
+ 239:ChibiOS/test/nil/test_sequence_002.c ****     time = chVTGetSystemTimeX();
+ 240:ChibiOS/test/nil/test_sequence_002.c ****     msg = chSemWaitTimeout(&sem1, MS2ST(1000));
+ 241:ChibiOS/test/nil/test_sequence_002.c ****     test_assert_time_window(time + MS2ST(1000),
+ 242:ChibiOS/test/nil/test_sequence_002.c ****                             time + MS2ST(1000) + 1,
+ 243:ChibiOS/test/nil/test_sequence_002.c ****                             "out of time window");
+ 244:ChibiOS/test/nil/test_sequence_002.c ****     test_assert_lock(chSemGetCounterI(&sem1) == 0,
+ 245:ChibiOS/test/nil/test_sequence_002.c ****                      "wrong counter value");
+ 246:ChibiOS/test/nil/test_sequence_002.c ****     test_assert(MSG_TIMEOUT == msg,
+ 247:ChibiOS/test/nil/test_sequence_002.c ****                 "wrong timeout message");
+ 248:ChibiOS/test/nil/test_sequence_002.c ****   }
+ 249:ChibiOS/test/nil/test_sequence_002.c **** }
+ 250:ChibiOS/test/nil/test_sequence_002.c **** 
+ 251:ChibiOS/test/nil/test_sequence_002.c **** static const testcase_t test_002_003 = {
+ 252:ChibiOS/test/nil/test_sequence_002.c ****   "semaphores timeout",
+ 253:ChibiOS/test/nil/test_sequence_002.c ****   test_002_003_setup,
+ 254:ChibiOS/test/nil/test_sequence_002.c ****   test_002_003_teardown,
+ 255:ChibiOS/test/nil/test_sequence_002.c ****   test_002_003_execute
+ 256:ChibiOS/test/nil/test_sequence_002.c **** };
+ 257:ChibiOS/test/nil/test_sequence_002.c **** #endif /* TRUE */
+ 258:ChibiOS/test/nil/test_sequence_002.c **** 
+ 259:ChibiOS/test/nil/test_sequence_002.c **** #if TRUE || defined(__DOXYGEN__)
+ 260:ChibiOS/test/nil/test_sequence_002.c **** /**
+ 261:ChibiOS/test/nil/test_sequence_002.c ****  * @page test_002_004 Suspend and Resume functionality
+ 262:ChibiOS/test/nil/test_sequence_002.c ****  *
+ 263:ChibiOS/test/nil/test_sequence_002.c ****  * <h2>Description</h2>
+ 264:ChibiOS/test/nil/test_sequence_002.c ****  * The functionality of chThdSuspendTimeoutS() and chThdResumeI() is
+ 265:ChibiOS/test/nil/test_sequence_002.c ****  * tested.
+ 266:ChibiOS/test/nil/test_sequence_002.c ****  *
+ 267:ChibiOS/test/nil/test_sequence_002.c ****  * <h2>Conditions</h2>
+ 268:ChibiOS/test/nil/test_sequence_002.c ****  * None.
+ 269:ChibiOS/test/nil/test_sequence_002.c ****  *
+ 270:ChibiOS/test/nil/test_sequence_002.c ****  * <h2>Test Steps</h2>
+ 271:ChibiOS/test/nil/test_sequence_002.c ****  * - The function chThdSuspendTimeoutS() is invoked, the thread is
+ 272:ChibiOS/test/nil/test_sequence_002.c ****  *   remotely resumed with message @p MSG_OK. On return the message
+ 273:ChibiOS/test/nil/test_sequence_002.c ****  *   and the state of the reference are tested.
+ 274:ChibiOS/test/nil/test_sequence_002.c ****  * - The function chThdSuspendTimeoutS() is invoked, the thread is
+ 275:ChibiOS/test/nil/test_sequence_002.c ****  *   not resumed so a timeout must occur. On return the message
+ 276:ChibiOS/test/nil/test_sequence_002.c ****  *   and the state of the reference are tested.
+ 277:ChibiOS/test/nil/test_sequence_002.c ****  * .
+ 278:ChibiOS/test/nil/test_sequence_002.c ****  */
+ 279:ChibiOS/test/nil/test_sequence_002.c **** 
+ 280:ChibiOS/test/nil/test_sequence_002.c **** static void test_002_004_setup(void) {
+  64               		.loc 1 280 0
+  65               		.cfi_startproc
+  66               	/* prologue: function */
+  67               	/* frame size = 0 */
+  68               	/* stack size = 0 */
+  69               	.L__stack_usage = 0
+ 281:ChibiOS/test/nil/test_sequence_002.c **** 
+ 282:ChibiOS/test/nil/test_sequence_002.c ****   tr1 = NULL;
+  70               		.loc 1 282 0
+  71 0000 1092 0000 		sts tr1+1,__zero_reg__
+  72 0004 1092 0000 		sts tr1,__zero_reg__
+  73 0008 0895      		ret
+  74               		.cfi_endproc
+  75               	.LFE62:
+  77               		.section	.text.test_002_005_setup,"ax",@progbits
+  79               	test_002_005_setup:
+  80               	.LFB64:
+ 283:ChibiOS/test/nil/test_sequence_002.c **** }
+ 284:ChibiOS/test/nil/test_sequence_002.c **** 
+ 285:ChibiOS/test/nil/test_sequence_002.c **** static void test_002_004_execute(void) {
+ 286:ChibiOS/test/nil/test_sequence_002.c ****   systime_t time;
+ 287:ChibiOS/test/nil/test_sequence_002.c ****   msg_t msg;
+ 288:ChibiOS/test/nil/test_sequence_002.c **** 
+ 289:ChibiOS/test/nil/test_sequence_002.c ****   /* The function chThdSuspendTimeoutS() is invoked, the thread is
+ 290:ChibiOS/test/nil/test_sequence_002.c ****      remotely resumed with message @p MSG_OK. On return the message
+ 291:ChibiOS/test/nil/test_sequence_002.c ****      and the state of the reference are tested.*/
+ 292:ChibiOS/test/nil/test_sequence_002.c ****   test_set_step(1);
+ 293:ChibiOS/test/nil/test_sequence_002.c ****   {
+ 294:ChibiOS/test/nil/test_sequence_002.c ****     chSysLock();
+ 295:ChibiOS/test/nil/test_sequence_002.c ****     msg = chThdSuspendTimeoutS(&gtr1, TIME_INFINITE);
+ 296:ChibiOS/test/nil/test_sequence_002.c ****     chSysUnlock();
+ 297:ChibiOS/test/nil/test_sequence_002.c ****     test_assert(NULL == gtr1,
+ 298:ChibiOS/test/nil/test_sequence_002.c ****                 "not NULL");
+ 299:ChibiOS/test/nil/test_sequence_002.c ****     test_assert(MSG_OK == msg,
+ 300:ChibiOS/test/nil/test_sequence_002.c ****                 "wrong returned message");
+ 301:ChibiOS/test/nil/test_sequence_002.c ****   }
+ 302:ChibiOS/test/nil/test_sequence_002.c **** 
+ 303:ChibiOS/test/nil/test_sequence_002.c ****   /* The function chThdSuspendTimeoutS() is invoked, the thread is
+ 304:ChibiOS/test/nil/test_sequence_002.c ****      not resumed so a timeout must occur. On return the message
+ 305:ChibiOS/test/nil/test_sequence_002.c ****      and the state of the reference are tested.*/
+ 306:ChibiOS/test/nil/test_sequence_002.c ****   test_set_step(2);
+ 307:ChibiOS/test/nil/test_sequence_002.c ****   {
+ 308:ChibiOS/test/nil/test_sequence_002.c ****     chSysLock();
+ 309:ChibiOS/test/nil/test_sequence_002.c ****     time = chVTGetSystemTimeX();
+ 310:ChibiOS/test/nil/test_sequence_002.c ****     msg = chThdSuspendTimeoutS(&tr1, MS2ST(1000));
+ 311:ChibiOS/test/nil/test_sequence_002.c ****     chSysUnlock();
+ 312:ChibiOS/test/nil/test_sequence_002.c ****     test_assert_time_window(time + MS2ST(1000),
+ 313:ChibiOS/test/nil/test_sequence_002.c ****                             time + MS2ST(1000) + 1,
+ 314:ChibiOS/test/nil/test_sequence_002.c ****                             "out of time window");
+ 315:ChibiOS/test/nil/test_sequence_002.c ****     test_assert(NULL == tr1,
+ 316:ChibiOS/test/nil/test_sequence_002.c ****                 "not NULL");
+ 317:ChibiOS/test/nil/test_sequence_002.c ****     test_assert(MSG_TIMEOUT == msg,
+ 318:ChibiOS/test/nil/test_sequence_002.c ****                 "wrong returned message");
+ 319:ChibiOS/test/nil/test_sequence_002.c ****   }
+ 320:ChibiOS/test/nil/test_sequence_002.c **** }
+ 321:ChibiOS/test/nil/test_sequence_002.c **** 
+ 322:ChibiOS/test/nil/test_sequence_002.c **** static const testcase_t test_002_004 = {
+ 323:ChibiOS/test/nil/test_sequence_002.c ****   "suspend and resume functionality",
+ 324:ChibiOS/test/nil/test_sequence_002.c ****   test_002_004_setup,
+ 325:ChibiOS/test/nil/test_sequence_002.c ****   NULL,
+ 326:ChibiOS/test/nil/test_sequence_002.c ****   test_002_004_execute
+ 327:ChibiOS/test/nil/test_sequence_002.c **** };
+ 328:ChibiOS/test/nil/test_sequence_002.c **** #endif /* TRUE */
+ 329:ChibiOS/test/nil/test_sequence_002.c **** 
+ 330:ChibiOS/test/nil/test_sequence_002.c **** #if (NIL_CFG_USE_EVENTS == TRUE) || defined(__DOXYGEN__)
+ 331:ChibiOS/test/nil/test_sequence_002.c **** /**
+ 332:ChibiOS/test/nil/test_sequence_002.c ****  * @page test_002_005 Events functionality
+ 333:ChibiOS/test/nil/test_sequence_002.c ****  *
+ 334:ChibiOS/test/nil/test_sequence_002.c ****  * <h2>Description</h2>
+ 335:ChibiOS/test/nil/test_sequence_002.c ****  * Event flags functionality is tested.
+ 336:ChibiOS/test/nil/test_sequence_002.c ****  *
+ 337:ChibiOS/test/nil/test_sequence_002.c ****  * <h2>Conditions</h2>
+ 338:ChibiOS/test/nil/test_sequence_002.c ****  * None.
+ 339:ChibiOS/test/nil/test_sequence_002.c ****  *
+ 340:ChibiOS/test/nil/test_sequence_002.c ****  * <h2>Test Steps</h2>
+ 341:ChibiOS/test/nil/test_sequence_002.c ****  * - A set of event flags are set on the current thread then the
+ 342:ChibiOS/test/nil/test_sequence_002.c ****  *   function chVTGetSystemTimeX() is invoked, the function is supposed to
+ 343:ChibiOS/test/nil/test_sequence_002.c ****  *   return immediately because the event flags are already pending,
+ 344:ChibiOS/test/nil/test_sequence_002.c ****  *   after return the events mask is tested.
+ 345:ChibiOS/test/nil/test_sequence_002.c ****  * - The pending event flags mask is cleared then the function
+ 346:ChibiOS/test/nil/test_sequence_002.c ****  *   chVTGetSystemTimeX() is invoked, after return the events
+ 347:ChibiOS/test/nil/test_sequence_002.c ****  *   mask is tested. The thread is signaled by another thread.
+ 348:ChibiOS/test/nil/test_sequence_002.c ****  * -
+ 349:ChibiOS/test/nil/test_sequence_002.c ****  * . The function chVTGetSystemTimeX() is invoked, no event can
+ 350:ChibiOS/test/nil/test_sequence_002.c ****  *   wakeup the thread, the function must return because timeout.
+ 351:ChibiOS/test/nil/test_sequence_002.c ****  */
+ 352:ChibiOS/test/nil/test_sequence_002.c **** 
+ 353:ChibiOS/test/nil/test_sequence_002.c **** static void test_002_005_setup(void) {
+  81               		.loc 1 353 0
+  82               		.cfi_startproc
+  83               	/* prologue: function */
+  84               	/* frame size = 0 */
+  85               	/* stack size = 0 */
+  86               	.L__stack_usage = 0
+ 354:ChibiOS/test/nil/test_sequence_002.c **** 
+ 355:ChibiOS/test/nil/test_sequence_002.c ****   chSemObjectInit(&sem1, 0);
+  87               		.loc 1 355 0
+  88 0000 1092 0000 		sts sem1,__zero_reg__
+  89 0004 0895      		ret
+  90               		.cfi_endproc
+  91               	.LFE64:
+  93               		.section	.text.test_002_003_teardown,"ax",@progbits
+  95               	test_002_003_teardown:
+  96               	.LFB60:
+ 211:ChibiOS/test/nil/test_sequence_002.c **** 
+  97               		.loc 1 211 0
+  98               		.cfi_startproc
+  99               	/* prologue: function */
+ 100               	/* frame size = 0 */
+ 101               	/* stack size = 0 */
+ 102               	.L__stack_usage = 0
+ 213:ChibiOS/test/nil/test_sequence_002.c **** }
+ 103               		.loc 1 213 0
+ 104 0000 60E0      		ldi r22,0
+ 105 0002 80E0      		ldi r24,lo8(sem1)
+ 106 0004 90E0      		ldi r25,hi8(sem1)
+ 107 0006 0C94 0000 		jmp chSemReset
+ 108               	.LVL0:
+ 109               		.cfi_endproc
+ 110               	.LFE60:
+ 112               		.section	.text.test_002_002_teardown,"ax",@progbits
+ 114               	test_002_002_teardown:
+ 115               	.LFB57:
+ 146:ChibiOS/test/nil/test_sequence_002.c **** 
+ 116               		.loc 1 146 0
+ 117               		.cfi_startproc
+ 118               	/* prologue: function */
+ 119               	/* frame size = 0 */
+ 120               	/* stack size = 0 */
+ 121               	.L__stack_usage = 0
+ 148:ChibiOS/test/nil/test_sequence_002.c **** }
+ 122               		.loc 1 148 0
+ 123 0000 60E0      		ldi r22,0
+ 124 0002 80E0      		ldi r24,lo8(sem1)
+ 125 0004 90E0      		ldi r25,hi8(sem1)
+ 126 0006 0C94 0000 		jmp chSemReset
+ 127               	.LVL1:
+ 128               		.cfi_endproc
+ 129               	.LFE57:
+ 131               		.section	.text.test_002_001_teardown,"ax",@progbits
+ 133               	test_002_001_teardown:
+ 134               	.LFB54:
+  73:ChibiOS/test/nil/test_sequence_002.c **** 
+ 135               		.loc 1 73 0
+ 136               		.cfi_startproc
+ 137               	/* prologue: function */
+ 138               	/* frame size = 0 */
+ 139               	/* stack size = 0 */
+ 140               	.L__stack_usage = 0
+  75:ChibiOS/test/nil/test_sequence_002.c **** }
+ 141               		.loc 1 75 0
+ 142 0000 60E0      		ldi r22,0
+ 143 0002 80E0      		ldi r24,lo8(sem1)
+ 144 0004 90E0      		ldi r25,hi8(sem1)
+ 145 0006 0C94 0000 		jmp chSemReset
+ 146               	.LVL2:
+ 147               		.cfi_endproc
+ 148               	.LFE54:
+ 150               		.section	.rodata.str1.1,"aMS",@progbits,1
+ 151               	.LC0:
+ 152 0000 7469 6D65 		.string	"timed out"
+ 152      6420 6F75 
+ 152      7400 
+ 153               	.LC1:
+ 154 000a 7772 6F6E 		.string	"wrong events mask"
+ 154      6720 6576 
+ 154      656E 7473 
+ 154      206D 6173 
+ 154      6B00 
+ 155               	.LC2:
+ 156 001c 6F75 7420 		.string	"out of time window"
+ 156      6F66 2074 
+ 156      696D 6520 
+ 156      7769 6E64 
+ 156      6F77 00
+ 157               		.section	.text.test_002_005_execute,"ax",@progbits
+ 159               	test_002_005_execute:
+ 160               	.LFB65:
+ 356:ChibiOS/test/nil/test_sequence_002.c **** }
+ 357:ChibiOS/test/nil/test_sequence_002.c **** 
+ 358:ChibiOS/test/nil/test_sequence_002.c **** static void test_002_005_execute(void) {
+ 161               		.loc 1 358 0
+ 162               		.cfi_startproc
+ 163 0000 1F93      		push r17
+ 164               	.LCFI0:
+ 165               		.cfi_def_cfa_offset 3
+ 166               		.cfi_offset 17, -2
+ 167 0002 CF93      		push r28
+ 168               	.LCFI1:
+ 169               		.cfi_def_cfa_offset 4
+ 170               		.cfi_offset 28, -3
+ 171 0004 DF93      		push r29
+ 172               	.LCFI2:
+ 173               		.cfi_def_cfa_offset 5
+ 174               		.cfi_offset 29, -4
+ 175               	/* prologue: function */
+ 176               	/* frame size = 0 */
+ 177               	/* stack size = 3 */
+ 178               	.L__stack_usage = 3
+ 359:ChibiOS/test/nil/test_sequence_002.c ****   systime_t time;
+ 360:ChibiOS/test/nil/test_sequence_002.c ****   eventmask_t events;
+ 361:ChibiOS/test/nil/test_sequence_002.c **** 
+ 362:ChibiOS/test/nil/test_sequence_002.c ****   /* A set of event flags are set on the current thread then the
+ 363:ChibiOS/test/nil/test_sequence_002.c ****      function chVTGetSystemTimeX() is invoked, the function is supposed to
+ 364:ChibiOS/test/nil/test_sequence_002.c ****      return immediately because the event flags are already pending,
+ 365:ChibiOS/test/nil/test_sequence_002.c ****      after return the events mask is tested.*/
+ 366:ChibiOS/test/nil/test_sequence_002.c ****   test_set_step(1);
+ 179               		.loc 1 366 0
+ 180 0006 81E0      		ldi r24,lo8(1)
+ 181 0008 90E0      		ldi r25,0
+ 182 000a 9093 0000 		sts test_step+1,r25
+ 183 000e 8093 0000 		sts test_step,r24
+ 184               	.LBB233:
+ 185               	.LBB234:
+ 186               	.LBB235:
+ 187               		.file 2 "ChibiOS/os/hal/ports/AVR/st_lld.h"
+   1:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*
+   2:ChibiOS/os/hal/ports/AVR/st_lld.h ****     ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio
+   3:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+   4:ChibiOS/os/hal/ports/AVR/st_lld.h ****     Licensed under the Apache License, Version 2.0 (the "License");
+   5:ChibiOS/os/hal/ports/AVR/st_lld.h ****     you may not use this file except in compliance with the License.
+   6:ChibiOS/os/hal/ports/AVR/st_lld.h ****     You may obtain a copy of the License at
+   7:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+   8:ChibiOS/os/hal/ports/AVR/st_lld.h ****         http://www.apache.org/licenses/LICENSE-2.0
+   9:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  10:ChibiOS/os/hal/ports/AVR/st_lld.h ****     Unless required by applicable law or agreed to in writing, software
+  11:ChibiOS/os/hal/ports/AVR/st_lld.h ****     distributed under the License is distributed on an "AS IS" BASIS,
+  12:ChibiOS/os/hal/ports/AVR/st_lld.h ****     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  13:ChibiOS/os/hal/ports/AVR/st_lld.h ****     See the License for the specific language governing permissions and
+  14:ChibiOS/os/hal/ports/AVR/st_lld.h ****     limitations under the License.
+  15:ChibiOS/os/hal/ports/AVR/st_lld.h **** */
+  16:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  17:ChibiOS/os/hal/ports/AVR/st_lld.h **** /**
+  18:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @file    AVR/st_lld.h
+  19:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @brief   ST Driver subsystem low level driver header.
+  20:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @details This header is designed to be include-able without having to
+  21:ChibiOS/os/hal/ports/AVR/st_lld.h ****  *          include other files from the HAL.
+  22:ChibiOS/os/hal/ports/AVR/st_lld.h ****  *
+  23:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @addtogroup AVR
+  24:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @{
+  25:ChibiOS/os/hal/ports/AVR/st_lld.h ****  */
+  26:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  27:ChibiOS/os/hal/ports/AVR/st_lld.h **** #ifndef _ST_LLD_H_
+  28:ChibiOS/os/hal/ports/AVR/st_lld.h **** #define _ST_LLD_H_
+  29:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  30:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  31:ChibiOS/os/hal/ports/AVR/st_lld.h **** /* Driver constants.                                                         */
+  32:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  33:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  34:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  35:ChibiOS/os/hal/ports/AVR/st_lld.h **** /* Driver pre-compile time settings.                                         */
+  36:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  37:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  38:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*
+  39:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * TODO: for models that have many timers,
+  40:ChibiOS/os/hal/ports/AVR/st_lld.h ****  *       could add AVR_ST_USE_TIMER
+  41:ChibiOS/os/hal/ports/AVR/st_lld.h ****  */
+  42:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  43:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  44:ChibiOS/os/hal/ports/AVR/st_lld.h **** /* Derived constants and error checks.                                       */
+  45:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  46:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  47:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*
+  48:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * TODO: error checks for valid timer selected
+  49:ChibiOS/os/hal/ports/AVR/st_lld.h ****  */
+  50:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  51:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  52:ChibiOS/os/hal/ports/AVR/st_lld.h **** /* Driver data structures and types.                                         */
+  53:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  54:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  55:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  56:ChibiOS/os/hal/ports/AVR/st_lld.h **** /* Driver macros.                                                            */
+  57:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  58:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  59:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  60:ChibiOS/os/hal/ports/AVR/st_lld.h **** /* External declarations.                                                    */
+  61:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  62:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  63:ChibiOS/os/hal/ports/AVR/st_lld.h **** #ifdef __cplusplus
+  64:ChibiOS/os/hal/ports/AVR/st_lld.h **** extern "C" {
+  65:ChibiOS/os/hal/ports/AVR/st_lld.h **** #endif
+  66:ChibiOS/os/hal/ports/AVR/st_lld.h ****   void st_lld_init(void);
+  67:ChibiOS/os/hal/ports/AVR/st_lld.h **** #ifdef __cplusplus
+  68:ChibiOS/os/hal/ports/AVR/st_lld.h **** }
+  69:ChibiOS/os/hal/ports/AVR/st_lld.h **** #endif
+  70:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  71:ChibiOS/os/hal/ports/AVR/st_lld.h **** #ifdef __AVR_ATmega128__
+  72:ChibiOS/os/hal/ports/AVR/st_lld.h **** #define TIFR_REG TIFR
+  73:ChibiOS/os/hal/ports/AVR/st_lld.h **** #define TIMSK_REG TIMSK
+  74:ChibiOS/os/hal/ports/AVR/st_lld.h **** #else
+  75:ChibiOS/os/hal/ports/AVR/st_lld.h **** #define TIFR_REG TIFR1
+  76:ChibiOS/os/hal/ports/AVR/st_lld.h **** #define TIMSK_REG TIMSK1
+  77:ChibiOS/os/hal/ports/AVR/st_lld.h **** #endif
+  78:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  79:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  80:ChibiOS/os/hal/ports/AVR/st_lld.h **** /* Driver inline functions.                                                  */
+  81:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  82:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  83:ChibiOS/os/hal/ports/AVR/st_lld.h **** /**
+  84:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @brief   Returns the time counter value.
+  85:ChibiOS/os/hal/ports/AVR/st_lld.h ****  *
+  86:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @return              The counter value.
+  87:ChibiOS/os/hal/ports/AVR/st_lld.h ****  *
+  88:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @notapi
+  89:ChibiOS/os/hal/ports/AVR/st_lld.h ****  */
+  90:ChibiOS/os/hal/ports/AVR/st_lld.h **** static inline systime_t st_lld_get_counter(void) {
+  91:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  92:ChibiOS/os/hal/ports/AVR/st_lld.h ****   return (systime_t) TCNT1;
+ 188               		.loc 2 92 0
+ 189 0012 8091 8400 		lds r24,132
+ 190 0016 9091 8500 		lds r25,132+1
+ 191               	.LBE235:
+ 192               	.LBE234:
+ 193               	.LBE233:
+ 367:ChibiOS/test/nil/test_sequence_002.c ****   {
+ 368:ChibiOS/test/nil/test_sequence_002.c ****     time = chVTGetSystemTimeX();
+ 369:ChibiOS/test/nil/test_sequence_002.c ****     chEvtSignal(chThdGetSelfX(), 0x55);
+ 194               		.loc 1 369 0
+ 195 001a 65E5      		ldi r22,lo8(85)
+ 196 001c 8091 0000 		lds r24,nil
+ 197 0020 9091 0000 		lds r25,nil+1
+ 198 0024 0E94 0000 		call chEvtSignal
+ 199               	.LVL3:
+ 370:ChibiOS/test/nil/test_sequence_002.c ****     events = chEvtWaitAnyTimeout(ALL_EVENTS, MS2ST(1000));
+ 200               		.loc 1 370 0
+ 201 0028 68E0      		ldi r22,lo8(8)
+ 202 002a 7DE3      		ldi r23,lo8(61)
+ 203 002c 8FEF      		ldi r24,lo8(-1)
+ 204 002e 0E94 0000 		call chEvtWaitAnyTimeout
+ 205               	.LVL4:
+ 206 0032 C82F      		mov r28,r24
+ 207               	.LVL5:
+ 371:ChibiOS/test/nil/test_sequence_002.c ****     test_assert((eventmask_t)0 != events,
+ 208               		.loc 1 371 0
+ 209 0034 81E0      		ldi r24,lo8(1)
+ 210               	.LVL6:
+ 211 0036 C111      		cpse r28,__zero_reg__
+ 212 0038 00C0      		rjmp .L10
+ 213 003a 80E0      		ldi r24,0
+ 214               	.L10:
+ 215 003c 60E0      		ldi r22,lo8(.LC0)
+ 216 003e 70E0      		ldi r23,hi8(.LC0)
+ 217 0040 0E94 0000 		call _test_assert
+ 218               	.LVL7:
+ 219 0044 8823      		tst r24
+ 220 0046 01F0      		breq .L28
+ 221               	.LVL8:
+ 222               	.L9:
+ 223               	/* epilogue start */
+ 372:ChibiOS/test/nil/test_sequence_002.c ****                 "timed out");
+ 373:ChibiOS/test/nil/test_sequence_002.c ****     test_assert((eventmask_t)0x55 == events,
+ 374:ChibiOS/test/nil/test_sequence_002.c ****                 "wrong events mask");
+ 375:ChibiOS/test/nil/test_sequence_002.c ****   }
+ 376:ChibiOS/test/nil/test_sequence_002.c **** 
+ 377:ChibiOS/test/nil/test_sequence_002.c ****   /* The pending event flags mask is cleared then the function
+ 378:ChibiOS/test/nil/test_sequence_002.c ****      chVTGetSystemTimeX() is invoked, after return the events
+ 379:ChibiOS/test/nil/test_sequence_002.c ****      mask is tested. The thread is signaled by another thread.*/
+ 380:ChibiOS/test/nil/test_sequence_002.c ****   test_set_step(2);
+ 381:ChibiOS/test/nil/test_sequence_002.c ****   {
+ 382:ChibiOS/test/nil/test_sequence_002.c ****     time = chVTGetSystemTimeX();
+ 383:ChibiOS/test/nil/test_sequence_002.c ****     chThdGetSelfX()->epmask = 0;
+ 384:ChibiOS/test/nil/test_sequence_002.c ****     events = chEvtWaitAnyTimeout(ALL_EVENTS, MS2ST(1000));
+ 385:ChibiOS/test/nil/test_sequence_002.c ****     test_assert((eventmask_t)0 != events,
+ 386:ChibiOS/test/nil/test_sequence_002.c ****                 "timed out");
+ 387:ChibiOS/test/nil/test_sequence_002.c ****     test_assert((eventmask_t)0x55 == events,
+ 388:ChibiOS/test/nil/test_sequence_002.c ****                 "wrong events mask");
+ 389:ChibiOS/test/nil/test_sequence_002.c ****   }
+ 390:ChibiOS/test/nil/test_sequence_002.c **** 
+ 391:ChibiOS/test/nil/test_sequence_002.c ****   /* The function chVTGetSystemTimeX() is invoked, no event can
+ 392:ChibiOS/test/nil/test_sequence_002.c ****      wakeup the thread, the function must return because timeout.*/
+ 393:ChibiOS/test/nil/test_sequence_002.c ****   test_set_step(3);
+ 394:ChibiOS/test/nil/test_sequence_002.c ****   {
+ 395:ChibiOS/test/nil/test_sequence_002.c ****     time = chVTGetSystemTimeX();
+ 396:ChibiOS/test/nil/test_sequence_002.c ****     events = chEvtWaitAnyTimeout(0, MS2ST(1000));
+ 397:ChibiOS/test/nil/test_sequence_002.c ****     test_assert_time_window(time + MS2ST(1000),
+ 398:ChibiOS/test/nil/test_sequence_002.c ****                             time + MS2ST(1000) + 1,
+ 399:ChibiOS/test/nil/test_sequence_002.c ****                             "out of time window");
+ 400:ChibiOS/test/nil/test_sequence_002.c ****     test_assert((eventmask_t)0 == events,
+ 401:ChibiOS/test/nil/test_sequence_002.c ****                 "wrong events mask");
+ 402:ChibiOS/test/nil/test_sequence_002.c ****   }
+ 403:ChibiOS/test/nil/test_sequence_002.c **** }
+ 224               		.loc 1 403 0
+ 225 0048 DF91      		pop r29
+ 226 004a CF91      		pop r28
+ 227 004c 1F91      		pop r17
+ 228 004e 0895      		ret
+ 229               	.LVL9:
+ 230               	.L28:
+ 373:ChibiOS/test/nil/test_sequence_002.c ****                 "wrong events mask");
+ 231               		.loc 1 373 0
+ 232 0050 81E0      		ldi r24,lo8(1)
+ 233 0052 C535      		cpi r28,lo8(85)
+ 234 0054 01F0      		breq .L13
+ 235 0056 80E0      		ldi r24,0
+ 236               	.L13:
+ 237 0058 60E0      		ldi r22,lo8(.LC1)
+ 238 005a 70E0      		ldi r23,hi8(.LC1)
+ 239 005c 0E94 0000 		call _test_assert
+ 240               	.LVL10:
+ 241 0060 8111      		cpse r24,__zero_reg__
+ 242 0062 00C0      		rjmp .L9
+ 243               	.LBB236:
+ 244               	.LBB237:
+ 380:ChibiOS/test/nil/test_sequence_002.c ****   {
+ 245               		.loc 1 380 0
+ 246 0064 82E0      		ldi r24,lo8(2)
+ 247 0066 90E0      		ldi r25,0
+ 248 0068 9093 0000 		sts test_step+1,r25
+ 249 006c 8093 0000 		sts test_step,r24
+ 250               	.LBB238:
+ 251               	.LBB239:
+ 252               	.LBB240:
+ 253               		.loc 2 92 0
+ 254 0070 8091 8400 		lds r24,132
+ 255 0074 9091 8500 		lds r25,132+1
+ 256               	.LBE240:
+ 257               	.LBE239:
+ 258               	.LBE238:
+ 383:ChibiOS/test/nil/test_sequence_002.c ****     events = chEvtWaitAnyTimeout(ALL_EVENTS, MS2ST(1000));
+ 259               		.loc 1 383 0
+ 260 0078 E091 0000 		lds r30,nil
+ 261 007c F091 0000 		lds r31,nil+1
+ 262 0080 1782      		std Z+7,__zero_reg__
+ 384:ChibiOS/test/nil/test_sequence_002.c ****     test_assert((eventmask_t)0 != events,
+ 263               		.loc 1 384 0
+ 264 0082 68E0      		ldi r22,lo8(8)
+ 265 0084 7DE3      		ldi r23,lo8(61)
+ 266 0086 8FEF      		ldi r24,lo8(-1)
+ 267 0088 0E94 0000 		call chEvtWaitAnyTimeout
+ 268               	.LVL11:
+ 269 008c C82F      		mov r28,r24
+ 270               	.LVL12:
+ 385:ChibiOS/test/nil/test_sequence_002.c ****                 "timed out");
+ 271               		.loc 1 385 0
+ 272 008e 81E0      		ldi r24,lo8(1)
+ 273               	.LVL13:
+ 274 0090 C111      		cpse r28,__zero_reg__
+ 275 0092 00C0      		rjmp .L15
+ 276 0094 80E0      		ldi r24,0
+ 277               	.L15:
+ 278 0096 60E0      		ldi r22,lo8(.LC0)
+ 279 0098 70E0      		ldi r23,hi8(.LC0)
+ 280 009a 0E94 0000 		call _test_assert
+ 281               	.LVL14:
+ 282 009e 8111      		cpse r24,__zero_reg__
+ 283 00a0 00C0      		rjmp .L9
+ 387:ChibiOS/test/nil/test_sequence_002.c ****                 "wrong events mask");
+ 284               		.loc 1 387 0
+ 285 00a2 81E0      		ldi r24,lo8(1)
+ 286 00a4 C535      		cpi r28,lo8(85)
+ 287 00a6 01F0      		breq .L16
+ 288 00a8 80E0      		ldi r24,0
+ 289               	.L16:
+ 290 00aa 60E0      		ldi r22,lo8(.LC1)
+ 291 00ac 70E0      		ldi r23,hi8(.LC1)
+ 292 00ae 0E94 0000 		call _test_assert
+ 293               	.LVL15:
+ 294 00b2 8111      		cpse r24,__zero_reg__
+ 295 00b4 00C0      		rjmp .L9
+ 393:ChibiOS/test/nil/test_sequence_002.c ****   {
+ 296               		.loc 1 393 0
+ 297 00b6 83E0      		ldi r24,lo8(3)
+ 298 00b8 90E0      		ldi r25,0
+ 299 00ba 9093 0000 		sts test_step+1,r25
+ 300 00be 8093 0000 		sts test_step,r24
+ 301               	.LBB241:
+ 302               	.LBB242:
+ 303               	.LBB243:
+ 304               		.loc 2 92 0
+ 305 00c2 C091 8400 		lds r28,132
+ 306 00c6 D091 8500 		lds r29,132+1
+ 307               	.LVL16:
+ 308               	.LBE243:
+ 309               	.LBE242:
+ 310               	.LBE241:
+ 396:ChibiOS/test/nil/test_sequence_002.c ****     test_assert_time_window(time + MS2ST(1000),
+ 311               		.loc 1 396 0
+ 312 00ca 68E0      		ldi r22,lo8(8)
+ 313 00cc 7DE3      		ldi r23,lo8(61)
+ 314 00ce 80E0      		ldi r24,0
+ 315 00d0 0E94 0000 		call chEvtWaitAnyTimeout
+ 316               	.LVL17:
+ 317 00d4 182F      		mov r17,r24
+ 318               	.LVL18:
+ 397:ChibiOS/test/nil/test_sequence_002.c ****                             time + MS2ST(1000) + 1,
+ 319               		.loc 1 397 0
+ 320 00d6 BE01      		movw r22,r28
+ 321 00d8 675F      		subi r22,-9
+ 322 00da 724C      		sbci r23,-62
+ 323 00dc 40E0      		ldi r20,lo8(.LC2)
+ 324 00de 50E0      		ldi r21,hi8(.LC2)
+ 325 00e0 CE01      		movw r24,r28
+ 326 00e2 885F      		subi r24,-8
+ 327 00e4 924C      		sbci r25,-62
+ 328 00e6 0E94 0000 		call _test_assert_time_window
+ 329               	.LVL19:
+ 330 00ea 8111      		cpse r24,__zero_reg__
+ 331 00ec 00C0      		rjmp .L9
+ 400:ChibiOS/test/nil/test_sequence_002.c ****                 "wrong events mask");
+ 332               		.loc 1 400 0
+ 333 00ee 81E0      		ldi r24,lo8(1)
+ 334 00f0 1111      		cpse r17,__zero_reg__
+ 335 00f2 80E0      		ldi r24,0
+ 336               	.L17:
+ 337 00f4 60E0      		ldi r22,lo8(.LC1)
+ 338 00f6 70E0      		ldi r23,hi8(.LC1)
+ 339               	/* epilogue start */
+ 340               	.LBE237:
+ 341               	.LBE236:
+ 342               		.loc 1 403 0
+ 343 00f8 DF91      		pop r29
+ 344 00fa CF91      		pop r28
+ 345 00fc 1F91      		pop r17
+ 346               	.LVL20:
+ 347               	.LBB245:
+ 348               	.LBB244:
+ 400:ChibiOS/test/nil/test_sequence_002.c ****                 "wrong events mask");
+ 349               		.loc 1 400 0
+ 350 00fe 0C94 0000 		jmp _test_assert
+ 351               	.LVL21:
+ 352               	.LBE244:
+ 353               	.LBE245:
+ 354               		.cfi_endproc
+ 355               	.LFE65:
+ 357               		.section	.rodata.str1.1
+ 358               	.LC3:
+ 359 002f 6E6F 7420 		.string	"not NULL"
+ 359      4E55 4C4C 
+ 359      00
+ 360               	.LC4:
+ 361 0038 7772 6F6E 		.string	"wrong returned message"
+ 361      6720 7265 
+ 361      7475 726E 
+ 361      6564 206D 
+ 361      6573 7361 
+ 362               		.section	.text.test_002_004_execute,"ax",@progbits
+ 364               	test_002_004_execute:
+ 365               	.LFB63:
+ 285:ChibiOS/test/nil/test_sequence_002.c ****   systime_t time;
+ 366               		.loc 1 285 0
+ 367               		.cfi_startproc
+ 368 0000 0F93      		push r16
+ 369               	.LCFI3:
+ 370               		.cfi_def_cfa_offset 3
+ 371               		.cfi_offset 16, -2
+ 372 0002 1F93      		push r17
+ 373               	.LCFI4:
+ 374               		.cfi_def_cfa_offset 4
+ 375               		.cfi_offset 17, -3
+ 376 0004 CF93      		push r28
+ 377               	.LCFI5:
+ 378               		.cfi_def_cfa_offset 5
+ 379               		.cfi_offset 28, -4
+ 380 0006 DF93      		push r29
+ 381               	.LCFI6:
+ 382               		.cfi_def_cfa_offset 6
+ 383               		.cfi_offset 29, -5
+ 384               	/* prologue: function */
+ 385               	/* frame size = 0 */
+ 386               	/* stack size = 4 */
+ 387               	.L__stack_usage = 4
+ 292:ChibiOS/test/nil/test_sequence_002.c ****   {
+ 388               		.loc 1 292 0
+ 389 0008 81E0      		ldi r24,lo8(1)
+ 390 000a 90E0      		ldi r25,0
+ 391 000c 9093 0000 		sts test_step+1,r25
+ 392 0010 8093 0000 		sts test_step,r24
+ 393               	.LBB263:
+ 394               	.LBB264:
+ 395               		.file 3 "ChibiOS/os/nil/ports/AVR/nilcore.h"
+   1:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*
+   2:ChibiOS/os/nil/ports/AVR/nilcore.h ****     ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio.
+   3:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+   4:ChibiOS/os/nil/ports/AVR/nilcore.h ****     This file is part of ChibiOS.
+   5:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+   6:ChibiOS/os/nil/ports/AVR/nilcore.h ****     ChibiOS is free software; you can redistribute it and/or modify
+   7:ChibiOS/os/nil/ports/AVR/nilcore.h ****     it under the terms of the GNU General Public License as published by
+   8:ChibiOS/os/nil/ports/AVR/nilcore.h ****     the Free Software Foundation; either version 3 of the License, or
+   9:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (at your option) any later version.
+  10:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  11:ChibiOS/os/nil/ports/AVR/nilcore.h ****     ChibiOS is distributed in the hope that it will be useful,
+  12:ChibiOS/os/nil/ports/AVR/nilcore.h ****     but WITHOUT ANY WARRANTY; without even the implied warranty of
+  13:ChibiOS/os/nil/ports/AVR/nilcore.h ****     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  14:ChibiOS/os/nil/ports/AVR/nilcore.h ****     GNU General Public License for more details.
+  15:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  16:ChibiOS/os/nil/ports/AVR/nilcore.h ****     You should have received a copy of the GNU General Public License
+  17:ChibiOS/os/nil/ports/AVR/nilcore.h ****     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  18:ChibiOS/os/nil/ports/AVR/nilcore.h **** */
+  19:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  20:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  21:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @file    AVR/nilcore.h
+  22:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   AVR port macros and structures.
+  23:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *
+  24:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @addtogroup AVR_CORE
+  25:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @{
+  26:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  27:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  28:ChibiOS/os/nil/ports/AVR/nilcore.h **** #ifndef _NILCORE_H_
+  29:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define _NILCORE_H_
+  30:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  31:ChibiOS/os/nil/ports/AVR/nilcore.h **** #include <avr/io.h>
+  32:ChibiOS/os/nil/ports/AVR/nilcore.h **** #include <avr/interrupt.h>
+  33:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  34:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+  35:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* Module constants.                                                         */
+  36:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+  37:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  38:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  39:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @name    Architecture and Compiler
+  40:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @{
+  41:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  42:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  43:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Macro defining the port architecture.
+  44:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  45:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_ARCHITECTURE_AVR
+  46:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  47:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  48:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Name of the implemented architecture.
+  49:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  50:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_ARCHITECTURE_NAME          "AVR"
+  51:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  52:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  53:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Name of the architecture variant.
+  54:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  55:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_CORE_VARIANT_NAME          "MegaAVR"
+  56:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  57:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  58:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Compiler name and version.
+  59:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  60:ChibiOS/os/nil/ports/AVR/nilcore.h **** #if defined(__GNUC__) || defined(__DOXYGEN__)
+  61:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_COMPILER_NAME              "GCC " __VERSION__
+  62:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  63:ChibiOS/os/nil/ports/AVR/nilcore.h **** #else
+  64:ChibiOS/os/nil/ports/AVR/nilcore.h **** #error "unsupported compiler"
+  65:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif
+  66:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  67:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  68:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Port-specific information string.
+  69:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  70:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_INFO                       "16 bits code addressing"
+  71:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  72:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  73:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   This port supports a realtime counter.
+  74:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  75:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_SUPPORTS_RT                FALSE
+  76:ChibiOS/os/nil/ports/AVR/nilcore.h **** /** @} */
+  77:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  78:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+  79:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* Module pre-compile time settings.                                         */
+  80:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+  81:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  82:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  83:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Stack size for the system idle thread.
+  84:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @details This size depends on the idle thread implementation, usually
+  85:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          the idle thread should take no more space than those reserved
+  86:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          by @p PORT_INT_REQUIRED_STACK.
+  87:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @note    In this port it is set to 8.
+  88:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  89:ChibiOS/os/nil/ports/AVR/nilcore.h **** #if !defined(PORT_IDLE_THREAD_STACK_SIZE) || defined(__DOXYGEN__)
+  90:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_IDLE_THREAD_STACK_SIZE     8
+  91:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif
+  92:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  93:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  94:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Per-thread stack overhead for interrupts servicing.
+  95:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @details This constant is used in the calculation of the correct working
+  96:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          area size.
+  97:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @note    In this port the default is 32 bytes per thread.
+  98:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  99:ChibiOS/os/nil/ports/AVR/nilcore.h **** #if !defined(PORT_INT_REQUIRED_STACK) || defined(__DOXYGEN__)
+ 100:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_INT_REQUIRED_STACK         32
+ 101:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif
+ 102:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 103:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 104:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Enables an alternative timer implementation.
+ 105:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @details Usually the port uses a timer interface defined in the file
+ 106:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          @p nilcore_timer.h, if this option is enabled then the file
+ 107:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          @p nilcore_timer_alt.h is included instead.
+ 108:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 109:ChibiOS/os/nil/ports/AVR/nilcore.h **** #if !defined(PORT_USE_ALT_TIMER)
+ 110:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_USE_ALT_TIMER              FALSE
+ 111:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif
+ 112:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 113:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 114:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* Derived constants and error checks.                                       */
+ 115:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 116:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 117:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 118:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* Module data structures and types.                                         */
+ 119:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 120:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 121:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* The following code is not processed when the file is included from an
+ 122:ChibiOS/os/nil/ports/AVR/nilcore.h ****    asm module.*/
+ 123:ChibiOS/os/nil/ports/AVR/nilcore.h **** #if !defined(_FROM_ASM_)
+ 124:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 125:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 126:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Type of stack and memory alignment enforcement.
+ 127:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 128:ChibiOS/os/nil/ports/AVR/nilcore.h **** typedef uint8_t stkalign_t;
+ 129:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 130:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 131:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   System saved context.
+ 132:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @details This structure represents the inner stack frame during a context
+ 133:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          switching.
+ 134:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 135:ChibiOS/os/nil/ports/AVR/nilcore.h **** struct port_intctx {
+ 136:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       _next;
+ 137:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r29;
+ 138:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r28;
+ 139:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r17;
+ 140:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r16;
+ 141:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r15;
+ 142:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r14;
+ 143:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r13;
+ 144:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r12;
+ 145:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r11;
+ 146:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r10;
+ 147:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r9;
+ 148:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r8;
+ 149:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r7;
+ 150:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r6;
+ 151:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r5;
+ 152:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r4;
+ 153:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r3;
+ 154:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r2;
+ 155:ChibiOS/os/nil/ports/AVR/nilcore.h **** #ifdef __AVR_3_BYTE_PC__
+ 156:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       pcx;
+ 157:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif
+ 158:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       pcl;
+ 159:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       pch;
+ 160:ChibiOS/os/nil/ports/AVR/nilcore.h **** };
+ 161:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 162:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif /* !defined(_FROM_ASM_) */
+ 163:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 164:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 165:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* Module macros.                                                            */
+ 166:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 167:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 168:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 169:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Platform dependent thread stack setup.
+ 170:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @details This code usually setup the context switching frame represented
+ 171:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          by an @p port_intctx structure.
+ 172:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 173:ChibiOS/os/nil/ports/AVR/nilcore.h **** #ifdef __AVR_3_BYTE_PC__
+ 174:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_SETUP_CONTEXT(tp, wend, pf, arg) {                             \
+ 175:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp = (struct port_intctx*)(((uint8_t *)(wend)) -                \
+ 176:ChibiOS/os/nil/ports/AVR/nilcore.h ****                                          sizeof(struct port_intctx));       \
+ 177:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->r2  = (int)pf;                                              \
+ 178:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->r3  = (int)pf >> 8;                                         \
+ 179:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->r4  = (int)arg;                                             \
+ 180:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->r5  = (int)arg >> 8;                                        \
+ 181:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->pcx = (int)0;                                               \
+ 182:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->pcl = (int)_port_thread_start >> 8;                         \
+ 183:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->pch = (int)_port_thread_start;                              \
+ 184:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 185:ChibiOS/os/nil/ports/AVR/nilcore.h **** #else /* __AVR_3_BYTE_PC__ */
+ 186:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_SETUP_CONTEXT(tp, wend, pf, arg) {                             \
+ 187:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp = (struct port_intctx*)(((uint8_t *)(wend)) -                \
+ 188:ChibiOS/os/nil/ports/AVR/nilcore.h ****                                          sizeof(struct port_intctx));       \
+ 189:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->r2  = (int)pf;                                              \
+ 190:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->r3  = (int)pf >> 8;                                         \
+ 191:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->r4  = (int)arg;                                             \
+ 192:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->r5  = (int)arg >> 8;                                        \
+ 193:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->pcl = (int)_port_thread_start >> 8;                         \
+ 194:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->pch = (int)_port_thread_start;                              \
+ 195:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 196:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif /* __AVR_3_BYTE_PC__ */
+ 197:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 198:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Computes the thread working area global size.
+ 199:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @note    There is no need to perform alignments in this macro.
+ 200:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 201:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_WA_SIZE(n) ((sizeof(struct port_intctx) - 1) +                 \
+ 202:ChibiOS/os/nil/ports/AVR/nilcore.h ****                          (n) + (PORT_INT_REQUIRED_STACK))
+ 203:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 204:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 205:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   IRQ prologue code.
+ 206:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @details This macro must be inserted at the start of all IRQ handlers
+ 207:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          enabled to invoke system APIs.
+ 208:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @note    This code tricks the compiler to save all the specified registers
+ 209:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          by "touching" them.
+ 210:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 211:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_IRQ_PROLOGUE() {                                               \
+ 212:ChibiOS/os/nil/ports/AVR/nilcore.h ****   asm ("" : : : "r18", "r19", "r20", "r21", "r22", "r23", "r24",            \
+ 213:ChibiOS/os/nil/ports/AVR/nilcore.h ****                 "r25", "r26", "r27", "r30", "r31");                         \
+ 214:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 215:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 216:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 217:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   IRQ epilogue code.
+ 218:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @details This macro must be inserted at the end of all IRQ handlers
+ 219:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          enabled to invoke system APIs.
+ 220:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 221:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_IRQ_EPILOGUE() chSchRescheduleS()
+ 222:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 223:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 224:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   IRQ handler function declaration.
+ 225:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @note    @p id can be a function name or a vector number depending on the
+ 226:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          port implementation.
+ 227:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 228:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_IRQ_HANDLER(id) ISR(id)
+ 229:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 230:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 231:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Fast IRQ handler function declaration.
+ 232:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @note    @p id can be a function name or a vector number depending on the
+ 233:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          port implementation.
+ 234:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 235:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_FAST_IRQ_HANDLER(id) ISR(id)
+ 236:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 237:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 238:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Performs a context switch between two threads.
+ 239:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @details This is the most critical code in any port, this function
+ 240:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          is responsible for the context switch between 2 threads.
+ 241:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @note    The implementation of this code affects <b>directly</b> the context
+ 242:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          switch performance so optimize here as much as you can.
+ 243:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *
+ 244:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @param[in] ntp       the thread to be switched in
+ 245:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @param[in] otp       the thread to be switched out
+ 246:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 247:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define port_switch(ntp, otp) _port_switch(ntp, otp)
+ 248:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 249:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 250:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* External declarations.                                                    */
+ 251:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 252:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 253:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* The following code is not processed when the file is included from an
+ 254:ChibiOS/os/nil/ports/AVR/nilcore.h ****    asm module.*/
+ 255:ChibiOS/os/nil/ports/AVR/nilcore.h **** #if !defined(_FROM_ASM_)
+ 256:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 257:ChibiOS/os/nil/ports/AVR/nilcore.h **** #ifdef __cplusplus
+ 258:ChibiOS/os/nil/ports/AVR/nilcore.h **** extern "C" {
+ 259:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif
+ 260:ChibiOS/os/nil/ports/AVR/nilcore.h ****   void _port_irq_epilogue(void);
+ 261:ChibiOS/os/nil/ports/AVR/nilcore.h ****   void _port_switch(thread_t *ntp, thread_t *otp);
+ 262:ChibiOS/os/nil/ports/AVR/nilcore.h ****   void _port_thread_start(void);
+ 263:ChibiOS/os/nil/ports/AVR/nilcore.h **** #ifdef __cplusplus
+ 264:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 265:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif
+ 266:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 267:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif /* !defined(_FROM_ASM_) */
+ 268:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 269:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 270:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* Module inline functions.                                                  */
+ 271:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 272:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 273:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* The following code is not processed when the file is included from an
+ 274:ChibiOS/os/nil/ports/AVR/nilcore.h ****    asm module.*/
+ 275:ChibiOS/os/nil/ports/AVR/nilcore.h **** #if !defined(_FROM_ASM_)
+ 276:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 277:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 278:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Port-related initialization code.
+ 279:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 280:ChibiOS/os/nil/ports/AVR/nilcore.h **** static inline void port_init(void) {
+ 281:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 282:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 283:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 284:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 285:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Returns a word encoding the current interrupts status.
+ 286:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *
+ 287:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @return              The interrupts status.
+ 288:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 289:ChibiOS/os/nil/ports/AVR/nilcore.h **** static inline syssts_t port_get_irq_status(void) {
+ 290:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 291:ChibiOS/os/nil/ports/AVR/nilcore.h ****   return 0;
+ 292:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 293:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 294:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 295:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Checks the interrupt status.
+ 296:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *
+ 297:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @param[in] sts       the interrupt status word
+ 298:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *
+ 299:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @return              The interrupt status.
+ 300:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @retvel false        the word specified a disabled interrupts status.
+ 301:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @retvel true         the word specified an enabled interrupts status.
+ 302:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 303:ChibiOS/os/nil/ports/AVR/nilcore.h **** static inline bool port_irq_enabled(syssts_t sts) {
+ 304:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 305:ChibiOS/os/nil/ports/AVR/nilcore.h ****   return false;
+ 306:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 307:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 308:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 309:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Determines the current execution context.
+ 310:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *
+ 311:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @return              The execution context.
+ 312:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @retval false        not running in ISR mode.
+ 313:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @retval true         running in ISR mode.
+ 314:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 315:ChibiOS/os/nil/ports/AVR/nilcore.h **** static inline bool port_is_isr_context(void) {
+ 316:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 317:ChibiOS/os/nil/ports/AVR/nilcore.h ****   return false;
+ 318:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 319:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 320:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 321:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Kernel-lock action.
+ 322:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 323:ChibiOS/os/nil/ports/AVR/nilcore.h **** static inline void port_lock(void) {
+ 324:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 325:ChibiOS/os/nil/ports/AVR/nilcore.h ****   asm volatile ("cli" : : : "memory");
+ 396               		.loc 3 325 0
+ 397               	/* #APP */
+ 398               	 ;  325 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 399 0014 F894      		cli
+ 400               	 ;  0 "" 2
+ 401               	/* #NOAPP */
+ 402               	.LBE264:
+ 403               	.LBE263:
+ 295:ChibiOS/test/nil/test_sequence_002.c ****     chSysUnlock();
+ 404               		.loc 1 295 0
+ 405 0016 60E0      		ldi r22,0
+ 406 0018 70E0      		ldi r23,0
+ 407 001a 80E0      		ldi r24,lo8(gtr1)
+ 408 001c 90E0      		ldi r25,hi8(gtr1)
+ 409 001e 0E94 0000 		call chThdSuspendTimeoutS
+ 410               	.LVL22:
+ 411 0022 EC01      		movw r28,r24
+ 412               	.LVL23:
+ 413               	.LBB265:
+ 414               	.LBB266:
+ 326:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 327:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 328:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 329:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Kernel-unlock action.
+ 330:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 331:ChibiOS/os/nil/ports/AVR/nilcore.h **** static inline void port_unlock(void) {
+ 332:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 333:ChibiOS/os/nil/ports/AVR/nilcore.h ****   asm volatile ("sei" : : : "memory");
+ 415               		.loc 3 333 0
+ 416               	/* #APP */
+ 417               	 ;  333 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 418 0024 7894      		sei
+ 419               	 ;  0 "" 2
+ 420               	/* #NOAPP */
+ 421               	.LBE266:
+ 422               	.LBE265:
+ 297:ChibiOS/test/nil/test_sequence_002.c ****                 "not NULL");
+ 423               		.loc 1 297 0
+ 424 0026 81E0      		ldi r24,lo8(1)
+ 425               	.LVL24:
+ 426 0028 2091 0000 		lds r18,gtr1
+ 427 002c 3091 0000 		lds r19,gtr1+1
+ 428 0030 232B      		or r18,r19
+ 429 0032 01F0      		breq .L30
+ 430 0034 80E0      		ldi r24,0
+ 431               	.L30:
+ 432 0036 60E0      		ldi r22,lo8(.LC3)
+ 433 0038 70E0      		ldi r23,hi8(.LC3)
+ 434 003a 0E94 0000 		call _test_assert
+ 435               	.LVL25:
+ 436 003e 8823      		tst r24
+ 437 0040 01F0      		breq .L49
+ 438               	.LVL26:
+ 439               	.L29:
+ 440               	/* epilogue start */
+ 320:ChibiOS/test/nil/test_sequence_002.c **** 
+ 441               		.loc 1 320 0
+ 442 0042 DF91      		pop r29
+ 443 0044 CF91      		pop r28
+ 444 0046 1F91      		pop r17
+ 445 0048 0F91      		pop r16
+ 446 004a 0895      		ret
+ 447               	.LVL27:
+ 448               	.L49:
+ 299:ChibiOS/test/nil/test_sequence_002.c ****                 "wrong returned message");
+ 449               		.loc 1 299 0
+ 450 004c 81E0      		ldi r24,lo8(1)
+ 451 004e CD2B      		or r28,r29
+ 452 0050 01F0      		breq .+2
+ 453 0052 00C0      		rjmp .L50
+ 454 0054 60E0      		ldi r22,lo8(.LC4)
+ 455 0056 70E0      		ldi r23,hi8(.LC4)
+ 456 0058 0E94 0000 		call _test_assert
+ 457               	.LVL28:
+ 458 005c 8111      		cpse r24,__zero_reg__
+ 459 005e 00C0      		rjmp .L29
+ 460               	.L52:
+ 461               	.LBB267:
+ 462               	.LBB268:
+ 306:ChibiOS/test/nil/test_sequence_002.c ****   {
+ 463               		.loc 1 306 0
+ 464 0060 82E0      		ldi r24,lo8(2)
+ 465 0062 90E0      		ldi r25,0
+ 466 0064 9093 0000 		sts test_step+1,r25
+ 467 0068 8093 0000 		sts test_step,r24
+ 468               	.LBB269:
+ 469               	.LBB270:
+ 325:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 470               		.loc 3 325 0
+ 471               	/* #APP */
+ 472               	 ;  325 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 473 006c F894      		cli
+ 474               	 ;  0 "" 2
+ 475               	/* #NOAPP */
+ 476               	.LBE270:
+ 477               	.LBE269:
+ 478               	.LBB271:
+ 479               	.LBB272:
+ 480               	.LBB273:
+ 481               		.loc 2 92 0
+ 482 006e C091 8400 		lds r28,132
+ 483 0072 D091 8500 		lds r29,132+1
+ 484               	.LVL29:
+ 485               	.LBE273:
+ 486               	.LBE272:
+ 487               	.LBE271:
+ 310:ChibiOS/test/nil/test_sequence_002.c ****     chSysUnlock();
+ 488               		.loc 1 310 0
+ 489 0076 68E0      		ldi r22,lo8(8)
+ 490 0078 7DE3      		ldi r23,lo8(61)
+ 491 007a 80E0      		ldi r24,lo8(tr1)
+ 492 007c 90E0      		ldi r25,hi8(tr1)
+ 493 007e 0E94 0000 		call chThdSuspendTimeoutS
+ 494               	.LVL30:
+ 495 0082 8C01      		movw r16,r24
+ 496               	.LVL31:
+ 497               	.LBB274:
+ 498               	.LBB275:
+ 499               		.loc 3 333 0
+ 500               	/* #APP */
+ 501               	 ;  333 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 502 0084 7894      		sei
+ 503               	 ;  0 "" 2
+ 504               	/* #NOAPP */
+ 505               	.LBE275:
+ 506               	.LBE274:
+ 312:ChibiOS/test/nil/test_sequence_002.c ****                             time + MS2ST(1000) + 1,
+ 507               		.loc 1 312 0
+ 508 0086 BE01      		movw r22,r28
+ 509 0088 675F      		subi r22,-9
+ 510 008a 724C      		sbci r23,-62
+ 511 008c 40E0      		ldi r20,lo8(.LC2)
+ 512 008e 50E0      		ldi r21,hi8(.LC2)
+ 513 0090 CE01      		movw r24,r28
+ 514 0092 885F      		subi r24,-8
+ 515 0094 924C      		sbci r25,-62
+ 516 0096 0E94 0000 		call _test_assert_time_window
+ 517               	.LVL32:
+ 518 009a 8111      		cpse r24,__zero_reg__
+ 519 009c 00C0      		rjmp .L29
+ 315:ChibiOS/test/nil/test_sequence_002.c ****                 "not NULL");
+ 520               		.loc 1 315 0
+ 521 009e 81E0      		ldi r24,lo8(1)
+ 522 00a0 2091 0000 		lds r18,tr1
+ 523 00a4 3091 0000 		lds r19,tr1+1
+ 524 00a8 232B      		or r18,r19
+ 525 00aa 01F4      		brne .L51
+ 526               	.L35:
+ 527 00ac 60E0      		ldi r22,lo8(.LC3)
+ 528 00ae 70E0      		ldi r23,hi8(.LC3)
+ 529 00b0 0E94 0000 		call _test_assert
+ 530               	.LVL33:
+ 531 00b4 8111      		cpse r24,__zero_reg__
+ 532 00b6 00C0      		rjmp .L29
+ 317:ChibiOS/test/nil/test_sequence_002.c ****                 "wrong returned message");
+ 533               		.loc 1 317 0
+ 534 00b8 81E0      		ldi r24,lo8(1)
+ 535 00ba 0F3F      		cpi r16,-1
+ 536 00bc 1F4F      		sbci r17,-1
+ 537 00be 01F0      		breq .L36
+ 538 00c0 80E0      		ldi r24,0
+ 539               	.L36:
+ 540 00c2 60E0      		ldi r22,lo8(.LC4)
+ 541 00c4 70E0      		ldi r23,hi8(.LC4)
+ 542               	/* epilogue start */
+ 543               	.LBE268:
+ 544               	.LBE267:
+ 320:ChibiOS/test/nil/test_sequence_002.c **** 
+ 545               		.loc 1 320 0
+ 546 00c6 DF91      		pop r29
+ 547 00c8 CF91      		pop r28
+ 548 00ca 1F91      		pop r17
+ 549 00cc 0F91      		pop r16
+ 550               	.LVL34:
+ 551               	.LBB278:
+ 552               	.LBB276:
+ 317:ChibiOS/test/nil/test_sequence_002.c ****                 "wrong returned message");
+ 553               		.loc 1 317 0
+ 554 00ce 0C94 0000 		jmp _test_assert
+ 555               	.LVL35:
+ 556               	.L50:
+ 557               	.LBE276:
+ 558               	.LBE278:
+ 299:ChibiOS/test/nil/test_sequence_002.c ****                 "wrong returned message");
+ 559               		.loc 1 299 0
+ 560 00d2 80E0      		ldi r24,0
+ 561 00d4 60E0      		ldi r22,lo8(.LC4)
+ 562 00d6 70E0      		ldi r23,hi8(.LC4)
+ 563 00d8 0E94 0000 		call _test_assert
+ 564               	.LVL36:
+ 565 00dc 8111      		cpse r24,__zero_reg__
+ 566 00de 00C0      		rjmp .L29
+ 567 00e0 00C0      		rjmp .L52
+ 568               	.LVL37:
+ 569               	.L51:
+ 570               	.LBB279:
+ 571               	.LBB277:
+ 315:ChibiOS/test/nil/test_sequence_002.c ****                 "not NULL");
+ 572               		.loc 1 315 0
+ 573 00e2 80E0      		ldi r24,0
+ 574 00e4 00C0      		rjmp .L35
+ 575               	.LBE277:
+ 576               	.LBE279:
+ 577               		.cfi_endproc
+ 578               	.LFE63:
+ 580               		.section	.rodata.str1.1
+ 581               	.LC5:
+ 582 004f 7772 6F6E 		.string	"wrong counter value"
+ 582      6720 636F 
+ 582      756E 7465 
+ 582      7220 7661 
+ 582      6C75 6500 
+ 583               	.LC6:
+ 584 0063 7772 6F6E 		.string	"wrong timeout message"
+ 584      6720 7469 
+ 584      6D65 6F75 
+ 584      7420 6D65 
+ 584      7373 6167 
+ 585               		.section	.text.test_002_003_execute,"ax",@progbits
+ 587               	test_002_003_execute:
+ 588               	.LFB61:
+ 216:ChibiOS/test/nil/test_sequence_002.c ****   systime_t time;
+ 589               		.loc 1 216 0
+ 590               		.cfi_startproc
+ 591 0000 0F93      		push r16
+ 592               	.LCFI7:
+ 593               		.cfi_def_cfa_offset 3
+ 594               		.cfi_offset 16, -2
+ 595 0002 1F93      		push r17
+ 596               	.LCFI8:
+ 597               		.cfi_def_cfa_offset 4
+ 598               		.cfi_offset 17, -3
+ 599 0004 CF93      		push r28
+ 600               	.LCFI9:
+ 601               		.cfi_def_cfa_offset 5
+ 602               		.cfi_offset 28, -4
+ 603 0006 DF93      		push r29
+ 604               	.LCFI10:
+ 605               		.cfi_def_cfa_offset 6
+ 606               		.cfi_offset 29, -5
+ 607               	/* prologue: function */
+ 608               	/* frame size = 0 */
+ 609               	/* stack size = 4 */
+ 610               	.L__stack_usage = 4
+ 222:ChibiOS/test/nil/test_sequence_002.c ****   {
+ 611               		.loc 1 222 0
+ 612 0008 81E0      		ldi r24,lo8(1)
+ 613 000a 90E0      		ldi r25,0
+ 614 000c 9093 0000 		sts test_step+1,r25
+ 615 0010 8093 0000 		sts test_step,r24
+ 616               	.LBB318:
+ 617               	.LBB319:
+ 618               	.LBB320:
+ 619               		.loc 2 92 0
+ 620 0014 C091 8400 		lds r28,132
+ 621 0018 D091 8500 		lds r29,132+1
+ 622               	.LBE320:
+ 623               	.LBE319:
+ 624               	.LBE318:
+ 225:ChibiOS/test/nil/test_sequence_002.c ****     test_assert_time_window(time + MS2ST(1000),
+ 625               		.loc 1 225 0
+ 626 001c 68E0      		ldi r22,lo8(8)
+ 627 001e 7DE3      		ldi r23,lo8(61)
+ 628 0020 80E0      		ldi r24,lo8(sem1)
+ 629 0022 90E0      		ldi r25,hi8(sem1)
+ 630 0024 0E94 0000 		call chSemWaitTimeout
+ 631               	.LVL38:
+ 632 0028 8C01      		movw r16,r24
+ 633               	.LVL39:
+ 226:ChibiOS/test/nil/test_sequence_002.c ****                             time + MS2ST(1000) + 1,
+ 634               		.loc 1 226 0
+ 635 002a BE01      		movw r22,r28
+ 636 002c 675F      		subi r22,-9
+ 637 002e 724C      		sbci r23,-62
+ 638 0030 40E0      		ldi r20,lo8(.LC2)
+ 639 0032 50E0      		ldi r21,hi8(.LC2)
+ 640 0034 CE01      		movw r24,r28
+ 641 0036 885F      		subi r24,-8
+ 642 0038 924C      		sbci r25,-62
+ 643 003a 0E94 0000 		call _test_assert_time_window
+ 644               	.LVL40:
+ 645 003e 8823      		tst r24
+ 646 0040 01F0      		breq .L76
+ 647               	.LVL41:
+ 648               	.L53:
+ 649               	/* epilogue start */
+ 249:ChibiOS/test/nil/test_sequence_002.c **** 
+ 650               		.loc 1 249 0
+ 651 0042 DF91      		pop r29
+ 652 0044 CF91      		pop r28
+ 653 0046 1F91      		pop r17
+ 654 0048 0F91      		pop r16
+ 655 004a 0895      		ret
+ 656               	.LVL42:
+ 657               	.L76:
+ 658               	.LBB321:
+ 659               	.LBB322:
+ 660               	.LBB323:
+ 325:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 661               		.loc 3 325 0
+ 662               	/* #APP */
+ 663               	 ;  325 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 664 004c F894      		cli
+ 665               	 ;  0 "" 2
+ 666               	/* #NOAPP */
+ 667               	.LBE323:
+ 668               	.LBE322:
+ 669               	.LBE321:
+ 229:ChibiOS/test/nil/test_sequence_002.c ****                      "wrong counter value");
+ 670               		.loc 1 229 0
+ 671 004e 9091 0000 		lds r25,sem1
+ 672 0052 81E0      		ldi r24,lo8(1)
+ 673 0054 9111      		cpse r25,__zero_reg__
+ 674 0056 00C0      		rjmp .L77
+ 675 0058 60E0      		ldi r22,lo8(.LC5)
+ 676 005a 70E0      		ldi r23,hi8(.LC5)
+ 677 005c 0E94 0000 		call _test_assert
+ 678               	.LVL43:
+ 679 0060 8823      		tst r24
+ 680 0062 01F0      		breq .L78
+ 681               	.LVL44:
+ 682               	.L75:
+ 683               	.LBB324:
+ 684               	.LBB325:
+ 685               	.LBB326:
+ 686               	.LBB327:
+ 687               	.LBB328:
+ 688               		.loc 3 333 0
+ 689               	/* #APP */
+ 690               	 ;  333 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 691 0064 7894      		sei
+ 692               	 ;  0 "" 2
+ 693               	/* epilogue start */
+ 694               	/* #NOAPP */
+ 695               	.LBE328:
+ 696               	.LBE327:
+ 697               	.LBE326:
+ 698               	.LBE325:
+ 699               	.LBE324:
+ 249:ChibiOS/test/nil/test_sequence_002.c **** 
+ 700               		.loc 1 249 0
+ 701 0066 DF91      		pop r29
+ 702 0068 CF91      		pop r28
+ 703 006a 1F91      		pop r17
+ 704 006c 0F91      		pop r16
+ 705 006e 0895      		ret
+ 706               	.LVL45:
+ 707               	.L77:
+ 229:ChibiOS/test/nil/test_sequence_002.c ****                      "wrong counter value");
+ 708               		.loc 1 229 0
+ 709 0070 80E0      		ldi r24,0
+ 710 0072 60E0      		ldi r22,lo8(.LC5)
+ 711 0074 70E0      		ldi r23,hi8(.LC5)
+ 712 0076 0E94 0000 		call _test_assert
+ 713               	.LVL46:
+ 714 007a 8111      		cpse r24,__zero_reg__
+ 715 007c 00C0      		rjmp .L75
+ 716               	.L78:
+ 717               	.LBB340:
+ 718               	.LBB341:
+ 719               	.LBB342:
+ 720               		.loc 3 333 0
+ 721               	/* #APP */
+ 722               	 ;  333 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 723 007e 7894      		sei
+ 724               	 ;  0 "" 2
+ 725               	/* #NOAPP */
+ 726               	.LBE342:
+ 727               	.LBE341:
+ 728               	.LBE340:
+ 231:ChibiOS/test/nil/test_sequence_002.c ****                 "wrong timeout message");
+ 729               		.loc 1 231 0
+ 730 0080 81E0      		ldi r24,lo8(1)
+ 731 0082 0F3F      		cpi r16,-1
+ 732 0084 1F4F      		sbci r17,-1
+ 733 0086 01F0      		breq .L58
+ 734 0088 80E0      		ldi r24,0
+ 735               	.L58:
+ 736 008a 60E0      		ldi r22,lo8(.LC6)
+ 737 008c 70E0      		ldi r23,hi8(.LC6)
+ 738 008e 0E94 0000 		call _test_assert
+ 739               	.LVL47:
+ 740 0092 8111      		cpse r24,__zero_reg__
+ 741 0094 00C0      		rjmp .L53
+ 742               	.LBB343:
+ 743               	.LBB338:
+ 237:ChibiOS/test/nil/test_sequence_002.c ****   {
+ 744               		.loc 1 237 0
+ 745 0096 82E0      		ldi r24,lo8(2)
+ 746 0098 90E0      		ldi r25,0
+ 747 009a 9093 0000 		sts test_step+1,r25
+ 748 009e 8093 0000 		sts test_step,r24
+ 749               	.LBB329:
+ 750               	.LBB330:
+ 751               	.LBB331:
+ 752               		.loc 2 92 0
+ 753 00a2 C091 8400 		lds r28,132
+ 754 00a6 D091 8500 		lds r29,132+1
+ 755               	.LBE331:
+ 756               	.LBE330:
+ 757               	.LBE329:
+ 240:ChibiOS/test/nil/test_sequence_002.c ****     test_assert_time_window(time + MS2ST(1000),
+ 758               		.loc 1 240 0
+ 759 00aa 68E0      		ldi r22,lo8(8)
+ 760 00ac 7DE3      		ldi r23,lo8(61)
+ 761 00ae 80E0      		ldi r24,lo8(sem1)
+ 762 00b0 90E0      		ldi r25,hi8(sem1)
+ 763 00b2 0E94 0000 		call chSemWaitTimeout
+ 764               	.LVL48:
+ 765 00b6 8C01      		movw r16,r24
+ 766               	.LVL49:
+ 241:ChibiOS/test/nil/test_sequence_002.c ****                             time + MS2ST(1000) + 1,
+ 767               		.loc 1 241 0
+ 768 00b8 BE01      		movw r22,r28
+ 769 00ba 675F      		subi r22,-9
+ 770 00bc 724C      		sbci r23,-62
+ 771 00be 40E0      		ldi r20,lo8(.LC2)
+ 772 00c0 50E0      		ldi r21,hi8(.LC2)
+ 773 00c2 CE01      		movw r24,r28
+ 774 00c4 885F      		subi r24,-8
+ 775 00c6 924C      		sbci r25,-62
+ 776 00c8 0E94 0000 		call _test_assert_time_window
+ 777               	.LVL50:
+ 778 00cc 8111      		cpse r24,__zero_reg__
+ 779 00ce 00C0      		rjmp .L53
+ 780               	.LBB332:
+ 781               	.LBB333:
+ 782               	.LBB334:
+ 325:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 783               		.loc 3 325 0
+ 784               	/* #APP */
+ 785               	 ;  325 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 786 00d0 F894      		cli
+ 787               	 ;  0 "" 2
+ 788               	/* #NOAPP */
+ 789               	.LBE334:
+ 790               	.LBE333:
+ 791               	.LBE332:
+ 244:ChibiOS/test/nil/test_sequence_002.c ****                      "wrong counter value");
+ 792               		.loc 1 244 0
+ 793 00d2 9091 0000 		lds r25,sem1
+ 794 00d6 81E0      		ldi r24,lo8(1)
+ 795 00d8 9111      		cpse r25,__zero_reg__
+ 796 00da 80E0      		ldi r24,0
+ 797               	.L60:
+ 798 00dc 60E0      		ldi r22,lo8(.LC5)
+ 799 00de 70E0      		ldi r23,hi8(.LC5)
+ 800 00e0 0E94 0000 		call _test_assert
+ 801               	.LVL51:
+ 802 00e4 8111      		cpse r24,__zero_reg__
+ 803 00e6 00C0      		rjmp .L75
+ 804               	.LBB335:
+ 805               	.LBB336:
+ 806               	.LBB337:
+ 807               		.loc 3 333 0
+ 808               	/* #APP */
+ 809               	 ;  333 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 810 00e8 7894      		sei
+ 811               	 ;  0 "" 2
+ 812               	/* #NOAPP */
+ 813               	.LBE337:
+ 814               	.LBE336:
+ 815               	.LBE335:
+ 246:ChibiOS/test/nil/test_sequence_002.c ****                 "wrong timeout message");
+ 816               		.loc 1 246 0
+ 817 00ea 81E0      		ldi r24,lo8(1)
+ 818 00ec 0F3F      		cpi r16,-1
+ 819 00ee 1F4F      		sbci r17,-1
+ 820 00f0 01F0      		breq .L62
+ 821 00f2 80E0      		ldi r24,0
+ 822               	.L62:
+ 823 00f4 60E0      		ldi r22,lo8(.LC6)
+ 824 00f6 70E0      		ldi r23,hi8(.LC6)
+ 825               	/* epilogue start */
+ 826               	.LBE338:
+ 827               	.LBE343:
+ 249:ChibiOS/test/nil/test_sequence_002.c **** 
+ 828               		.loc 1 249 0
+ 829 00f8 DF91      		pop r29
+ 830 00fa CF91      		pop r28
+ 831 00fc 1F91      		pop r17
+ 832 00fe 0F91      		pop r16
+ 833               	.LVL52:
+ 834               	.LBB344:
+ 835               	.LBB339:
+ 246:ChibiOS/test/nil/test_sequence_002.c ****                 "wrong timeout message");
+ 836               		.loc 1 246 0
+ 837 0100 0C94 0000 		jmp _test_assert
+ 838               	.LVL53:
+ 839               	.LBE339:
+ 840               	.LBE344:
+ 841               		.cfi_endproc
+ 842               	.LFE61:
+ 844               		.section	.text.test_002_002_execute,"ax",@progbits
+ 846               	test_002_002_execute:
+ 847               	.LFB58:
+ 151:ChibiOS/test/nil/test_sequence_002.c **** 
+ 848               		.loc 1 151 0
+ 849               		.cfi_startproc
+ 850 0000 CF93      		push r28
+ 851               	.LCFI11:
+ 852               		.cfi_def_cfa_offset 3
+ 853               		.cfi_offset 28, -2
+ 854 0002 DF93      		push r29
+ 855               	.LCFI12:
+ 856               		.cfi_def_cfa_offset 4
+ 857               		.cfi_offset 29, -3
+ 858               	/* prologue: function */
+ 859               	/* frame size = 0 */
+ 860               	/* stack size = 2 */
+ 861               	.L__stack_usage = 2
+ 156:ChibiOS/test/nil/test_sequence_002.c ****   {
+ 862               		.loc 1 156 0
+ 863 0004 81E0      		ldi r24,lo8(1)
+ 864 0006 90E0      		ldi r25,0
+ 865 0008 9093 0000 		sts test_step+1,r25
+ 866 000c 8093 0000 		sts test_step,r24
+ 867               	.LBB377:
+ 160:ChibiOS/test/nil/test_sequence_002.c ****     test_assert_lock(chSemGetCounterI(&gsem1) == 0,
+ 868               		.loc 1 160 0
+ 869 0010 60E0      		ldi r22,0
+ 870 0012 70E0      		ldi r23,0
+ 871 0014 80E0      		ldi r24,lo8(gsem1)
+ 872 0016 90E0      		ldi r25,hi8(gsem1)
+ 873 0018 0E94 0000 		call chSemWaitTimeout
+ 874               	.LVL54:
+ 875 001c EC01      		movw r28,r24
+ 876               	.LVL55:
+ 877               	.LBB378:
+ 878               	.LBB379:
+ 879               	.LBB380:
+ 325:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 880               		.loc 3 325 0
+ 881               	/* #APP */
+ 882               	 ;  325 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 883 001e F894      		cli
+ 884               	 ;  0 "" 2
+ 885               	/* #NOAPP */
+ 886               	.LBE380:
+ 887               	.LBE379:
+ 888               	.LBE378:
+ 161:ChibiOS/test/nil/test_sequence_002.c ****                      "wrong counter value");
+ 889               		.loc 1 161 0
+ 890 0020 9091 0000 		lds r25,gsem1
+ 891 0024 81E0      		ldi r24,lo8(1)
+ 892               	.LVL56:
+ 893 0026 9111      		cpse r25,__zero_reg__
+ 894 0028 80E0      		ldi r24,0
+ 895               	.L80:
+ 896 002a 60E0      		ldi r22,lo8(.LC5)
+ 897 002c 70E0      		ldi r23,hi8(.LC5)
+ 898 002e 0E94 0000 		call _test_assert
+ 899               	.LVL57:
+ 900 0032 8823      		tst r24
+ 901 0034 01F0      		breq .L100
+ 902               	.LVL58:
+ 903               	.L99:
+ 904               	.LBE377:
+ 905               	.LBB384:
+ 906               	.LBB385:
+ 907               	.LBB386:
+ 908               	.LBB387:
+ 909               	.LBB388:
+ 910               	.LBB389:
+ 911               		.loc 3 333 0
+ 912               	/* #APP */
+ 913               	 ;  333 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 914 0036 7894      		sei
+ 915               	 ;  0 "" 2
+ 916               	/* #NOAPP */
+ 917               	.L79:
+ 918               	/* epilogue start */
+ 919               	.LBE389:
+ 920               	.LBE388:
+ 921               	.LBE387:
+ 922               	.LBE386:
+ 923               	.LBE385:
+ 924               	.LBE384:
+ 180:ChibiOS/test/nil/test_sequence_002.c **** 
+ 925               		.loc 1 180 0
+ 926 0038 DF91      		pop r29
+ 927 003a CF91      		pop r28
+ 928 003c 0895      		ret
+ 929               	.LVL59:
+ 930               	.L100:
+ 931               	.LBB400:
+ 932               	.LBB381:
+ 933               	.LBB382:
+ 934               	.LBB383:
+ 935               		.loc 3 333 0
+ 936               	/* #APP */
+ 937               	 ;  333 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 938 003e 7894      		sei
+ 939               	 ;  0 "" 2
+ 940               	/* #NOAPP */
+ 941               	.LBE383:
+ 942               	.LBE382:
+ 943               	.LBE381:
+ 163:ChibiOS/test/nil/test_sequence_002.c ****                 "wrong returned message");
+ 944               		.loc 1 163 0
+ 945 0040 81E0      		ldi r24,lo8(1)
+ 946 0042 CD2B      		or r28,r29
+ 947 0044 01F4      		brne .L101
+ 948 0046 60E0      		ldi r22,lo8(.LC4)
+ 949 0048 70E0      		ldi r23,hi8(.LC4)
+ 950 004a 0E94 0000 		call _test_assert
+ 951               	.LVL60:
+ 952 004e 8111      		cpse r24,__zero_reg__
+ 953 0050 00C0      		rjmp .L79
+ 954               	.L102:
+ 955               	.LBE400:
+ 956               	.LBB401:
+ 957               	.LBB398:
+ 170:ChibiOS/test/nil/test_sequence_002.c ****   {
+ 958               		.loc 1 170 0
+ 959 0052 82E0      		ldi r24,lo8(2)
+ 960 0054 90E0      		ldi r25,0
+ 961 0056 9093 0000 		sts test_step+1,r25
+ 962 005a 8093 0000 		sts test_step,r24
+ 963               	.LBB396:
+ 174:ChibiOS/test/nil/test_sequence_002.c ****     test_assert_lock(chSemGetCounterI(&gsem2) == 0,
+ 964               		.loc 1 174 0
+ 965 005e 60E0      		ldi r22,0
+ 966 0060 70E0      		ldi r23,0
+ 967 0062 80E0      		ldi r24,lo8(gsem2)
+ 968 0064 90E0      		ldi r25,hi8(gsem2)
+ 969 0066 0E94 0000 		call chSemWaitTimeout
+ 970               	.LVL61:
+ 971 006a EC01      		movw r28,r24
+ 972               	.LVL62:
+ 973               	.LBB390:
+ 974               	.LBB391:
+ 975               	.LBB392:
+ 325:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 976               		.loc 3 325 0
+ 977               	/* #APP */
+ 978               	 ;  325 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 979 006c F894      		cli
+ 980               	 ;  0 "" 2
+ 981               	/* #NOAPP */
+ 982               	.LBE392:
+ 983               	.LBE391:
+ 984               	.LBE390:
+ 175:ChibiOS/test/nil/test_sequence_002.c ****                      "wrong counter value");
+ 985               		.loc 1 175 0
+ 986 006e 9091 0000 		lds r25,gsem2
+ 987 0072 81E0      		ldi r24,lo8(1)
+ 988               	.LVL63:
+ 989 0074 9111      		cpse r25,__zero_reg__
+ 990 0076 80E0      		ldi r24,0
+ 991               	.L84:
+ 992 0078 60E0      		ldi r22,lo8(.LC5)
+ 993 007a 70E0      		ldi r23,hi8(.LC5)
+ 994 007c 0E94 0000 		call _test_assert
+ 995               	.LVL64:
+ 996 0080 8111      		cpse r24,__zero_reg__
+ 997 0082 00C0      		rjmp .L99
+ 998               	.LBB393:
+ 999               	.LBB394:
+ 1000               	.LBB395:
+ 1001               		.loc 3 333 0
+ 1002               	/* #APP */
+ 1003               	 ;  333 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 1004 0084 7894      		sei
+ 1005               	 ;  0 "" 2
+ 1006               	/* #NOAPP */
+ 1007               	.LBE395:
+ 1008               	.LBE394:
+ 1009               	.LBE393:
+ 177:ChibiOS/test/nil/test_sequence_002.c ****                 "wrong returned message");
+ 1010               		.loc 1 177 0
+ 1011 0086 81E0      		ldi r24,lo8(1)
+ 1012 0088 2296      		adiw r28,2
+ 1013 008a 01F0      		breq .L86
+ 1014 008c 80E0      		ldi r24,0
+ 1015               	.L86:
+ 1016 008e 60E0      		ldi r22,lo8(.LC4)
+ 1017 0090 70E0      		ldi r23,hi8(.LC4)
+ 1018               	/* epilogue start */
+ 1019               	.LBE396:
+ 1020               	.LBE398:
+ 1021               	.LBE401:
+ 180:ChibiOS/test/nil/test_sequence_002.c **** 
+ 1022               		.loc 1 180 0
+ 1023 0092 DF91      		pop r29
+ 1024 0094 CF91      		pop r28
+ 1025               	.LVL65:
+ 1026               	.LBB402:
+ 1027               	.LBB399:
+ 1028               	.LBB397:
+ 177:ChibiOS/test/nil/test_sequence_002.c ****                 "wrong returned message");
+ 1029               		.loc 1 177 0
+ 1030 0096 0C94 0000 		jmp _test_assert
+ 1031               	.LVL66:
+ 1032               	.L101:
+ 1033               	.LBE397:
+ 1034               	.LBE399:
+ 1035               	.LBE402:
+ 1036               	.LBB403:
+ 163:ChibiOS/test/nil/test_sequence_002.c ****                 "wrong returned message");
+ 1037               		.loc 1 163 0
+ 1038 009a 80E0      		ldi r24,0
+ 1039 009c 60E0      		ldi r22,lo8(.LC4)
+ 1040 009e 70E0      		ldi r23,hi8(.LC4)
+ 1041 00a0 0E94 0000 		call _test_assert
+ 1042               	.LVL67:
+ 1043 00a4 8111      		cpse r24,__zero_reg__
+ 1044 00a6 00C0      		rjmp .L79
+ 1045 00a8 00C0      		rjmp .L102
+ 1046               	.LBE403:
+ 1047               		.cfi_endproc
+ 1048               	.LFE58:
+ 1050               		.section	.text.test_002_001_execute,"ax",@progbits
+ 1052               	test_002_001_execute:
+ 1053               	.LFB55:
+  78:ChibiOS/test/nil/test_sequence_002.c **** 
+ 1054               		.loc 1 78 0
+ 1055               		.cfi_startproc
+ 1056 0000 CF93      		push r28
+ 1057               	.LCFI13:
+ 1058               		.cfi_def_cfa_offset 3
+ 1059               		.cfi_offset 28, -2
+ 1060 0002 DF93      		push r29
+ 1061               	.LCFI14:
+ 1062               		.cfi_def_cfa_offset 4
+ 1063               		.cfi_offset 29, -3
+ 1064               	/* prologue: function */
+ 1065               	/* frame size = 0 */
+ 1066               	/* stack size = 2 */
+ 1067               	.L__stack_usage = 2
+  82:ChibiOS/test/nil/test_sequence_002.c ****   {
+ 1068               		.loc 1 82 0
+ 1069 0004 81E0      		ldi r24,lo8(1)
+ 1070 0006 90E0      		ldi r25,0
+ 1071 0008 9093 0000 		sts test_step+1,r25
+ 1072 000c 8093 0000 		sts test_step,r24
+ 1073               	.LBB450:
+  86:ChibiOS/test/nil/test_sequence_002.c ****     test_assert_lock(chSemGetCounterI(&sem1) == 0,
+ 1074               		.loc 1 86 0
+ 1075 0010 60E0      		ldi r22,0
+ 1076 0012 70E0      		ldi r23,0
+ 1077 0014 80E0      		ldi r24,lo8(sem1)
+ 1078 0016 90E0      		ldi r25,hi8(sem1)
+ 1079 0018 0E94 0000 		call chSemWaitTimeout
+ 1080               	.LVL68:
+ 1081 001c EC01      		movw r28,r24
+ 1082               	.LVL69:
+ 1083               	.LBB451:
+ 1084               	.LBB452:
+ 1085               	.LBB453:
+ 325:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 1086               		.loc 3 325 0
+ 1087               	/* #APP */
+ 1088               	 ;  325 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 1089 001e F894      		cli
+ 1090               	 ;  0 "" 2
+ 1091               	/* #NOAPP */
+ 1092               	.LBE453:
+ 1093               	.LBE452:
+ 1094               	.LBE451:
+  87:ChibiOS/test/nil/test_sequence_002.c ****                      "wrong counter value");
+ 1095               		.loc 1 87 0
+ 1096 0020 9091 0000 		lds r25,sem1
+ 1097 0024 81E0      		ldi r24,lo8(1)
+ 1098               	.LVL70:
+ 1099 0026 9111      		cpse r25,__zero_reg__
+ 1100 0028 80E0      		ldi r24,0
+ 1101               	.L104:
+ 1102 002a 60E0      		ldi r22,lo8(.LC5)
+ 1103 002c 70E0      		ldi r23,hi8(.LC5)
+ 1104 002e 0E94 0000 		call _test_assert
+ 1105               	.LVL71:
+ 1106 0032 8823      		tst r24
+ 1107 0034 01F0      		breq .L124
+ 1108               	.L111:
+ 1109               	.LBE450:
+ 1110               	.LBB457:
+ 1111               	.LBB458:
+ 1112               	.LBB459:
+ 1113               	.LBB460:
+ 1114               	.LBB461:
+ 1115               		.loc 3 333 0
+ 1116               	/* #APP */
+ 1117               	 ;  333 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 1118 0036 7894      		sei
+ 1119               	 ;  0 "" 2
+ 1120               	/* #NOAPP */
+ 1121               	.L103:
+ 1122               	/* epilogue start */
+ 1123               	.LBE461:
+ 1124               	.LBE460:
+ 1125               	.LBE459:
+ 1126               	.LBE458:
+ 1127               	.LBE457:
+ 110:ChibiOS/test/nil/test_sequence_002.c **** 
+ 1128               		.loc 1 110 0
+ 1129 0038 DF91      		pop r29
+ 1130 003a CF91      		pop r28
+ 1131               	.LVL72:
+ 1132 003c 0895      		ret
+ 1133               	.LVL73:
+ 1134               	.L124:
+ 1135               	.LBB469:
+ 1136               	.LBB454:
+ 1137               	.LBB455:
+ 1138               	.LBB456:
+ 1139               		.loc 3 333 0
+ 1140               	/* #APP */
+ 1141               	 ;  333 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 1142 003e 7894      		sei
+ 1143               	 ;  0 "" 2
+ 1144               	/* #NOAPP */
+ 1145               	.LBE456:
+ 1146               	.LBE455:
+ 1147               	.LBE454:
+  89:ChibiOS/test/nil/test_sequence_002.c ****                 "wrong returned message");
+ 1148               		.loc 1 89 0
+ 1149 0040 81E0      		ldi r24,lo8(1)
+ 1150 0042 CD2B      		or r28,r29
+ 1151 0044 01F4      		brne .L125
+ 1152 0046 60E0      		ldi r22,lo8(.LC4)
+ 1153 0048 70E0      		ldi r23,hi8(.LC4)
+ 1154 004a 0E94 0000 		call _test_assert
+ 1155               	.LVL74:
+ 1156 004e 8111      		cpse r24,__zero_reg__
+ 1157 0050 00C0      		rjmp .L103
+ 1158               	.L126:
+ 1159               	.LBE469:
+  95:ChibiOS/test/nil/test_sequence_002.c ****   {
+ 1160               		.loc 1 95 0
+ 1161 0052 82E0      		ldi r24,lo8(2)
+ 1162 0054 90E0      		ldi r25,0
+ 1163 0056 9093 0000 		sts test_step+1,r25
+ 1164 005a 8093 0000 		sts test_step,r24
+  97:ChibiOS/test/nil/test_sequence_002.c ****     test_assert_lock(chSemGetCounterI(&sem1) == 1,
+ 1165               		.loc 1 97 0
+ 1166 005e 80E0      		ldi r24,lo8(sem1)
+ 1167 0060 90E0      		ldi r25,hi8(sem1)
+ 1168 0062 0E94 0000 		call chSemSignal
+ 1169               	.LVL75:
+ 1170               	.LBB470:
+ 1171               	.LBB471:
+ 1172               	.LBB472:
+ 325:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 1173               		.loc 3 325 0
+ 1174               	/* #APP */
+ 1175               	 ;  325 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 1176 0066 F894      		cli
+ 1177               	 ;  0 "" 2
+ 1178               	/* #NOAPP */
+ 1179               	.LBE472:
+ 1180               	.LBE471:
+ 1181               	.LBE470:
+  98:ChibiOS/test/nil/test_sequence_002.c ****                      "wrong counter value");
+ 1182               		.loc 1 98 0
+ 1183 0068 9091 0000 		lds r25,sem1
+ 1184 006c 81E0      		ldi r24,lo8(1)
+ 1185 006e 9130      		cpi r25,lo8(1)
+ 1186 0070 01F0      		breq .L108
+ 1187 0072 80E0      		ldi r24,0
+ 1188               	.L108:
+ 1189 0074 60E0      		ldi r22,lo8(.LC5)
+ 1190 0076 70E0      		ldi r23,hi8(.LC5)
+ 1191 0078 0E94 0000 		call _test_assert
+ 1192               	.LVL76:
+ 1193 007c 8111      		cpse r24,__zero_reg__
+ 1194 007e 00C0      		rjmp .L111
+ 1195               	.LBB473:
+ 1196               	.LBB468:
+ 1197               	.LBB462:
+ 1198               	.LBB463:
+ 1199               	.LBB464:
+ 1200               		.loc 3 333 0
+ 1201               	/* #APP */
+ 1202               	 ;  333 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 1203 0080 7894      		sei
+ 1204               	 ;  0 "" 2
+ 1205               	/* #NOAPP */
+ 1206               	.LBE464:
+ 1207               	.LBE463:
+ 1208               	.LBE462:
+ 104:ChibiOS/test/nil/test_sequence_002.c ****   {
+ 1209               		.loc 1 104 0
+ 1210 0082 83E0      		ldi r24,lo8(3)
+ 1211 0084 90E0      		ldi r25,0
+ 1212 0086 9093 0000 		sts test_step+1,r25
+ 1213 008a 8093 0000 		sts test_step,r24
+ 106:ChibiOS/test/nil/test_sequence_002.c ****     test_assert_lock(chSemGetCounterI(&sem1) == 2,
+ 1214               		.loc 1 106 0
+ 1215 008e 62E0      		ldi r22,lo8(2)
+ 1216 0090 80E0      		ldi r24,lo8(sem1)
+ 1217 0092 90E0      		ldi r25,hi8(sem1)
+ 1218 0094 0E94 0000 		call chSemReset
+ 1219               	.LVL77:
+ 1220               	.LBB465:
+ 1221               	.LBB466:
+ 1222               	.LBB467:
+ 325:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 1223               		.loc 3 325 0
+ 1224               	/* #APP */
+ 1225               	 ;  325 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 1226 0098 F894      		cli
+ 1227               	 ;  0 "" 2
+ 1228               	/* #NOAPP */
+ 1229               	.LBE467:
+ 1230               	.LBE466:
+ 1231               	.LBE465:
+ 107:ChibiOS/test/nil/test_sequence_002.c ****                      "wrong counter value");
+ 1232               		.loc 1 107 0
+ 1233 009a 9091 0000 		lds r25,sem1
+ 1234 009e 81E0      		ldi r24,lo8(1)
+ 1235 00a0 9230      		cpi r25,lo8(2)
+ 1236 00a2 01F0      		breq .L110
+ 1237 00a4 80E0      		ldi r24,0
+ 1238               	.L110:
+ 1239 00a6 60E0      		ldi r22,lo8(.LC5)
+ 1240 00a8 70E0      		ldi r23,hi8(.LC5)
+ 1241 00aa 0E94 0000 		call _test_assert
+ 1242               	.LVL78:
+ 1243 00ae 00C0      		rjmp .L111
+ 1244               	.L125:
+ 1245               	.LBE468:
+ 1246               	.LBE473:
+ 1247               	.LBB474:
+  89:ChibiOS/test/nil/test_sequence_002.c ****                 "wrong returned message");
+ 1248               		.loc 1 89 0
+ 1249 00b0 80E0      		ldi r24,0
+ 1250 00b2 60E0      		ldi r22,lo8(.LC4)
+ 1251 00b4 70E0      		ldi r23,hi8(.LC4)
+ 1252 00b6 0E94 0000 		call _test_assert
+ 1253               	.LVL79:
+ 1254 00ba 8111      		cpse r24,__zero_reg__
+ 1255 00bc 00C0      		rjmp .L103
+ 1256 00be 00C0      		rjmp .L126
+ 1257               	.LBE474:
+ 1258               		.cfi_endproc
+ 1259               	.LFE55:
+ 1261               	.global	test_sequence_002
+ 1262               		.section	.rodata.test_sequence_002,"a",@progbits
+ 1265               	test_sequence_002:
+ 1266 0000 0000      		.word	test_002_001
+ 1267 0002 0000      		.word	test_002_002
+ 1268 0004 0000      		.word	test_002_003
+ 1269 0006 0000      		.word	test_002_004
+ 1270 0008 0000      		.word	test_002_005
+ 1271 000a 0000      		.word	0
+ 1272               		.section	.rodata.str1.1
+ 1273               	.LC7:
+ 1274 0079 6576 656E 		.string	"events functionality"
+ 1274      7473 2066 
+ 1274      756E 6374 
+ 1274      696F 6E61 
+ 1274      6C69 7479 
+ 1275               		.section	.rodata.test_002_005,"a",@progbits
+ 1278               	test_002_005:
+ 1279 0000 0000      		.word	.LC7
+ 1280 0002 0000      		.word	gs(test_002_005_setup)
+ 1281 0004 0000      		.word	0
+ 1282 0006 0000      		.word	gs(test_002_005_execute)
+ 1283               		.section	.rodata.str1.1
+ 1284               	.LC8:
+ 1285 008e 7375 7370 		.string	"suspend and resume functionality"
+ 1285      656E 6420 
+ 1285      616E 6420 
+ 1285      7265 7375 
+ 1285      6D65 2066 
+ 1286               		.section	.rodata.test_002_004,"a",@progbits
+ 1289               	test_002_004:
+ 1290 0000 0000      		.word	.LC8
+ 1291 0002 0000      		.word	gs(test_002_004_setup)
+ 1292 0004 0000      		.word	0
+ 1293 0006 0000      		.word	gs(test_002_004_execute)
+ 1294               		.section	.rodata.str1.1
+ 1295               	.LC9:
+ 1296 00af 7365 6D61 		.string	"semaphores timeout"
+ 1296      7068 6F72 
+ 1296      6573 2074 
+ 1296      696D 656F 
+ 1296      7574 00
+ 1297               		.section	.rodata.test_002_003,"a",@progbits
+ 1300               	test_002_003:
+ 1301 0000 0000      		.word	.LC9
+ 1302 0002 0000      		.word	gs(test_002_003_setup)
+ 1303 0004 0000      		.word	gs(test_002_003_teardown)
+ 1304 0006 0000      		.word	gs(test_002_003_execute)
+ 1305               		.section	.rodata.str1.1
+ 1306               	.LC10:
+ 1307 00c2 7365 6D61 		.string	"semaphore primitives, with state change"
+ 1307      7068 6F72 
+ 1307      6520 7072 
+ 1307      696D 6974 
+ 1307      6976 6573 
+ 1308               		.section	.rodata.test_002_002,"a",@progbits
+ 1311               	test_002_002:
+ 1312 0000 0000      		.word	.LC10
+ 1313 0002 0000      		.word	gs(test_002_002_setup)
+ 1314 0004 0000      		.word	gs(test_002_002_teardown)
+ 1315 0006 0000      		.word	gs(test_002_002_execute)
+ 1316               		.section	.rodata.str1.1
+ 1317               	.LC11:
+ 1318 00ea 7365 6D61 		.string	"semaphore primitives, no state change"
+ 1318      7068 6F72 
+ 1318      6520 7072 
+ 1318      696D 6974 
+ 1318      6976 6573 
+ 1319               		.section	.rodata.test_002_001,"a",@progbits
+ 1322               	test_002_001:
+ 1323 0000 0000      		.word	.LC11
+ 1324 0002 0000      		.word	gs(test_002_001_setup)
+ 1325 0004 0000      		.word	gs(test_002_001_teardown)
+ 1326 0006 0000      		.word	gs(test_002_001_execute)
+ 1327               		.section	.bss.tr1,"aw",@nobits
+ 1330               	tr1:
+ 1331 0000 0000      		.zero	2
+ 1332               		.section	.bss.sem1,"aw",@nobits
+ 1335               	sem1:
+ 1336 0000 00        		.zero	1
+ 1337               		.text
+ 1338               	.Letext0:
+ 1339               		.file 4 "c:\\program files (x86)\\atmel\\studio\\7.0\\toolchain\\avr8\\avr8-gnu-toolchain\\avr\\in
+ 1340               		.file 5 "ChibiOS/os/nil/include/nil.h"
+ 1341               		.file 6 "ChibiOS/os/nil/ports/AVR/compilers/GCC/niltypes.h"
+ 1342               		.file 7 "ChibiOS/test/lib/ch_test.h"
+ 1343               		.file 8 "ChibiOS/os/nil/ports/AVR/nilcore_timer.h"
+ 1344               		.file 9 "ChibiOS/os/hal/osal/nil/osal.h"
+ 1345               		.file 10 "ChibiOS/test/nil/test_root.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 test_sequence_002.c
+C:\Users\Noah\AppData\Local\Temp\ccDOSAj7.s:2      *ABS*:0000003e __SP_H__
+C:\Users\Noah\AppData\Local\Temp\ccDOSAj7.s:3      *ABS*:0000003d __SP_L__
+C:\Users\Noah\AppData\Local\Temp\ccDOSAj7.s:4      *ABS*:0000003f __SREG__
+C:\Users\Noah\AppData\Local\Temp\ccDOSAj7.s:5      *ABS*:00000000 __tmp_reg__
+C:\Users\Noah\AppData\Local\Temp\ccDOSAj7.s:6      *ABS*:00000001 __zero_reg__
+C:\Users\Noah\AppData\Local\Temp\ccDOSAj7.s:12     .text.test_002_001_setup:00000000 test_002_001_setup
+C:\Users\Noah\AppData\Local\Temp\ccDOSAj7.s:1335   .bss.sem1:00000000 sem1
+C:\Users\Noah\AppData\Local\Temp\ccDOSAj7.s:30     .text.test_002_002_setup:00000000 test_002_002_setup
+C:\Users\Noah\AppData\Local\Temp\ccDOSAj7.s:46     .text.test_002_003_setup:00000000 test_002_003_setup
+C:\Users\Noah\AppData\Local\Temp\ccDOSAj7.s:62     .text.test_002_004_setup:00000000 test_002_004_setup
+C:\Users\Noah\AppData\Local\Temp\ccDOSAj7.s:1330   .bss.tr1:00000000 tr1
+C:\Users\Noah\AppData\Local\Temp\ccDOSAj7.s:79     .text.test_002_005_setup:00000000 test_002_005_setup
+C:\Users\Noah\AppData\Local\Temp\ccDOSAj7.s:95     .text.test_002_003_teardown:00000000 test_002_003_teardown
+C:\Users\Noah\AppData\Local\Temp\ccDOSAj7.s:114    .text.test_002_002_teardown:00000000 test_002_002_teardown
+C:\Users\Noah\AppData\Local\Temp\ccDOSAj7.s:133    .text.test_002_001_teardown:00000000 test_002_001_teardown
+C:\Users\Noah\AppData\Local\Temp\ccDOSAj7.s:159    .text.test_002_005_execute:00000000 test_002_005_execute
+C:\Users\Noah\AppData\Local\Temp\ccDOSAj7.s:364    .text.test_002_004_execute:00000000 test_002_004_execute
+C:\Users\Noah\AppData\Local\Temp\ccDOSAj7.s:587    .text.test_002_003_execute:00000000 test_002_003_execute
+C:\Users\Noah\AppData\Local\Temp\ccDOSAj7.s:846    .text.test_002_002_execute:00000000 test_002_002_execute
+C:\Users\Noah\AppData\Local\Temp\ccDOSAj7.s:1052   .text.test_002_001_execute:00000000 test_002_001_execute
+C:\Users\Noah\AppData\Local\Temp\ccDOSAj7.s:1265   .rodata.test_sequence_002:00000000 test_sequence_002
+C:\Users\Noah\AppData\Local\Temp\ccDOSAj7.s:1322   .rodata.test_002_001:00000000 test_002_001
+C:\Users\Noah\AppData\Local\Temp\ccDOSAj7.s:1311   .rodata.test_002_002:00000000 test_002_002
+C:\Users\Noah\AppData\Local\Temp\ccDOSAj7.s:1300   .rodata.test_002_003:00000000 test_002_003
+C:\Users\Noah\AppData\Local\Temp\ccDOSAj7.s:1289   .rodata.test_002_004:00000000 test_002_004
+C:\Users\Noah\AppData\Local\Temp\ccDOSAj7.s:1278   .rodata.test_002_005:00000000 test_002_005
+
+UNDEFINED SYMBOLS
+chSemReset
+test_step
+nil
+chEvtSignal
+chEvtWaitAnyTimeout
+_test_assert
+_test_assert_time_window
+gtr1
+chThdSuspendTimeoutS
+chSemWaitTimeout
+gsem1
+gsem2
+chSemSignal
+__do_copy_data
+__do_clear_bss

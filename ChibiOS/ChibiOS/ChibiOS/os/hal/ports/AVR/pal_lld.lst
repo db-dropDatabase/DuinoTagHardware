@@ -1,0 +1,289 @@
+   1               		.file	"pal_lld.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               		.section	.text._pal_lld_init,"ax",@progbits
+  11               	.global	_pal_lld_init
+  13               	_pal_lld_init:
+  14               	.LFB53:
+  15               		.file 1 "ChibiOS/os/hal/ports/AVR/pal_lld.c"
+   1:ChibiOS/os/hal/ports/AVR/pal_lld.c **** /*
+   2:ChibiOS/os/hal/ports/AVR/pal_lld.c ****     ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio
+   3:ChibiOS/os/hal/ports/AVR/pal_lld.c **** 
+   4:ChibiOS/os/hal/ports/AVR/pal_lld.c ****     Licensed under the Apache License, Version 2.0 (the "License");
+   5:ChibiOS/os/hal/ports/AVR/pal_lld.c ****     you may not use this file except in compliance with the License.
+   6:ChibiOS/os/hal/ports/AVR/pal_lld.c ****     You may obtain a copy of the License at
+   7:ChibiOS/os/hal/ports/AVR/pal_lld.c **** 
+   8:ChibiOS/os/hal/ports/AVR/pal_lld.c ****         http://www.apache.org/licenses/LICENSE-2.0
+   9:ChibiOS/os/hal/ports/AVR/pal_lld.c **** 
+  10:ChibiOS/os/hal/ports/AVR/pal_lld.c ****     Unless required by applicable law or agreed to in writing, software
+  11:ChibiOS/os/hal/ports/AVR/pal_lld.c ****     distributed under the License is distributed on an "AS IS" BASIS,
+  12:ChibiOS/os/hal/ports/AVR/pal_lld.c ****     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  13:ChibiOS/os/hal/ports/AVR/pal_lld.c ****     See the License for the specific language governing permissions and
+  14:ChibiOS/os/hal/ports/AVR/pal_lld.c ****     limitations under the License.
+  15:ChibiOS/os/hal/ports/AVR/pal_lld.c **** */
+  16:ChibiOS/os/hal/ports/AVR/pal_lld.c **** 
+  17:ChibiOS/os/hal/ports/AVR/pal_lld.c **** /**
+  18:ChibiOS/os/hal/ports/AVR/pal_lld.c ****  * @file    AVR/pal_lld.c
+  19:ChibiOS/os/hal/ports/AVR/pal_lld.c ****  * @brief   AVR GPIO low level driver code.
+  20:ChibiOS/os/hal/ports/AVR/pal_lld.c ****  *
+  21:ChibiOS/os/hal/ports/AVR/pal_lld.c ****  * @addtogroup PAL
+  22:ChibiOS/os/hal/ports/AVR/pal_lld.c ****  * @{
+  23:ChibiOS/os/hal/ports/AVR/pal_lld.c ****  */
+  24:ChibiOS/os/hal/ports/AVR/pal_lld.c **** 
+  25:ChibiOS/os/hal/ports/AVR/pal_lld.c **** #include "hal.h"
+  26:ChibiOS/os/hal/ports/AVR/pal_lld.c **** 
+  27:ChibiOS/os/hal/ports/AVR/pal_lld.c **** #if HAL_USE_PAL || defined(__DOXYGEN__)
+  28:ChibiOS/os/hal/ports/AVR/pal_lld.c **** 
+  29:ChibiOS/os/hal/ports/AVR/pal_lld.c **** /*===========================================================================*/
+  30:ChibiOS/os/hal/ports/AVR/pal_lld.c **** /* Driver exported variables.                                                */
+  31:ChibiOS/os/hal/ports/AVR/pal_lld.c **** /*===========================================================================*/
+  32:ChibiOS/os/hal/ports/AVR/pal_lld.c **** 
+  33:ChibiOS/os/hal/ports/AVR/pal_lld.c **** /*===========================================================================*/
+  34:ChibiOS/os/hal/ports/AVR/pal_lld.c **** /* Driver local variables and types.                                         */
+  35:ChibiOS/os/hal/ports/AVR/pal_lld.c **** /*===========================================================================*/
+  36:ChibiOS/os/hal/ports/AVR/pal_lld.c **** 
+  37:ChibiOS/os/hal/ports/AVR/pal_lld.c **** /*===========================================================================*/
+  38:ChibiOS/os/hal/ports/AVR/pal_lld.c **** /* Driver local functions.                                                   */
+  39:ChibiOS/os/hal/ports/AVR/pal_lld.c **** /*===========================================================================*/
+  40:ChibiOS/os/hal/ports/AVR/pal_lld.c **** 
+  41:ChibiOS/os/hal/ports/AVR/pal_lld.c **** /*===========================================================================*/
+  42:ChibiOS/os/hal/ports/AVR/pal_lld.c **** /* Driver interrupt handlers.                                                */
+  43:ChibiOS/os/hal/ports/AVR/pal_lld.c **** /*===========================================================================*/
+  44:ChibiOS/os/hal/ports/AVR/pal_lld.c **** 
+  45:ChibiOS/os/hal/ports/AVR/pal_lld.c **** /*===========================================================================*/
+  46:ChibiOS/os/hal/ports/AVR/pal_lld.c **** /* Driver exported functions.                                                */
+  47:ChibiOS/os/hal/ports/AVR/pal_lld.c **** /*===========================================================================*/
+  48:ChibiOS/os/hal/ports/AVR/pal_lld.c **** 
+  49:ChibiOS/os/hal/ports/AVR/pal_lld.c **** /**
+  50:ChibiOS/os/hal/ports/AVR/pal_lld.c ****  * @brief   AVR GPIO ports configuration.
+  51:ChibiOS/os/hal/ports/AVR/pal_lld.c ****  * @details GPIO registers initialization.
+  52:ChibiOS/os/hal/ports/AVR/pal_lld.c ****  *
+  53:ChibiOS/os/hal/ports/AVR/pal_lld.c ****  * @param[in] config    the AVR ports configuration
+  54:ChibiOS/os/hal/ports/AVR/pal_lld.c ****  *
+  55:ChibiOS/os/hal/ports/AVR/pal_lld.c ****  * @notapi
+  56:ChibiOS/os/hal/ports/AVR/pal_lld.c ****  */
+  57:ChibiOS/os/hal/ports/AVR/pal_lld.c **** void _pal_lld_init(const PALConfig *config) {
+  16               		.loc 1 57 0
+  17               		.cfi_startproc
+  18               	.LVL0:
+  19               	/* prologue: function */
+  20               	/* frame size = 0 */
+  21               	/* stack size = 0 */
+  22               	.L__stack_usage = 0
+  23 0000 FC01      		movw r30,r24
+  58:ChibiOS/os/hal/ports/AVR/pal_lld.c **** 
+  59:ChibiOS/os/hal/ports/AVR/pal_lld.c **** #if defined(PORTA) || defined(__DOXYGEN__)
+  60:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   PORTA = config->porta.out;
+  61:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   DDRA = config->porta.dir;
+  62:ChibiOS/os/hal/ports/AVR/pal_lld.c **** #endif
+  63:ChibiOS/os/hal/ports/AVR/pal_lld.c **** 
+  64:ChibiOS/os/hal/ports/AVR/pal_lld.c **** #if defined(PORTB) || defined(__DOXYGEN__)
+  65:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   PORTB = config->portb.out;
+  24               		.loc 1 65 0
+  25 0002 8081      		ld r24,Z
+  26               	.LVL1:
+  27 0004 85B9      		out 0x5,r24
+  66:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   DDRB = config->portb.dir;
+  28               		.loc 1 66 0
+  29 0006 8181      		ldd r24,Z+1
+  30 0008 84B9      		out 0x4,r24
+  67:ChibiOS/os/hal/ports/AVR/pal_lld.c **** #endif
+  68:ChibiOS/os/hal/ports/AVR/pal_lld.c **** 
+  69:ChibiOS/os/hal/ports/AVR/pal_lld.c **** #if defined(PORTC) || defined(__DOXYGEN__)
+  70:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   PORTC = config->portc.out;
+  31               		.loc 1 70 0
+  32 000a 8281      		ldd r24,Z+2
+  33 000c 88B9      		out 0x8,r24
+  71:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   DDRC = config->portc.dir;
+  34               		.loc 1 71 0
+  35 000e 8381      		ldd r24,Z+3
+  36 0010 87B9      		out 0x7,r24
+  72:ChibiOS/os/hal/ports/AVR/pal_lld.c **** #endif
+  73:ChibiOS/os/hal/ports/AVR/pal_lld.c **** 
+  74:ChibiOS/os/hal/ports/AVR/pal_lld.c **** #if defined(PORTD) || defined(__DOXYGEN__)
+  75:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   PORTD = config->portd.out;
+  37               		.loc 1 75 0
+  38 0012 8481      		ldd r24,Z+4
+  39 0014 8BB9      		out 0xb,r24
+  76:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   DDRD = config->portd.dir;
+  40               		.loc 1 76 0
+  41 0016 8581      		ldd r24,Z+5
+  42 0018 8AB9      		out 0xa,r24
+  43 001a 0895      		ret
+  44               		.cfi_endproc
+  45               	.LFE53:
+  47               		.section	.text._pal_lld_setgroupmode,"ax",@progbits
+  48               	.global	_pal_lld_setgroupmode
+  50               	_pal_lld_setgroupmode:
+  51               	.LFB54:
+  77:ChibiOS/os/hal/ports/AVR/pal_lld.c **** #endif
+  78:ChibiOS/os/hal/ports/AVR/pal_lld.c **** 
+  79:ChibiOS/os/hal/ports/AVR/pal_lld.c **** #if defined(PORTE) || defined(__DOXYGEN__)
+  80:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   PORTE = config->porte.out;
+  81:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   DDRE = config->porte.dir;
+  82:ChibiOS/os/hal/ports/AVR/pal_lld.c **** #endif
+  83:ChibiOS/os/hal/ports/AVR/pal_lld.c **** 
+  84:ChibiOS/os/hal/ports/AVR/pal_lld.c **** #if defined(PORTF) || defined(__DOXYGEN__)
+  85:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   PORTF = config->portf.out;
+  86:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   DDRF = config->portf.dir;
+  87:ChibiOS/os/hal/ports/AVR/pal_lld.c **** #endif
+  88:ChibiOS/os/hal/ports/AVR/pal_lld.c **** 
+  89:ChibiOS/os/hal/ports/AVR/pal_lld.c **** #if defined(PORTG) || defined(__DOXYGEN__)
+  90:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   PORTG = config->portg.out;
+  91:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   DDRG = config->portg.dir;
+  92:ChibiOS/os/hal/ports/AVR/pal_lld.c **** #endif
+  93:ChibiOS/os/hal/ports/AVR/pal_lld.c **** 
+  94:ChibiOS/os/hal/ports/AVR/pal_lld.c **** #if defined(PORTH) || defined(__DOXYGEN__)
+  95:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   PORTH = config->porth.out;
+  96:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   DDRH = config->porth.dir;
+  97:ChibiOS/os/hal/ports/AVR/pal_lld.c **** #endif
+  98:ChibiOS/os/hal/ports/AVR/pal_lld.c **** 
+  99:ChibiOS/os/hal/ports/AVR/pal_lld.c **** #if defined(PORTJ) || defined(__DOXYGEN__)
+ 100:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   PORTJ = config->portj.out;
+ 101:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   DDRJ = config->portj.dir;
+ 102:ChibiOS/os/hal/ports/AVR/pal_lld.c **** #endif
+ 103:ChibiOS/os/hal/ports/AVR/pal_lld.c **** 
+ 104:ChibiOS/os/hal/ports/AVR/pal_lld.c **** #if defined(PORTK) || defined(__DOXYGEN__)
+ 105:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   PORTK = config->portk.out;
+ 106:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   DDRK = config->portk.dir;
+ 107:ChibiOS/os/hal/ports/AVR/pal_lld.c **** #endif
+ 108:ChibiOS/os/hal/ports/AVR/pal_lld.c **** 
+ 109:ChibiOS/os/hal/ports/AVR/pal_lld.c **** #if defined(PORTL) || defined(__DOXYGEN__)
+ 110:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   PORTL = config->portl.out;
+ 111:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   DDRL = config->portl.dir;
+ 112:ChibiOS/os/hal/ports/AVR/pal_lld.c **** #endif
+ 113:ChibiOS/os/hal/ports/AVR/pal_lld.c **** }
+ 114:ChibiOS/os/hal/ports/AVR/pal_lld.c **** 
+ 115:ChibiOS/os/hal/ports/AVR/pal_lld.c **** /**
+ 116:ChibiOS/os/hal/ports/AVR/pal_lld.c ****  * @brief   Pads mode setup.
+ 117:ChibiOS/os/hal/ports/AVR/pal_lld.c ****  * @details This function programs a pads group belonging to the same port
+ 118:ChibiOS/os/hal/ports/AVR/pal_lld.c ****  *          with the specified mode.
+ 119:ChibiOS/os/hal/ports/AVR/pal_lld.c ****  *
+ 120:ChibiOS/os/hal/ports/AVR/pal_lld.c ****  * @param[in] port the port identifier
+ 121:ChibiOS/os/hal/ports/AVR/pal_lld.c ****  * @param[in] mask the group mask
+ 122:ChibiOS/os/hal/ports/AVR/pal_lld.c ****  * @param[in] mode the mode
+ 123:ChibiOS/os/hal/ports/AVR/pal_lld.c ****  *
+ 124:ChibiOS/os/hal/ports/AVR/pal_lld.c ****  * @note This function is not meant to be invoked directly by the application
+ 125:ChibiOS/os/hal/ports/AVR/pal_lld.c ****  *       code.
+ 126:ChibiOS/os/hal/ports/AVR/pal_lld.c ****  * @note @p PAL_MODE_UNCONNECTED is implemented as output as recommended by
+ 127:ChibiOS/os/hal/ports/AVR/pal_lld.c ****  *       the AVR Family User's Guide. Unconnected pads are set to input
+ 128:ChibiOS/os/hal/ports/AVR/pal_lld.c ****  *       with pull-up by default.
+ 129:ChibiOS/os/hal/ports/AVR/pal_lld.c ****  *
+ 130:ChibiOS/os/hal/ports/AVR/pal_lld.c ****  * @notapi
+ 131:ChibiOS/os/hal/ports/AVR/pal_lld.c ****  */
+ 132:ChibiOS/os/hal/ports/AVR/pal_lld.c **** void _pal_lld_setgroupmode(ioportid_t port,
+ 133:ChibiOS/os/hal/ports/AVR/pal_lld.c ****                            ioportmask_t mask,
+ 134:ChibiOS/os/hal/ports/AVR/pal_lld.c ****                            iomode_t mode) {
+  52               		.loc 1 134 0
+  53               		.cfi_startproc
+  54               	.LVL2:
+  55               	/* prologue: function */
+  56               	/* frame size = 0 */
+  57               	/* stack size = 0 */
+  58               	.L__stack_usage = 0
+  59 0000 FC01      		movw r30,r24
+ 135:ChibiOS/os/hal/ports/AVR/pal_lld.c **** 
+ 136:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   switch (mode) {
+  60               		.loc 1 136 0
+  61 0002 4230      		cpi r20,lo8(2)
+  62 0004 01F0      		breq .L4
+  63 0006 00F0      		brlo .L24
+  64 0008 4530      		cpi r20,lo8(5)
+  65 000a 01F0      		breq .L4
+  66 000c 4630      		cpi r20,lo8(6)
+  67 000e 01F4      		brne .L25
+ 137:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   case PAL_MODE_RESET:
+ 138:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   case PAL_MODE_INPUT:
+ 139:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   case PAL_MODE_INPUT_ANALOG:
+ 140:ChibiOS/os/hal/ports/AVR/pal_lld.c ****     port->dir &= ~mask;
+ 141:ChibiOS/os/hal/ports/AVR/pal_lld.c ****     port->out &= ~mask;
+ 142:ChibiOS/os/hal/ports/AVR/pal_lld.c ****     break;
+ 143:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   case PAL_MODE_UNCONNECTED:
+ 144:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   case PAL_MODE_INPUT_PULLUP:
+ 145:ChibiOS/os/hal/ports/AVR/pal_lld.c ****     port->dir &= ~mask;
+ 146:ChibiOS/os/hal/ports/AVR/pal_lld.c ****     port->out |= mask;
+ 147:ChibiOS/os/hal/ports/AVR/pal_lld.c ****     break;
+ 148:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   case PAL_MODE_OUTPUT_PUSHPULL:
+ 149:ChibiOS/os/hal/ports/AVR/pal_lld.c ****     port->dir |= mask;
+  68               		.loc 1 149 0
+  69 0010 8181      		ldd r24,Z+1
+  70               	.LVL3:
+  71 0012 682B      		or r22,r24
+  72               	.LVL4:
+  73 0014 6183      		std Z+1,r22
+  74               	.L2:
+  75 0016 0895      		ret
+  76               	.LVL5:
+  77               	.L25:
+ 136:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   case PAL_MODE_RESET:
+  78               		.loc 1 136 0
+  79 0018 4330      		cpi r20,lo8(3)
+  80 001a 01F4      		brne .L2
+  81               	.L6:
+ 145:ChibiOS/os/hal/ports/AVR/pal_lld.c ****     port->out |= mask;
+  82               		.loc 1 145 0
+  83 001c 8181      		ldd r24,Z+1
+  84               	.LVL6:
+  85 001e 962F      		mov r25,r22
+  86 0020 9095      		com r25
+  87 0022 8923      		and r24,r25
+  88 0024 8183      		std Z+1,r24
+ 146:ChibiOS/os/hal/ports/AVR/pal_lld.c ****     break;
+  89               		.loc 1 146 0
+  90 0026 8281      		ldd r24,Z+2
+  91 0028 682B      		or r22,r24
+  92               	.LVL7:
+  93 002a 6283      		std Z+2,r22
+ 147:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   case PAL_MODE_OUTPUT_PUSHPULL:
+  94               		.loc 1 147 0
+  95 002c 0895      		ret
+  96               	.LVL8:
+  97               	.L24:
+ 136:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   case PAL_MODE_RESET:
+  98               		.loc 1 136 0
+  99 002e 4423      		tst r20
+ 100 0030 01F0      		breq .L4
+ 101 0032 4130      		cpi r20,lo8(1)
+ 102 0034 01F0      		breq .L6
+ 103 0036 0895      		ret
+ 104               	.L4:
+ 140:ChibiOS/os/hal/ports/AVR/pal_lld.c ****     port->out &= ~mask;
+ 105               		.loc 1 140 0
+ 106 0038 8181      		ldd r24,Z+1
+ 107               	.LVL9:
+ 108 003a 6095      		com r22
+ 109               	.LVL10:
+ 110 003c 8623      		and r24,r22
+ 111 003e 8183      		std Z+1,r24
+ 141:ChibiOS/os/hal/ports/AVR/pal_lld.c ****     break;
+ 112               		.loc 1 141 0
+ 113 0040 8281      		ldd r24,Z+2
+ 114 0042 6823      		and r22,r24
+ 115               	.LVL11:
+ 116 0044 6283      		std Z+2,r22
+ 142:ChibiOS/os/hal/ports/AVR/pal_lld.c ****   case PAL_MODE_UNCONNECTED:
+ 117               		.loc 1 142 0
+ 118 0046 0895      		ret
+ 119               		.cfi_endproc
+ 120               	.LFE54:
+ 122               		.text
+ 123               	.Letext0:
+ 124               		.file 2 "ChibiOS/os/hal/ports/AVR/pal_lld.h"
+ 125               		.file 3 "c:\\program files (x86)\\atmel\\studio\\7.0\\toolchain\\avr8\\avr8-gnu-toolchain\\avr\\in
+DEFINED SYMBOLS
+                            *ABS*:00000000 pal_lld.c
+C:\Users\Noah\AppData\Local\Temp\ccc4QOaA.s:2      *ABS*:0000003e __SP_H__
+C:\Users\Noah\AppData\Local\Temp\ccc4QOaA.s:3      *ABS*:0000003d __SP_L__
+C:\Users\Noah\AppData\Local\Temp\ccc4QOaA.s:4      *ABS*:0000003f __SREG__
+C:\Users\Noah\AppData\Local\Temp\ccc4QOaA.s:5      *ABS*:00000000 __tmp_reg__
+C:\Users\Noah\AppData\Local\Temp\ccc4QOaA.s:6      *ABS*:00000001 __zero_reg__
+C:\Users\Noah\AppData\Local\Temp\ccc4QOaA.s:13     .text._pal_lld_init:00000000 _pal_lld_init
+C:\Users\Noah\AppData\Local\Temp\ccc4QOaA.s:50     .text._pal_lld_setgroupmode:00000000 _pal_lld_setgroupmode
+
+NO UNDEFINED SYMBOLS

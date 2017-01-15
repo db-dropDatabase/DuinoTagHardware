@@ -1,0 +1,587 @@
+   1               		.file	"test_sequence_001.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               		.section	.text.test_001_001_execute,"ax",@progbits
+  12               	test_001_001_execute:
+  13               	.LFB53:
+  14               		.file 1 "ChibiOS/test/nil/test_sequence_001.c"
+   1:ChibiOS/test/nil/test_sequence_001.c **** /*
+   2:ChibiOS/test/nil/test_sequence_001.c ****     ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio
+   3:ChibiOS/test/nil/test_sequence_001.c **** 
+   4:ChibiOS/test/nil/test_sequence_001.c ****     Licensed under the Apache License, Version 2.0 (the "License");
+   5:ChibiOS/test/nil/test_sequence_001.c ****     you may not use this file except in compliance with the License.
+   6:ChibiOS/test/nil/test_sequence_001.c ****     You may obtain a copy of the License at
+   7:ChibiOS/test/nil/test_sequence_001.c **** 
+   8:ChibiOS/test/nil/test_sequence_001.c ****         http://www.apache.org/licenses/LICENSE-2.0
+   9:ChibiOS/test/nil/test_sequence_001.c **** 
+  10:ChibiOS/test/nil/test_sequence_001.c ****     Unless required by applicable law or agreed to in writing, software
+  11:ChibiOS/test/nil/test_sequence_001.c ****     distributed under the License is distributed on an "AS IS" BASIS,
+  12:ChibiOS/test/nil/test_sequence_001.c ****     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  13:ChibiOS/test/nil/test_sequence_001.c ****     See the License for the specific language governing permissions and
+  14:ChibiOS/test/nil/test_sequence_001.c ****     limitations under the License.
+  15:ChibiOS/test/nil/test_sequence_001.c **** */
+  16:ChibiOS/test/nil/test_sequence_001.c **** 
+  17:ChibiOS/test/nil/test_sequence_001.c **** #include "hal.h"
+  18:ChibiOS/test/nil/test_sequence_001.c **** #include "ch_test.h"
+  19:ChibiOS/test/nil/test_sequence_001.c **** #include "test_root.h"
+  20:ChibiOS/test/nil/test_sequence_001.c **** 
+  21:ChibiOS/test/nil/test_sequence_001.c **** /**
+  22:ChibiOS/test/nil/test_sequence_001.c ****  * @page test_sequence_001 Threads Functionality
+  23:ChibiOS/test/nil/test_sequence_001.c ****  *
+  24:ChibiOS/test/nil/test_sequence_001.c ****  * File: @ref test_sequence_001.c
+  25:ChibiOS/test/nil/test_sequence_001.c ****  *
+  26:ChibiOS/test/nil/test_sequence_001.c ****  * <h2>Description</h2>
+  27:ChibiOS/test/nil/test_sequence_001.c ****  * This sequence tests the ChibiOS/NIL functionalities related to threading.
+  28:ChibiOS/test/nil/test_sequence_001.c ****  *
+  29:ChibiOS/test/nil/test_sequence_001.c ****  * <h2>Test Cases</h2>
+  30:ChibiOS/test/nil/test_sequence_001.c ****  * - @subpage test_001_001
+  31:ChibiOS/test/nil/test_sequence_001.c ****  * - @subpage test_001_002
+  32:ChibiOS/test/nil/test_sequence_001.c ****  * .
+  33:ChibiOS/test/nil/test_sequence_001.c ****  */
+  34:ChibiOS/test/nil/test_sequence_001.c **** 
+  35:ChibiOS/test/nil/test_sequence_001.c **** /****************************************************************************
+  36:ChibiOS/test/nil/test_sequence_001.c ****  * Shared code.
+  37:ChibiOS/test/nil/test_sequence_001.c ****  ****************************************************************************/
+  38:ChibiOS/test/nil/test_sequence_001.c **** 
+  39:ChibiOS/test/nil/test_sequence_001.c **** 
+  40:ChibiOS/test/nil/test_sequence_001.c **** /****************************************************************************
+  41:ChibiOS/test/nil/test_sequence_001.c ****  * Test cases.
+  42:ChibiOS/test/nil/test_sequence_001.c ****  ****************************************************************************/
+  43:ChibiOS/test/nil/test_sequence_001.c **** 
+  44:ChibiOS/test/nil/test_sequence_001.c **** #if TRUE || defined(__DOXYGEN__)
+  45:ChibiOS/test/nil/test_sequence_001.c **** /**
+  46:ChibiOS/test/nil/test_sequence_001.c ****  * @page test_001_001 System Tick Counter functionality
+  47:ChibiOS/test/nil/test_sequence_001.c ****  *
+  48:ChibiOS/test/nil/test_sequence_001.c ****  * <h2>Description</h2>
+  49:ChibiOS/test/nil/test_sequence_001.c ****  * The functionality of the API @p chVTGetSystemTimeX() is tested.
+  50:ChibiOS/test/nil/test_sequence_001.c ****  *
+  51:ChibiOS/test/nil/test_sequence_001.c ****  * <h2>Conditions</h2>
+  52:ChibiOS/test/nil/test_sequence_001.c ****  * None.
+  53:ChibiOS/test/nil/test_sequence_001.c ****  *
+  54:ChibiOS/test/nil/test_sequence_001.c ****  * <h2>Test Steps</h2>
+  55:ChibiOS/test/nil/test_sequence_001.c ****  * - A System Tick Counter increment is expected, the test simply hangs if
+  56:ChibiOS/test/nil/test_sequence_001.c ****  *   it does not happen.
+  57:ChibiOS/test/nil/test_sequence_001.c ****  * .
+  58:ChibiOS/test/nil/test_sequence_001.c ****  */
+  59:ChibiOS/test/nil/test_sequence_001.c **** 
+  60:ChibiOS/test/nil/test_sequence_001.c **** static void test_001_001_execute(void) {
+  15               		.loc 1 60 0
+  16               		.cfi_startproc
+  17               	/* prologue: function */
+  18               	/* frame size = 0 */
+  19               	/* stack size = 0 */
+  20               	.L__stack_usage = 0
+  61:ChibiOS/test/nil/test_sequence_001.c ****   systime_t time;
+  62:ChibiOS/test/nil/test_sequence_001.c **** 
+  63:ChibiOS/test/nil/test_sequence_001.c ****   /* A System Tick Counter increment is expected, the test simply hangs if
+  64:ChibiOS/test/nil/test_sequence_001.c ****      it does not happen.*/
+  65:ChibiOS/test/nil/test_sequence_001.c ****   test_set_step(1);
+  21               		.loc 1 65 0
+  22 0000 81E0      		ldi r24,lo8(1)
+  23 0002 90E0      		ldi r25,0
+  24 0004 9093 0000 		sts test_step+1,r25
+  25 0008 8093 0000 		sts test_step,r24
+  26               	.LBB47:
+  27               	.LBB48:
+  28               	.LBB49:
+  29               		.file 2 "ChibiOS/os/hal/ports/AVR/st_lld.h"
+   1:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*
+   2:ChibiOS/os/hal/ports/AVR/st_lld.h ****     ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio
+   3:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+   4:ChibiOS/os/hal/ports/AVR/st_lld.h ****     Licensed under the Apache License, Version 2.0 (the "License");
+   5:ChibiOS/os/hal/ports/AVR/st_lld.h ****     you may not use this file except in compliance with the License.
+   6:ChibiOS/os/hal/ports/AVR/st_lld.h ****     You may obtain a copy of the License at
+   7:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+   8:ChibiOS/os/hal/ports/AVR/st_lld.h ****         http://www.apache.org/licenses/LICENSE-2.0
+   9:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  10:ChibiOS/os/hal/ports/AVR/st_lld.h ****     Unless required by applicable law or agreed to in writing, software
+  11:ChibiOS/os/hal/ports/AVR/st_lld.h ****     distributed under the License is distributed on an "AS IS" BASIS,
+  12:ChibiOS/os/hal/ports/AVR/st_lld.h ****     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  13:ChibiOS/os/hal/ports/AVR/st_lld.h ****     See the License for the specific language governing permissions and
+  14:ChibiOS/os/hal/ports/AVR/st_lld.h ****     limitations under the License.
+  15:ChibiOS/os/hal/ports/AVR/st_lld.h **** */
+  16:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  17:ChibiOS/os/hal/ports/AVR/st_lld.h **** /**
+  18:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @file    AVR/st_lld.h
+  19:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @brief   ST Driver subsystem low level driver header.
+  20:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @details This header is designed to be include-able without having to
+  21:ChibiOS/os/hal/ports/AVR/st_lld.h ****  *          include other files from the HAL.
+  22:ChibiOS/os/hal/ports/AVR/st_lld.h ****  *
+  23:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @addtogroup AVR
+  24:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @{
+  25:ChibiOS/os/hal/ports/AVR/st_lld.h ****  */
+  26:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  27:ChibiOS/os/hal/ports/AVR/st_lld.h **** #ifndef _ST_LLD_H_
+  28:ChibiOS/os/hal/ports/AVR/st_lld.h **** #define _ST_LLD_H_
+  29:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  30:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  31:ChibiOS/os/hal/ports/AVR/st_lld.h **** /* Driver constants.                                                         */
+  32:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  33:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  34:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  35:ChibiOS/os/hal/ports/AVR/st_lld.h **** /* Driver pre-compile time settings.                                         */
+  36:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  37:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  38:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*
+  39:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * TODO: for models that have many timers,
+  40:ChibiOS/os/hal/ports/AVR/st_lld.h ****  *       could add AVR_ST_USE_TIMER
+  41:ChibiOS/os/hal/ports/AVR/st_lld.h ****  */
+  42:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  43:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  44:ChibiOS/os/hal/ports/AVR/st_lld.h **** /* Derived constants and error checks.                                       */
+  45:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  46:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  47:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*
+  48:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * TODO: error checks for valid timer selected
+  49:ChibiOS/os/hal/ports/AVR/st_lld.h ****  */
+  50:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  51:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  52:ChibiOS/os/hal/ports/AVR/st_lld.h **** /* Driver data structures and types.                                         */
+  53:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  54:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  55:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  56:ChibiOS/os/hal/ports/AVR/st_lld.h **** /* Driver macros.                                                            */
+  57:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  58:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  59:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  60:ChibiOS/os/hal/ports/AVR/st_lld.h **** /* External declarations.                                                    */
+  61:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  62:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  63:ChibiOS/os/hal/ports/AVR/st_lld.h **** #ifdef __cplusplus
+  64:ChibiOS/os/hal/ports/AVR/st_lld.h **** extern "C" {
+  65:ChibiOS/os/hal/ports/AVR/st_lld.h **** #endif
+  66:ChibiOS/os/hal/ports/AVR/st_lld.h ****   void st_lld_init(void);
+  67:ChibiOS/os/hal/ports/AVR/st_lld.h **** #ifdef __cplusplus
+  68:ChibiOS/os/hal/ports/AVR/st_lld.h **** }
+  69:ChibiOS/os/hal/ports/AVR/st_lld.h **** #endif
+  70:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  71:ChibiOS/os/hal/ports/AVR/st_lld.h **** #ifdef __AVR_ATmega128__
+  72:ChibiOS/os/hal/ports/AVR/st_lld.h **** #define TIFR_REG TIFR
+  73:ChibiOS/os/hal/ports/AVR/st_lld.h **** #define TIMSK_REG TIMSK
+  74:ChibiOS/os/hal/ports/AVR/st_lld.h **** #else
+  75:ChibiOS/os/hal/ports/AVR/st_lld.h **** #define TIFR_REG TIFR1
+  76:ChibiOS/os/hal/ports/AVR/st_lld.h **** #define TIMSK_REG TIMSK1
+  77:ChibiOS/os/hal/ports/AVR/st_lld.h **** #endif
+  78:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  79:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  80:ChibiOS/os/hal/ports/AVR/st_lld.h **** /* Driver inline functions.                                                  */
+  81:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  82:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  83:ChibiOS/os/hal/ports/AVR/st_lld.h **** /**
+  84:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @brief   Returns the time counter value.
+  85:ChibiOS/os/hal/ports/AVR/st_lld.h ****  *
+  86:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @return              The counter value.
+  87:ChibiOS/os/hal/ports/AVR/st_lld.h ****  *
+  88:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @notapi
+  89:ChibiOS/os/hal/ports/AVR/st_lld.h ****  */
+  90:ChibiOS/os/hal/ports/AVR/st_lld.h **** static inline systime_t st_lld_get_counter(void) {
+  91:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  92:ChibiOS/os/hal/ports/AVR/st_lld.h ****   return (systime_t) TCNT1;
+  30               		.loc 2 92 0
+  31 000c 2091 8400 		lds r18,132
+  32 0010 3091 8500 		lds r19,132+1
+  33               	.L2:
+  34               	.LBE49:
+  35               	.LBE48:
+  36               	.LBE47:
+  37               	.LBB50:
+  38               	.LBB51:
+  39               	.LBB52:
+  40               		.loc 2 92 0 is_stmt 0 discriminator 1
+  41 0014 8091 8400 		lds r24,132
+  42 0018 9091 8500 		lds r25,132+1
+  43               	.LBE52:
+  44               	.LBE51:
+  45               	.LBE50:
+  66:ChibiOS/test/nil/test_sequence_001.c ****   {
+  67:ChibiOS/test/nil/test_sequence_001.c ****     time = chVTGetSystemTimeX();
+  68:ChibiOS/test/nil/test_sequence_001.c ****     while (time == chVTGetSystemTimeX()) {
+  46               		.loc 1 68 0 is_stmt 1 discriminator 1
+  47 001c 8217      		cp r24,r18
+  48 001e 9307      		cpc r25,r19
+  49 0020 01F0      		breq .L2
+  50               	/* epilogue start */
+  69:ChibiOS/test/nil/test_sequence_001.c ****     }
+  70:ChibiOS/test/nil/test_sequence_001.c ****   }
+  71:ChibiOS/test/nil/test_sequence_001.c **** }
+  51               		.loc 1 71 0
+  52 0022 0895      		ret
+  53               		.cfi_endproc
+  54               	.LFE53:
+  56               		.section	.rodata.str1.1,"aMS",@progbits,1
+  57               	.LC0:
+  58 0000 6F75 7420 		.string	"out of time window"
+  58      6F66 2074 
+  58      696D 6520 
+  58      7769 6E64 
+  58      6F77 00
+  59               		.section	.text.test_001_002_execute,"ax",@progbits
+  61               	test_001_002_execute:
+  62               	.LFB54:
+  72:ChibiOS/test/nil/test_sequence_001.c **** 
+  73:ChibiOS/test/nil/test_sequence_001.c **** static const testcase_t test_001_001 = {
+  74:ChibiOS/test/nil/test_sequence_001.c ****   "System Tick Counter functionality",
+  75:ChibiOS/test/nil/test_sequence_001.c ****   NULL,
+  76:ChibiOS/test/nil/test_sequence_001.c ****   NULL,
+  77:ChibiOS/test/nil/test_sequence_001.c ****   test_001_001_execute
+  78:ChibiOS/test/nil/test_sequence_001.c **** };
+  79:ChibiOS/test/nil/test_sequence_001.c **** #endif /* TRUE */
+  80:ChibiOS/test/nil/test_sequence_001.c **** 
+  81:ChibiOS/test/nil/test_sequence_001.c **** #if TRUE || defined(__DOXYGEN__)
+  82:ChibiOS/test/nil/test_sequence_001.c **** /**
+  83:ChibiOS/test/nil/test_sequence_001.c ****  * @page test_001_002 Thread Sleep functionality
+  84:ChibiOS/test/nil/test_sequence_001.c ****  *
+  85:ChibiOS/test/nil/test_sequence_001.c ****  * <h2>Description</h2>
+  86:ChibiOS/test/nil/test_sequence_001.c ****  * The functionality of the API @p chThdSleep() and derivatives is tested.
+  87:ChibiOS/test/nil/test_sequence_001.c ****  *
+  88:ChibiOS/test/nil/test_sequence_001.c ****  * <h2>Conditions</h2>
+  89:ChibiOS/test/nil/test_sequence_001.c ****  * None.
+  90:ChibiOS/test/nil/test_sequence_001.c ****  *
+  91:ChibiOS/test/nil/test_sequence_001.c ****  * <h2>Test Steps</h2>
+  92:ChibiOS/test/nil/test_sequence_001.c ****  * - The current system time is read then a sleep is performed for 100 system
+  93:ChibiOS/test/nil/test_sequence_001.c ****  *   ticks and on exit the system time is verified again.
+  94:ChibiOS/test/nil/test_sequence_001.c ****  * - The current system time is read then a sleep is performed for 100000
+  95:ChibiOS/test/nil/test_sequence_001.c ****  *   microseconds and on exit the system time is verified again.
+  96:ChibiOS/test/nil/test_sequence_001.c ****  * - The current system time is read then a sleep is performed for 100
+  97:ChibiOS/test/nil/test_sequence_001.c ****  *   milliseconds and on exit the system time is verified again.
+  98:ChibiOS/test/nil/test_sequence_001.c ****  * - The current system time is read then a sleep is performed for 1
+  99:ChibiOS/test/nil/test_sequence_001.c ****  *   second and on exit the system time is verified again.
+ 100:ChibiOS/test/nil/test_sequence_001.c ****  * .
+ 101:ChibiOS/test/nil/test_sequence_001.c ****  */
+ 102:ChibiOS/test/nil/test_sequence_001.c **** 
+ 103:ChibiOS/test/nil/test_sequence_001.c **** static void test_001_002_execute(void) {
+  63               		.loc 1 103 0
+  64               		.cfi_startproc
+  65 0000 0F93      		push r16
+  66               	.LCFI0:
+  67               		.cfi_def_cfa_offset 3
+  68               		.cfi_offset 16, -2
+  69 0002 1F93      		push r17
+  70               	.LCFI1:
+  71               		.cfi_def_cfa_offset 4
+  72               		.cfi_offset 17, -3
+  73 0004 CF93      		push r28
+  74               	.LCFI2:
+  75               		.cfi_def_cfa_offset 5
+  76               		.cfi_offset 28, -4
+  77 0006 DF93      		push r29
+  78               	.LCFI3:
+  79               		.cfi_def_cfa_offset 6
+  80               		.cfi_offset 29, -5
+  81               	/* prologue: function */
+  82               	/* frame size = 0 */
+  83               	/* stack size = 4 */
+  84               	.L__stack_usage = 4
+ 104:ChibiOS/test/nil/test_sequence_001.c ****   systime_t time;
+ 105:ChibiOS/test/nil/test_sequence_001.c **** 
+ 106:ChibiOS/test/nil/test_sequence_001.c ****   /* The current system time is read then a sleep is performed for 100 system
+ 107:ChibiOS/test/nil/test_sequence_001.c ****      ticks and on exit the system time is verified again.*/
+ 108:ChibiOS/test/nil/test_sequence_001.c ****   test_set_step(1);
+  85               		.loc 1 108 0
+  86 0008 81E0      		ldi r24,lo8(1)
+  87 000a 90E0      		ldi r25,0
+  88 000c 9093 0000 		sts test_step+1,r25
+  89 0010 8093 0000 		sts test_step,r24
+  90               	.LBB76:
+  91               	.LBB77:
+  92               	.LBB78:
+  93               		.loc 2 92 0
+  94 0014 C091 8400 		lds r28,132
+  95 0018 D091 8500 		lds r29,132+1
+  96               	.LBE78:
+  97               	.LBE77:
+  98               	.LBE76:
+ 109:ChibiOS/test/nil/test_sequence_001.c ****   {
+ 110:ChibiOS/test/nil/test_sequence_001.c ****     time = chVTGetSystemTimeX();
+ 111:ChibiOS/test/nil/test_sequence_001.c ****     chThdSleep(100);
+  99               		.loc 1 111 0
+ 100 001c 84E6      		ldi r24,lo8(100)
+ 101 001e 90E0      		ldi r25,0
+ 102 0020 0E94 0000 		call chThdSleep
+ 103               	.LVL0:
+ 112:ChibiOS/test/nil/test_sequence_001.c ****     test_assert_time_window(time + 100,
+ 104               		.loc 1 112 0
+ 105 0024 BE01      		movw r22,r28
+ 106 0026 6B59      		subi r22,-101
+ 107 0028 7F4F      		sbci r23,-1
+ 108 002a 40E0      		ldi r20,lo8(.LC0)
+ 109 002c 50E0      		ldi r21,hi8(.LC0)
+ 110 002e CE01      		movw r24,r28
+ 111 0030 8C59      		subi r24,-100
+ 112 0032 9F4F      		sbci r25,-1
+ 113 0034 0E94 0000 		call _test_assert_time_window
+ 114               	.LVL1:
+ 115 0038 8823      		tst r24
+ 116 003a 01F0      		breq .L9
+ 117               	.L5:
+ 118               	/* epilogue start */
+ 113:ChibiOS/test/nil/test_sequence_001.c ****                             time + 100 + 1,
+ 114:ChibiOS/test/nil/test_sequence_001.c ****                             "out of time window");
+ 115:ChibiOS/test/nil/test_sequence_001.c ****   }
+ 116:ChibiOS/test/nil/test_sequence_001.c **** 
+ 117:ChibiOS/test/nil/test_sequence_001.c ****   /* The current system time is read then a sleep is performed for 100000
+ 118:ChibiOS/test/nil/test_sequence_001.c ****      microseconds and on exit the system time is verified again.*/
+ 119:ChibiOS/test/nil/test_sequence_001.c ****   test_set_step(2);
+ 120:ChibiOS/test/nil/test_sequence_001.c ****   {
+ 121:ChibiOS/test/nil/test_sequence_001.c ****     time = chVTGetSystemTimeX();
+ 122:ChibiOS/test/nil/test_sequence_001.c ****     chThdSleepMicroseconds(100);
+ 123:ChibiOS/test/nil/test_sequence_001.c ****     test_assert_time_window(time + US2ST(100),
+ 124:ChibiOS/test/nil/test_sequence_001.c ****                             time + US2ST(100) + 1,
+ 125:ChibiOS/test/nil/test_sequence_001.c ****                             "out of time window");
+ 126:ChibiOS/test/nil/test_sequence_001.c ****   }
+ 127:ChibiOS/test/nil/test_sequence_001.c **** 
+ 128:ChibiOS/test/nil/test_sequence_001.c ****   /* The current system time is read then a sleep is performed for 100
+ 129:ChibiOS/test/nil/test_sequence_001.c ****      milliseconds and on exit the system time is verified again.*/
+ 130:ChibiOS/test/nil/test_sequence_001.c ****   test_set_step(3);
+ 131:ChibiOS/test/nil/test_sequence_001.c ****   {
+ 132:ChibiOS/test/nil/test_sequence_001.c ****     time = chVTGetSystemTimeX();
+ 133:ChibiOS/test/nil/test_sequence_001.c ****     chThdSleepMilliseconds(100);
+ 134:ChibiOS/test/nil/test_sequence_001.c ****     test_assert_time_window(time + MS2ST(100),
+ 135:ChibiOS/test/nil/test_sequence_001.c ****                             time + MS2ST(100) + 1,
+ 136:ChibiOS/test/nil/test_sequence_001.c ****                             "out of time window");
+ 137:ChibiOS/test/nil/test_sequence_001.c ****   }
+ 138:ChibiOS/test/nil/test_sequence_001.c **** 
+ 139:ChibiOS/test/nil/test_sequence_001.c ****   /* The current system time is read then a sleep is performed for 1
+ 140:ChibiOS/test/nil/test_sequence_001.c ****      second and on exit the system time is verified again.*/
+ 141:ChibiOS/test/nil/test_sequence_001.c ****   test_set_step(4);
+ 142:ChibiOS/test/nil/test_sequence_001.c ****   {
+ 143:ChibiOS/test/nil/test_sequence_001.c ****     time = chVTGetSystemTimeX();
+ 144:ChibiOS/test/nil/test_sequence_001.c ****     chThdSleepSeconds(1);
+ 145:ChibiOS/test/nil/test_sequence_001.c ****     test_assert_time_window(time + S2ST(1),
+ 146:ChibiOS/test/nil/test_sequence_001.c ****                             time + S2ST(1) + 1,
+ 147:ChibiOS/test/nil/test_sequence_001.c ****                             "out of time window");
+ 148:ChibiOS/test/nil/test_sequence_001.c ****   }
+ 149:ChibiOS/test/nil/test_sequence_001.c **** 
+ 150:ChibiOS/test/nil/test_sequence_001.c ****   test_set_step(5);
+ 151:ChibiOS/test/nil/test_sequence_001.c ****   {
+ 152:ChibiOS/test/nil/test_sequence_001.c ****     time = chVTGetSystemTimeX();
+ 153:ChibiOS/test/nil/test_sequence_001.c ****     chThdSleepUntil(time + 100);
+ 154:ChibiOS/test/nil/test_sequence_001.c ****     test_assert_time_window(time + 100,
+ 155:ChibiOS/test/nil/test_sequence_001.c ****                             time + 100 + 1,
+ 156:ChibiOS/test/nil/test_sequence_001.c ****                             "out of time window");
+ 157:ChibiOS/test/nil/test_sequence_001.c ****   }
+ 158:ChibiOS/test/nil/test_sequence_001.c **** }
+ 119               		.loc 1 158 0
+ 120 003c DF91      		pop r29
+ 121 003e CF91      		pop r28
+ 122 0040 1F91      		pop r17
+ 123 0042 0F91      		pop r16
+ 124 0044 0895      		ret
+ 125               	.L9:
+ 119:ChibiOS/test/nil/test_sequence_001.c ****   {
+ 126               		.loc 1 119 0
+ 127 0046 82E0      		ldi r24,lo8(2)
+ 128 0048 90E0      		ldi r25,0
+ 129 004a 9093 0000 		sts test_step+1,r25
+ 130 004e 8093 0000 		sts test_step,r24
+ 131               	.LBB79:
+ 132               	.LBB80:
+ 133               	.LBB81:
+ 134               		.loc 2 92 0
+ 135 0052 C091 8400 		lds r28,132
+ 136 0056 D091 8500 		lds r29,132+1
+ 137               	.LBE81:
+ 138               	.LBE80:
+ 139               	.LBE79:
+ 122:ChibiOS/test/nil/test_sequence_001.c ****     test_assert_time_window(time + US2ST(100),
+ 140               		.loc 1 122 0
+ 141 005a 0E94 0000 		call chThdSleep
+ 142               	.LVL2:
+ 123:ChibiOS/test/nil/test_sequence_001.c ****                             time + US2ST(100) + 1,
+ 143               		.loc 1 123 0
+ 144 005e BE01      		movw r22,r28
+ 145 0060 6D5F      		subi r22,-3
+ 146 0062 7F4F      		sbci r23,-1
+ 147 0064 40E0      		ldi r20,lo8(.LC0)
+ 148 0066 50E0      		ldi r21,hi8(.LC0)
+ 149 0068 CE01      		movw r24,r28
+ 150 006a 0296      		adiw r24,2
+ 151 006c 0E94 0000 		call _test_assert_time_window
+ 152               	.LVL3:
+ 153 0070 8111      		cpse r24,__zero_reg__
+ 154 0072 00C0      		rjmp .L5
+ 155               	.LBB82:
+ 156               	.LBB83:
+ 130:ChibiOS/test/nil/test_sequence_001.c ****   {
+ 157               		.loc 1 130 0
+ 158 0074 83E0      		ldi r24,lo8(3)
+ 159 0076 90E0      		ldi r25,0
+ 160 0078 9093 0000 		sts test_step+1,r25
+ 161 007c 8093 0000 		sts test_step,r24
+ 162               	.LBB84:
+ 163               	.LBB85:
+ 164               	.LBB86:
+ 165               		.loc 2 92 0
+ 166 0080 C091 8400 		lds r28,132
+ 167 0084 D091 8500 		lds r29,132+1
+ 168               	.LBE86:
+ 169               	.LBE85:
+ 170               	.LBE84:
+ 133:ChibiOS/test/nil/test_sequence_001.c ****     test_assert_time_window(time + MS2ST(100),
+ 171               		.loc 1 133 0
+ 172 0088 8BE1      		ldi r24,lo8(27)
+ 173 008a 96E0      		ldi r25,lo8(6)
+ 174 008c 0E94 0000 		call chThdSleep
+ 175               	.LVL4:
+ 134:ChibiOS/test/nil/test_sequence_001.c ****                             time + MS2ST(100) + 1,
+ 176               		.loc 1 134 0
+ 177 0090 BE01      		movw r22,r28
+ 178 0092 645E      		subi r22,-28
+ 179 0094 794F      		sbci r23,-7
+ 180 0096 40E0      		ldi r20,lo8(.LC0)
+ 181 0098 50E0      		ldi r21,hi8(.LC0)
+ 182 009a CE01      		movw r24,r28
+ 183 009c 855E      		subi r24,-27
+ 184 009e 994F      		sbci r25,-7
+ 185 00a0 0E94 0000 		call _test_assert_time_window
+ 186               	.LVL5:
+ 187 00a4 8111      		cpse r24,__zero_reg__
+ 188 00a6 00C0      		rjmp .L5
+ 141:ChibiOS/test/nil/test_sequence_001.c ****   {
+ 189               		.loc 1 141 0
+ 190 00a8 84E0      		ldi r24,lo8(4)
+ 191 00aa 90E0      		ldi r25,0
+ 192 00ac 9093 0000 		sts test_step+1,r25
+ 193 00b0 8093 0000 		sts test_step,r24
+ 194               	.LBB87:
+ 195               	.LBB88:
+ 196               	.LBB89:
+ 197               		.loc 2 92 0
+ 198 00b4 C091 8400 		lds r28,132
+ 199 00b8 D091 8500 		lds r29,132+1
+ 200               	.LBE89:
+ 201               	.LBE88:
+ 202               	.LBE87:
+ 144:ChibiOS/test/nil/test_sequence_001.c ****     test_assert_time_window(time + S2ST(1),
+ 203               		.loc 1 144 0
+ 204 00bc 88E0      		ldi r24,lo8(8)
+ 205 00be 9DE3      		ldi r25,lo8(61)
+ 206 00c0 0E94 0000 		call chThdSleep
+ 207               	.LVL6:
+ 145:ChibiOS/test/nil/test_sequence_001.c ****                             time + S2ST(1) + 1,
+ 208               		.loc 1 145 0
+ 209 00c4 BE01      		movw r22,r28
+ 210 00c6 675F      		subi r22,-9
+ 211 00c8 724C      		sbci r23,-62
+ 212 00ca 40E0      		ldi r20,lo8(.LC0)
+ 213 00cc 50E0      		ldi r21,hi8(.LC0)
+ 214 00ce CE01      		movw r24,r28
+ 215 00d0 885F      		subi r24,-8
+ 216 00d2 924C      		sbci r25,-62
+ 217 00d4 0E94 0000 		call _test_assert_time_window
+ 218               	.LVL7:
+ 219 00d8 8111      		cpse r24,__zero_reg__
+ 220 00da 00C0      		rjmp .L5
+ 150:ChibiOS/test/nil/test_sequence_001.c ****   {
+ 221               		.loc 1 150 0
+ 222 00dc 85E0      		ldi r24,lo8(5)
+ 223 00de 90E0      		ldi r25,0
+ 224 00e0 9093 0000 		sts test_step+1,r25
+ 225 00e4 8093 0000 		sts test_step,r24
+ 226               	.LBB90:
+ 227               	.LBB91:
+ 228               	.LBB92:
+ 229               		.loc 2 92 0
+ 230 00e8 C091 8400 		lds r28,132
+ 231 00ec D091 8500 		lds r29,132+1
+ 232               	.LBE92:
+ 233               	.LBE91:
+ 234               	.LBE90:
+ 153:ChibiOS/test/nil/test_sequence_001.c ****     test_assert_time_window(time + 100,
+ 235               		.loc 1 153 0
+ 236 00f0 8E01      		movw r16,r28
+ 237 00f2 0C59      		subi r16,-100
+ 238 00f4 1F4F      		sbci r17,-1
+ 239 00f6 C801      		movw r24,r16
+ 240 00f8 0E94 0000 		call chThdSleepUntil
+ 241               	.LVL8:
+ 154:ChibiOS/test/nil/test_sequence_001.c ****                             time + 100 + 1,
+ 242               		.loc 1 154 0
+ 243 00fc BE01      		movw r22,r28
+ 244 00fe 6B59      		subi r22,-101
+ 245 0100 7F4F      		sbci r23,-1
+ 246 0102 40E0      		ldi r20,lo8(.LC0)
+ 247 0104 50E0      		ldi r21,hi8(.LC0)
+ 248 0106 C801      		movw r24,r16
+ 249               	/* epilogue start */
+ 250               	.LBE83:
+ 251               	.LBE82:
+ 252               		.loc 1 158 0
+ 253 0108 DF91      		pop r29
+ 254 010a CF91      		pop r28
+ 255 010c 1F91      		pop r17
+ 256 010e 0F91      		pop r16
+ 257               	.LBB94:
+ 258               	.LBB93:
+ 154:ChibiOS/test/nil/test_sequence_001.c ****                             time + 100 + 1,
+ 259               		.loc 1 154 0
+ 260 0110 0C94 0000 		jmp _test_assert_time_window
+ 261               	.LVL9:
+ 262               	.LBE93:
+ 263               	.LBE94:
+ 264               		.cfi_endproc
+ 265               	.LFE54:
+ 267               	.global	test_sequence_001
+ 268               		.section	.rodata.test_sequence_001,"a",@progbits
+ 271               	test_sequence_001:
+ 272 0000 0000      		.word	test_001_001
+ 273 0002 0000      		.word	test_001_002
+ 274 0004 0000      		.word	0
+ 275               		.section	.rodata.str1.1
+ 276               	.LC1:
+ 277 0013 5468 7265 		.string	"Thread Sleep functionality"
+ 277      6164 2053 
+ 277      6C65 6570 
+ 277      2066 756E 
+ 277      6374 696F 
+ 278               		.section	.rodata.test_001_002,"a",@progbits
+ 281               	test_001_002:
+ 282 0000 0000      		.word	.LC1
+ 283 0002 0000      		.word	0
+ 284 0004 0000      		.word	0
+ 285 0006 0000      		.word	gs(test_001_002_execute)
+ 286               		.section	.rodata.str1.1
+ 287               	.LC2:
+ 288 002e 5379 7374 		.string	"System Tick Counter functionality"
+ 288      656D 2054 
+ 288      6963 6B20 
+ 288      436F 756E 
+ 288      7465 7220 
+ 289               		.section	.rodata.test_001_001,"a",@progbits
+ 292               	test_001_001:
+ 293 0000 0000      		.word	.LC2
+ 294 0002 0000      		.word	0
+ 295 0004 0000      		.word	0
+ 296 0006 0000      		.word	gs(test_001_001_execute)
+ 297               		.text
+ 298               	.Letext0:
+ 299               		.file 3 "c:\\program files (x86)\\atmel\\studio\\7.0\\toolchain\\avr8\\avr8-gnu-toolchain\\avr\\in
+ 300               		.file 4 "ChibiOS/os/nil/ports/AVR/compilers/GCC/niltypes.h"
+ 301               		.file 5 "ChibiOS/test/lib/ch_test.h"
+ 302               		.file 6 "ChibiOS/os/nil/ports/AVR/nilcore_timer.h"
+ 303               		.file 7 "ChibiOS/os/nil/include/nil.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 test_sequence_001.c
+C:\Users\Noah\AppData\Local\Temp\ccbGRt8P.s:2      *ABS*:0000003e __SP_H__
+C:\Users\Noah\AppData\Local\Temp\ccbGRt8P.s:3      *ABS*:0000003d __SP_L__
+C:\Users\Noah\AppData\Local\Temp\ccbGRt8P.s:4      *ABS*:0000003f __SREG__
+C:\Users\Noah\AppData\Local\Temp\ccbGRt8P.s:5      *ABS*:00000000 __tmp_reg__
+C:\Users\Noah\AppData\Local\Temp\ccbGRt8P.s:6      *ABS*:00000001 __zero_reg__
+C:\Users\Noah\AppData\Local\Temp\ccbGRt8P.s:12     .text.test_001_001_execute:00000000 test_001_001_execute
+C:\Users\Noah\AppData\Local\Temp\ccbGRt8P.s:61     .text.test_001_002_execute:00000000 test_001_002_execute
+C:\Users\Noah\AppData\Local\Temp\ccbGRt8P.s:271    .rodata.test_sequence_001:00000000 test_sequence_001
+C:\Users\Noah\AppData\Local\Temp\ccbGRt8P.s:292    .rodata.test_001_001:00000000 test_001_001
+C:\Users\Noah\AppData\Local\Temp\ccbGRt8P.s:281    .rodata.test_001_002:00000000 test_001_002
+
+UNDEFINED SYMBOLS
+test_step
+chThdSleep
+_test_assert_time_window
+chThdSleepUntil
+__do_copy_data

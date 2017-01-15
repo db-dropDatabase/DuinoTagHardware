@@ -1,0 +1,2268 @@
+   1               		.file	"serial.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               		.section	.text.readt,"ax",@progbits
+  12               	readt:
+  13               	.LFB60:
+  14               		.file 1 "ChibiOS/os/hal/src/serial.c"
+   1:ChibiOS/os/hal/src/serial.c **** /*
+   2:ChibiOS/os/hal/src/serial.c ****     ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio
+   3:ChibiOS/os/hal/src/serial.c **** 
+   4:ChibiOS/os/hal/src/serial.c ****     Licensed under the Apache License, Version 2.0 (the "License");
+   5:ChibiOS/os/hal/src/serial.c ****     you may not use this file except in compliance with the License.
+   6:ChibiOS/os/hal/src/serial.c ****     You may obtain a copy of the License at
+   7:ChibiOS/os/hal/src/serial.c **** 
+   8:ChibiOS/os/hal/src/serial.c ****         http://www.apache.org/licenses/LICENSE-2.0
+   9:ChibiOS/os/hal/src/serial.c **** 
+  10:ChibiOS/os/hal/src/serial.c ****     Unless required by applicable law or agreed to in writing, software
+  11:ChibiOS/os/hal/src/serial.c ****     distributed under the License is distributed on an "AS IS" BASIS,
+  12:ChibiOS/os/hal/src/serial.c ****     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  13:ChibiOS/os/hal/src/serial.c ****     See the License for the specific language governing permissions and
+  14:ChibiOS/os/hal/src/serial.c ****     limitations under the License.
+  15:ChibiOS/os/hal/src/serial.c **** */
+  16:ChibiOS/os/hal/src/serial.c **** 
+  17:ChibiOS/os/hal/src/serial.c **** /**
+  18:ChibiOS/os/hal/src/serial.c ****  * @file    serial.c
+  19:ChibiOS/os/hal/src/serial.c ****  * @brief   Serial Driver code.
+  20:ChibiOS/os/hal/src/serial.c ****  *
+  21:ChibiOS/os/hal/src/serial.c ****  * @addtogroup SERIAL
+  22:ChibiOS/os/hal/src/serial.c ****  * @{
+  23:ChibiOS/os/hal/src/serial.c ****  */
+  24:ChibiOS/os/hal/src/serial.c **** 
+  25:ChibiOS/os/hal/src/serial.c **** #include "hal.h"
+  26:ChibiOS/os/hal/src/serial.c **** 
+  27:ChibiOS/os/hal/src/serial.c **** #if (HAL_USE_SERIAL == TRUE) || defined(__DOXYGEN__)
+  28:ChibiOS/os/hal/src/serial.c **** 
+  29:ChibiOS/os/hal/src/serial.c **** /*===========================================================================*/
+  30:ChibiOS/os/hal/src/serial.c **** /* Driver local definitions.                                                 */
+  31:ChibiOS/os/hal/src/serial.c **** /*===========================================================================*/
+  32:ChibiOS/os/hal/src/serial.c **** 
+  33:ChibiOS/os/hal/src/serial.c **** /*===========================================================================*/
+  34:ChibiOS/os/hal/src/serial.c **** /* Driver exported variables.                                                */
+  35:ChibiOS/os/hal/src/serial.c **** /*===========================================================================*/
+  36:ChibiOS/os/hal/src/serial.c **** 
+  37:ChibiOS/os/hal/src/serial.c **** /*===========================================================================*/
+  38:ChibiOS/os/hal/src/serial.c **** /* Driver local variables and types.                                         */
+  39:ChibiOS/os/hal/src/serial.c **** /*===========================================================================*/
+  40:ChibiOS/os/hal/src/serial.c **** 
+  41:ChibiOS/os/hal/src/serial.c **** /*===========================================================================*/
+  42:ChibiOS/os/hal/src/serial.c **** /* Driver local functions.                                                   */
+  43:ChibiOS/os/hal/src/serial.c **** /*===========================================================================*/
+  44:ChibiOS/os/hal/src/serial.c **** 
+  45:ChibiOS/os/hal/src/serial.c **** /*
+  46:ChibiOS/os/hal/src/serial.c ****  * Interface implementation, the following functions just invoke the equivalent
+  47:ChibiOS/os/hal/src/serial.c ****  * queue-level function or macro.
+  48:ChibiOS/os/hal/src/serial.c ****  */
+  49:ChibiOS/os/hal/src/serial.c **** 
+  50:ChibiOS/os/hal/src/serial.c **** static size_t write(void *ip, const uint8_t *bp, size_t n) {
+  51:ChibiOS/os/hal/src/serial.c **** 
+  52:ChibiOS/os/hal/src/serial.c ****   return oqWriteTimeout(&((SerialDriver *)ip)->oqueue, bp,
+  53:ChibiOS/os/hal/src/serial.c ****                         n, TIME_INFINITE);
+  54:ChibiOS/os/hal/src/serial.c **** }
+  55:ChibiOS/os/hal/src/serial.c **** 
+  56:ChibiOS/os/hal/src/serial.c **** static size_t read(void *ip, uint8_t *bp, size_t n) {
+  57:ChibiOS/os/hal/src/serial.c **** 
+  58:ChibiOS/os/hal/src/serial.c ****   return iqReadTimeout(&((SerialDriver *)ip)->iqueue, bp,
+  59:ChibiOS/os/hal/src/serial.c ****                        n, TIME_INFINITE);
+  60:ChibiOS/os/hal/src/serial.c **** }
+  61:ChibiOS/os/hal/src/serial.c **** 
+  62:ChibiOS/os/hal/src/serial.c **** static msg_t put(void *ip, uint8_t b) {
+  63:ChibiOS/os/hal/src/serial.c **** 
+  64:ChibiOS/os/hal/src/serial.c ****   return oqPutTimeout(&((SerialDriver *)ip)->oqueue, b, TIME_INFINITE);
+  65:ChibiOS/os/hal/src/serial.c **** }
+  66:ChibiOS/os/hal/src/serial.c **** 
+  67:ChibiOS/os/hal/src/serial.c **** static msg_t get(void *ip) {
+  68:ChibiOS/os/hal/src/serial.c **** 
+  69:ChibiOS/os/hal/src/serial.c ****   return iqGetTimeout(&((SerialDriver *)ip)->iqueue, TIME_INFINITE);
+  70:ChibiOS/os/hal/src/serial.c **** }
+  71:ChibiOS/os/hal/src/serial.c **** 
+  72:ChibiOS/os/hal/src/serial.c **** static msg_t putt(void *ip, uint8_t b, systime_t timeout) {
+  73:ChibiOS/os/hal/src/serial.c **** 
+  74:ChibiOS/os/hal/src/serial.c ****   return oqPutTimeout(&((SerialDriver *)ip)->oqueue, b, timeout);
+  75:ChibiOS/os/hal/src/serial.c **** }
+  76:ChibiOS/os/hal/src/serial.c **** 
+  77:ChibiOS/os/hal/src/serial.c **** static msg_t gett(void *ip, systime_t timeout) {
+  78:ChibiOS/os/hal/src/serial.c **** 
+  79:ChibiOS/os/hal/src/serial.c ****   return iqGetTimeout(&((SerialDriver *)ip)->iqueue, timeout);
+  80:ChibiOS/os/hal/src/serial.c **** }
+  81:ChibiOS/os/hal/src/serial.c **** 
+  82:ChibiOS/os/hal/src/serial.c **** static size_t writet(void *ip, const uint8_t *bp, size_t n, systime_t timeout) {
+  83:ChibiOS/os/hal/src/serial.c **** 
+  84:ChibiOS/os/hal/src/serial.c ****   return oqWriteTimeout(&((SerialDriver *)ip)->oqueue, bp, n, timeout);
+  85:ChibiOS/os/hal/src/serial.c **** }
+  86:ChibiOS/os/hal/src/serial.c **** 
+  87:ChibiOS/os/hal/src/serial.c **** static size_t readt(void *ip, uint8_t *bp, size_t n, systime_t timeout) {
+  15               		.loc 1 87 0
+  16               		.cfi_startproc
+  17               	.LVL0:
+  18               	/* prologue: function */
+  19               	/* frame size = 0 */
+  20               	/* stack size = 0 */
+  21               	.L__stack_usage = 0
+  88:ChibiOS/os/hal/src/serial.c **** 
+  89:ChibiOS/os/hal/src/serial.c ****   return iqReadTimeout(&((SerialDriver *)ip)->iqueue, bp, n, timeout);
+  22               		.loc 1 89 0
+  23 0000 0B96      		adiw r24,11
+  24               	.LVL1:
+  25 0002 0C94 0000 		jmp iqReadTimeout
+  26               	.LVL2:
+  27               		.cfi_endproc
+  28               	.LFE60:
+  30               		.section	.text.read,"ax",@progbits
+  32               	read:
+  33               	.LFB54:
+  56:ChibiOS/os/hal/src/serial.c **** 
+  34               		.loc 1 56 0
+  35               		.cfi_startproc
+  36               	.LVL3:
+  37               	/* prologue: function */
+  38               	/* frame size = 0 */
+  39               	/* stack size = 0 */
+  40               	.L__stack_usage = 0
+  58:ChibiOS/os/hal/src/serial.c ****                        n, TIME_INFINITE);
+  41               		.loc 1 58 0
+  42 0000 20E0      		ldi r18,0
+  43 0002 30E0      		ldi r19,0
+  44 0004 0B96      		adiw r24,11
+  45               	.LVL4:
+  46 0006 0C94 0000 		jmp iqReadTimeout
+  47               	.LVL5:
+  48               		.cfi_endproc
+  49               	.LFE54:
+  51               		.section	.text.writet,"ax",@progbits
+  53               	writet:
+  54               	.LFB59:
+  82:ChibiOS/os/hal/src/serial.c **** 
+  55               		.loc 1 82 0
+  56               		.cfi_startproc
+  57               	.LVL6:
+  58               	/* prologue: function */
+  59               	/* frame size = 0 */
+  60               	/* stack size = 0 */
+  61               	.L__stack_usage = 0
+  84:ChibiOS/os/hal/src/serial.c **** }
+  62               		.loc 1 84 0
+  63 0000 4A96      		adiw r24,26
+  64               	.LVL7:
+  65 0002 0C94 0000 		jmp oqWriteTimeout
+  66               	.LVL8:
+  67               		.cfi_endproc
+  68               	.LFE59:
+  70               		.section	.text.write,"ax",@progbits
+  72               	write:
+  73               	.LFB53:
+  50:ChibiOS/os/hal/src/serial.c **** 
+  74               		.loc 1 50 0
+  75               		.cfi_startproc
+  76               	.LVL9:
+  77               	/* prologue: function */
+  78               	/* frame size = 0 */
+  79               	/* stack size = 0 */
+  80               	.L__stack_usage = 0
+  52:ChibiOS/os/hal/src/serial.c ****                         n, TIME_INFINITE);
+  81               		.loc 1 52 0
+  82 0000 20E0      		ldi r18,0
+  83 0002 30E0      		ldi r19,0
+  84 0004 4A96      		adiw r24,26
+  85               	.LVL10:
+  86 0006 0C94 0000 		jmp oqWriteTimeout
+  87               	.LVL11:
+  88               		.cfi_endproc
+  89               	.LFE53:
+  91               		.section	.text.gett,"ax",@progbits
+  93               	gett:
+  94               	.LFB58:
+  77:ChibiOS/os/hal/src/serial.c **** 
+  95               		.loc 1 77 0
+  96               		.cfi_startproc
+  97               	.LVL12:
+  98               	/* prologue: function */
+  99               	/* frame size = 0 */
+ 100               	/* stack size = 0 */
+ 101               	.L__stack_usage = 0
+  79:ChibiOS/os/hal/src/serial.c **** }
+ 102               		.loc 1 79 0
+ 103 0000 0B96      		adiw r24,11
+ 104               	.LVL13:
+ 105 0002 0C94 0000 		jmp iqGetTimeout
+ 106               	.LVL14:
+ 107               		.cfi_endproc
+ 108               	.LFE58:
+ 110               		.section	.text.get,"ax",@progbits
+ 112               	get:
+ 113               	.LFB56:
+  67:ChibiOS/os/hal/src/serial.c **** 
+ 114               		.loc 1 67 0
+ 115               		.cfi_startproc
+ 116               	.LVL15:
+ 117               	/* prologue: function */
+ 118               	/* frame size = 0 */
+ 119               	/* stack size = 0 */
+ 120               	.L__stack_usage = 0
+  69:ChibiOS/os/hal/src/serial.c **** }
+ 121               		.loc 1 69 0
+ 122 0000 60E0      		ldi r22,0
+ 123 0002 70E0      		ldi r23,0
+ 124 0004 0B96      		adiw r24,11
+ 125               	.LVL16:
+ 126 0006 0C94 0000 		jmp iqGetTimeout
+ 127               	.LVL17:
+ 128               		.cfi_endproc
+ 129               	.LFE56:
+ 131               		.section	.text.putt,"ax",@progbits
+ 133               	putt:
+ 134               	.LFB57:
+  72:ChibiOS/os/hal/src/serial.c **** 
+ 135               		.loc 1 72 0
+ 136               		.cfi_startproc
+ 137               	.LVL18:
+ 138               	/* prologue: function */
+ 139               	/* frame size = 0 */
+ 140               	/* stack size = 0 */
+ 141               	.L__stack_usage = 0
+  74:ChibiOS/os/hal/src/serial.c **** }
+ 142               		.loc 1 74 0
+ 143 0000 4A96      		adiw r24,26
+ 144               	.LVL19:
+ 145 0002 0C94 0000 		jmp oqPutTimeout
+ 146               	.LVL20:
+ 147               		.cfi_endproc
+ 148               	.LFE57:
+ 150               		.section	.text.put,"ax",@progbits
+ 152               	put:
+ 153               	.LFB55:
+  62:ChibiOS/os/hal/src/serial.c **** 
+ 154               		.loc 1 62 0
+ 155               		.cfi_startproc
+ 156               	.LVL21:
+ 157               	/* prologue: function */
+ 158               	/* frame size = 0 */
+ 159               	/* stack size = 0 */
+ 160               	.L__stack_usage = 0
+  64:ChibiOS/os/hal/src/serial.c **** }
+ 161               		.loc 1 64 0
+ 162 0000 40E0      		ldi r20,0
+ 163 0002 50E0      		ldi r21,0
+ 164 0004 4A96      		adiw r24,26
+ 165               	.LVL22:
+ 166 0006 0C94 0000 		jmp oqPutTimeout
+ 167               	.LVL23:
+ 168               		.cfi_endproc
+ 169               	.LFE55:
+ 171               		.section	.text.sdInit,"ax",@progbits
+ 172               	.global	sdInit
+ 174               	sdInit:
+ 175               	.LFB61:
+  90:ChibiOS/os/hal/src/serial.c **** }
+  91:ChibiOS/os/hal/src/serial.c **** 
+  92:ChibiOS/os/hal/src/serial.c **** static const struct SerialDriverVMT vmt = {
+  93:ChibiOS/os/hal/src/serial.c ****   write, read, put, get,
+  94:ChibiOS/os/hal/src/serial.c ****   putt, gett, writet, readt
+  95:ChibiOS/os/hal/src/serial.c **** };
+  96:ChibiOS/os/hal/src/serial.c **** 
+  97:ChibiOS/os/hal/src/serial.c **** /*===========================================================================*/
+  98:ChibiOS/os/hal/src/serial.c **** /* Driver exported functions.                                                */
+  99:ChibiOS/os/hal/src/serial.c **** /*===========================================================================*/
+ 100:ChibiOS/os/hal/src/serial.c **** 
+ 101:ChibiOS/os/hal/src/serial.c **** /**
+ 102:ChibiOS/os/hal/src/serial.c ****  * @brief   Serial Driver initialization.
+ 103:ChibiOS/os/hal/src/serial.c ****  * @note    This function is implicitly invoked by @p halInit(), there is
+ 104:ChibiOS/os/hal/src/serial.c ****  *          no need to explicitly initialize the driver.
+ 105:ChibiOS/os/hal/src/serial.c ****  *
+ 106:ChibiOS/os/hal/src/serial.c ****  * @init
+ 107:ChibiOS/os/hal/src/serial.c ****  */
+ 108:ChibiOS/os/hal/src/serial.c **** void sdInit(void) {
+ 176               		.loc 1 108 0
+ 177               		.cfi_startproc
+ 178               	/* prologue: function */
+ 179               	/* frame size = 0 */
+ 180               	/* stack size = 0 */
+ 181               	.L__stack_usage = 0
+ 109:ChibiOS/os/hal/src/serial.c **** 
+ 110:ChibiOS/os/hal/src/serial.c ****   sd_lld_init();
+ 182               		.loc 1 110 0
+ 183 0000 0C94 0000 		jmp sd_lld_init
+ 184               	.LVL24:
+ 185               		.cfi_endproc
+ 186               	.LFE61:
+ 188               		.section	.text.sdObjectInit,"ax",@progbits
+ 189               	.global	sdObjectInit
+ 191               	sdObjectInit:
+ 192               	.LFB62:
+ 111:ChibiOS/os/hal/src/serial.c **** }
+ 112:ChibiOS/os/hal/src/serial.c **** 
+ 113:ChibiOS/os/hal/src/serial.c **** /**
+ 114:ChibiOS/os/hal/src/serial.c ****  * @brief   Initializes a generic full duplex driver object.
+ 115:ChibiOS/os/hal/src/serial.c ****  * @details The HW dependent part of the initialization has to be performed
+ 116:ChibiOS/os/hal/src/serial.c ****  *          outside, usually in the hardware initialization code.
+ 117:ChibiOS/os/hal/src/serial.c ****  *
+ 118:ChibiOS/os/hal/src/serial.c ****  * @param[out] sdp      pointer to a @p SerialDriver structure
+ 119:ChibiOS/os/hal/src/serial.c ****  * @param[in] inotify   pointer to a callback function that is invoked when
+ 120:ChibiOS/os/hal/src/serial.c ****  *                      some data is read from the Queue. The value can be
+ 121:ChibiOS/os/hal/src/serial.c ****  *                      @p NULL.
+ 122:ChibiOS/os/hal/src/serial.c ****  * @param[in] onotify   pointer to a callback function that is invoked when
+ 123:ChibiOS/os/hal/src/serial.c ****  *                      some data is written in the Queue. The value can be
+ 124:ChibiOS/os/hal/src/serial.c ****  *                      @p NULL.
+ 125:ChibiOS/os/hal/src/serial.c ****  *
+ 126:ChibiOS/os/hal/src/serial.c ****  * @init
+ 127:ChibiOS/os/hal/src/serial.c ****  */
+ 128:ChibiOS/os/hal/src/serial.c **** void sdObjectInit(SerialDriver *sdp, qnotify_t inotify, qnotify_t onotify) {
+ 193               		.loc 1 128 0
+ 194               		.cfi_startproc
+ 195               	.LVL25:
+ 196 0000 EF92      		push r14
+ 197               	.LCFI0:
+ 198               		.cfi_def_cfa_offset 3
+ 199               		.cfi_offset 14, -2
+ 200 0002 FF92      		push r15
+ 201               	.LCFI1:
+ 202               		.cfi_def_cfa_offset 4
+ 203               		.cfi_offset 15, -3
+ 204 0004 0F93      		push r16
+ 205               	.LCFI2:
+ 206               		.cfi_def_cfa_offset 5
+ 207               		.cfi_offset 16, -4
+ 208 0006 1F93      		push r17
+ 209               	.LCFI3:
+ 210               		.cfi_def_cfa_offset 6
+ 211               		.cfi_offset 17, -5
+ 212 0008 CF93      		push r28
+ 213               	.LCFI4:
+ 214               		.cfi_def_cfa_offset 7
+ 215               		.cfi_offset 28, -6
+ 216 000a DF93      		push r29
+ 217               	.LCFI5:
+ 218               		.cfi_def_cfa_offset 8
+ 219               		.cfi_offset 29, -7
+ 220               	/* prologue: function */
+ 221               	/* frame size = 0 */
+ 222               	/* stack size = 6 */
+ 223               	.L__stack_usage = 6
+ 224 000c EC01      		movw r28,r24
+ 225 000e 9B01      		movw r18,r22
+ 226 0010 7A01      		movw r14,r20
+ 129:ChibiOS/os/hal/src/serial.c **** 
+ 130:ChibiOS/os/hal/src/serial.c ****   sdp->vmt = &vmt;
+ 227               		.loc 1 130 0
+ 228 0012 80E0      		ldi r24,lo8(vmt)
+ 229 0014 90E0      		ldi r25,hi8(vmt)
+ 230               	.LVL26:
+ 231 0016 9983      		std Y+1,r25
+ 232 0018 8883      		st Y,r24
+ 233               	.LVL27:
+ 234               	.LBB48:
+ 235               	.LBB49:
+ 236               		.file 2 "ChibiOS/os/hal/osal/nil/osal.h"
+   1:ChibiOS/os/hal/osal/nil/osal.h **** /*
+   2:ChibiOS/os/hal/osal/nil/osal.h ****     ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio
+   3:ChibiOS/os/hal/osal/nil/osal.h **** 
+   4:ChibiOS/os/hal/osal/nil/osal.h ****     Licensed under the Apache License, Version 2.0 (the "License");
+   5:ChibiOS/os/hal/osal/nil/osal.h ****     you may not use this file except in compliance with the License.
+   6:ChibiOS/os/hal/osal/nil/osal.h ****     You may obtain a copy of the License at
+   7:ChibiOS/os/hal/osal/nil/osal.h **** 
+   8:ChibiOS/os/hal/osal/nil/osal.h ****         http://www.apache.org/licenses/LICENSE-2.0
+   9:ChibiOS/os/hal/osal/nil/osal.h **** 
+  10:ChibiOS/os/hal/osal/nil/osal.h ****     Unless required by applicable law or agreed to in writing, software
+  11:ChibiOS/os/hal/osal/nil/osal.h ****     distributed under the License is distributed on an "AS IS" BASIS,
+  12:ChibiOS/os/hal/osal/nil/osal.h ****     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  13:ChibiOS/os/hal/osal/nil/osal.h ****     See the License for the specific language governing permissions and
+  14:ChibiOS/os/hal/osal/nil/osal.h ****     limitations under the License.
+  15:ChibiOS/os/hal/osal/nil/osal.h **** */
+  16:ChibiOS/os/hal/osal/nil/osal.h **** 
+  17:ChibiOS/os/hal/osal/nil/osal.h **** /**
+  18:ChibiOS/os/hal/osal/nil/osal.h ****  * @file    osal.h
+  19:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   OSAL module header.
+  20:ChibiOS/os/hal/osal/nil/osal.h ****  *
+  21:ChibiOS/os/hal/osal/nil/osal.h ****  * @addtogroup OSAL
+  22:ChibiOS/os/hal/osal/nil/osal.h ****  * @{
+  23:ChibiOS/os/hal/osal/nil/osal.h ****  */
+  24:ChibiOS/os/hal/osal/nil/osal.h **** 
+  25:ChibiOS/os/hal/osal/nil/osal.h **** #ifndef _OSAL_H_
+  26:ChibiOS/os/hal/osal/nil/osal.h **** #define _OSAL_H_
+  27:ChibiOS/os/hal/osal/nil/osal.h **** 
+  28:ChibiOS/os/hal/osal/nil/osal.h **** #include <stddef.h>
+  29:ChibiOS/os/hal/osal/nil/osal.h **** #include <stdint.h>
+  30:ChibiOS/os/hal/osal/nil/osal.h **** #include <stdbool.h>
+  31:ChibiOS/os/hal/osal/nil/osal.h **** 
+  32:ChibiOS/os/hal/osal/nil/osal.h **** #include "nil.h"
+  33:ChibiOS/os/hal/osal/nil/osal.h **** 
+  34:ChibiOS/os/hal/osal/nil/osal.h **** #if defined(__SPC5_HAL__)
+  35:ChibiOS/os/hal/osal/nil/osal.h **** #include "platform.h"
+  36:ChibiOS/os/hal/osal/nil/osal.h **** #endif
+  37:ChibiOS/os/hal/osal/nil/osal.h **** 
+  38:ChibiOS/os/hal/osal/nil/osal.h **** /*===========================================================================*/
+  39:ChibiOS/os/hal/osal/nil/osal.h **** /* Module constants.                                                         */
+  40:ChibiOS/os/hal/osal/nil/osal.h **** /*===========================================================================*/
+  41:ChibiOS/os/hal/osal/nil/osal.h **** 
+  42:ChibiOS/os/hal/osal/nil/osal.h **** /**
+  43:ChibiOS/os/hal/osal/nil/osal.h ****  * @name    Common constants
+  44:ChibiOS/os/hal/osal/nil/osal.h ****  * @{
+  45:ChibiOS/os/hal/osal/nil/osal.h ****  */
+  46:ChibiOS/os/hal/osal/nil/osal.h **** #if !defined(FALSE) || defined(__DOXYGEN__)
+  47:ChibiOS/os/hal/osal/nil/osal.h **** #define FALSE                               0
+  48:ChibiOS/os/hal/osal/nil/osal.h **** #endif
+  49:ChibiOS/os/hal/osal/nil/osal.h **** 
+  50:ChibiOS/os/hal/osal/nil/osal.h **** #if !defined(TRUE) || defined(__DOXYGEN__)
+  51:ChibiOS/os/hal/osal/nil/osal.h **** #define TRUE                                (!FALSE)
+  52:ChibiOS/os/hal/osal/nil/osal.h **** #endif
+  53:ChibiOS/os/hal/osal/nil/osal.h **** 
+  54:ChibiOS/os/hal/osal/nil/osal.h **** #define OSAL_SUCCESS                        FALSE
+  55:ChibiOS/os/hal/osal/nil/osal.h **** #define OSAL_FAILED                         TRUE
+  56:ChibiOS/os/hal/osal/nil/osal.h **** /** @} */
+  57:ChibiOS/os/hal/osal/nil/osal.h **** 
+  58:ChibiOS/os/hal/osal/nil/osal.h **** #if 0
+  59:ChibiOS/os/hal/osal/nil/osal.h **** /**
+  60:ChibiOS/os/hal/osal/nil/osal.h ****  * @name    Messages
+  61:ChibiOS/os/hal/osal/nil/osal.h ****  * @{
+  62:ChibiOS/os/hal/osal/nil/osal.h ****  */
+  63:ChibiOS/os/hal/osal/nil/osal.h **** #define MSG_OK                              RDY_OK
+  64:ChibiOS/os/hal/osal/nil/osal.h **** #define MSG_RESET                           RDY_RESET
+  65:ChibiOS/os/hal/osal/nil/osal.h **** #define MSG_TIMEOUT                         RDY_TIMEOUT
+  66:ChibiOS/os/hal/osal/nil/osal.h **** /** @} */
+  67:ChibiOS/os/hal/osal/nil/osal.h **** #endif
+  68:ChibiOS/os/hal/osal/nil/osal.h **** 
+  69:ChibiOS/os/hal/osal/nil/osal.h **** #if 0
+  70:ChibiOS/os/hal/osal/nil/osal.h **** /**
+  71:ChibiOS/os/hal/osal/nil/osal.h ****  * @name    Special time constants
+  72:ChibiOS/os/hal/osal/nil/osal.h ****  * @{
+  73:ChibiOS/os/hal/osal/nil/osal.h ****  */
+  74:ChibiOS/os/hal/osal/nil/osal.h **** #define TIME_IMMEDIATE                      ((systime_t)0)
+  75:ChibiOS/os/hal/osal/nil/osal.h **** #define TIME_INFINITE                       ((systime_t)-1)
+  76:ChibiOS/os/hal/osal/nil/osal.h **** /** @} */
+  77:ChibiOS/os/hal/osal/nil/osal.h **** #endif
+  78:ChibiOS/os/hal/osal/nil/osal.h **** 
+  79:ChibiOS/os/hal/osal/nil/osal.h **** /**
+  80:ChibiOS/os/hal/osal/nil/osal.h ****  * @name    Systick modes.
+  81:ChibiOS/os/hal/osal/nil/osal.h ****  * @{
+  82:ChibiOS/os/hal/osal/nil/osal.h ****  */
+  83:ChibiOS/os/hal/osal/nil/osal.h **** #define OSAL_ST_MODE_NONE                   0
+  84:ChibiOS/os/hal/osal/nil/osal.h **** #define OSAL_ST_MODE_PERIODIC               1
+  85:ChibiOS/os/hal/osal/nil/osal.h **** #define OSAL_ST_MODE_FREERUNNING            2
+  86:ChibiOS/os/hal/osal/nil/osal.h **** /** @} */
+  87:ChibiOS/os/hal/osal/nil/osal.h **** 
+  88:ChibiOS/os/hal/osal/nil/osal.h **** /**
+  89:ChibiOS/os/hal/osal/nil/osal.h ****  * @name    Systick parameters.
+  90:ChibiOS/os/hal/osal/nil/osal.h ****  * @{
+  91:ChibiOS/os/hal/osal/nil/osal.h ****  */
+  92:ChibiOS/os/hal/osal/nil/osal.h **** /**
+  93:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Size in bits of the @p systick_t type.
+  94:ChibiOS/os/hal/osal/nil/osal.h ****  */
+  95:ChibiOS/os/hal/osal/nil/osal.h **** #define OSAL_ST_RESOLUTION                  NIL_CFG_ST_RESOLUTION
+  96:ChibiOS/os/hal/osal/nil/osal.h **** 
+  97:ChibiOS/os/hal/osal/nil/osal.h **** /**
+  98:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Required systick frequency or resolution.
+  99:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 100:ChibiOS/os/hal/osal/nil/osal.h **** #define OSAL_ST_FREQUENCY                   NIL_CFG_ST_FREQUENCY
+ 101:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 102:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 103:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Systick mode required by the underlying OS.
+ 104:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 105:ChibiOS/os/hal/osal/nil/osal.h **** #if (NIL_CFG_ST_TIMEDELTA == 0) || defined(__DOXYGEN__)
+ 106:ChibiOS/os/hal/osal/nil/osal.h **** #define OSAL_ST_MODE                        OSAL_ST_MODE_PERIODIC
+ 107:ChibiOS/os/hal/osal/nil/osal.h **** #else
+ 108:ChibiOS/os/hal/osal/nil/osal.h **** #define OSAL_ST_MODE                        OSAL_ST_MODE_FREERUNNING
+ 109:ChibiOS/os/hal/osal/nil/osal.h **** #endif
+ 110:ChibiOS/os/hal/osal/nil/osal.h **** /** @} */
+ 111:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 112:ChibiOS/os/hal/osal/nil/osal.h **** /*===========================================================================*/
+ 113:ChibiOS/os/hal/osal/nil/osal.h **** /* Module pre-compile time settings.                                         */
+ 114:ChibiOS/os/hal/osal/nil/osal.h **** /*===========================================================================*/
+ 115:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 116:ChibiOS/os/hal/osal/nil/osal.h **** /*===========================================================================*/
+ 117:ChibiOS/os/hal/osal/nil/osal.h **** /* Derived constants and error checks.                                       */
+ 118:ChibiOS/os/hal/osal/nil/osal.h **** /*===========================================================================*/
+ 119:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 120:ChibiOS/os/hal/osal/nil/osal.h **** #if NIL_CFG_USE_EVENTS == FALSE
+ 121:ChibiOS/os/hal/osal/nil/osal.h **** #error "OSAL requires NIL_CFG_USE_EVENTS=TRUE"
+ 122:ChibiOS/os/hal/osal/nil/osal.h **** #endif
+ 123:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 124:ChibiOS/os/hal/osal/nil/osal.h **** #if !(OSAL_ST_MODE == OSAL_ST_MODE_NONE) &&                                 \
+ 125:ChibiOS/os/hal/osal/nil/osal.h ****     !(OSAL_ST_MODE == OSAL_ST_MODE_PERIODIC) &&                             \
+ 126:ChibiOS/os/hal/osal/nil/osal.h ****     !(OSAL_ST_MODE == OSAL_ST_MODE_FREERUNNING)
+ 127:ChibiOS/os/hal/osal/nil/osal.h **** #error "invalid OSAL_ST_MODE setting in osal.h"
+ 128:ChibiOS/os/hal/osal/nil/osal.h **** #endif
+ 129:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 130:ChibiOS/os/hal/osal/nil/osal.h **** #if (OSAL_ST_RESOLUTION != 16) && (OSAL_ST_RESOLUTION != 32)
+ 131:ChibiOS/os/hal/osal/nil/osal.h **** #error "invalid OSAL_ST_RESOLUTION, must be 16 or 32"
+ 132:ChibiOS/os/hal/osal/nil/osal.h **** #endif
+ 133:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 134:ChibiOS/os/hal/osal/nil/osal.h **** /*===========================================================================*/
+ 135:ChibiOS/os/hal/osal/nil/osal.h **** /* Module data structures and types.                                         */
+ 136:ChibiOS/os/hal/osal/nil/osal.h **** /*===========================================================================*/
+ 137:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 138:ChibiOS/os/hal/osal/nil/osal.h **** #if 0
+ 139:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 140:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Type of a system status word.
+ 141:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 142:ChibiOS/os/hal/osal/nil/osal.h **** typedef uint32_t syssts_t;
+ 143:ChibiOS/os/hal/osal/nil/osal.h **** #endif
+ 144:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 145:ChibiOS/os/hal/osal/nil/osal.h **** #if 0
+ 146:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 147:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Type of a message.
+ 148:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 149:ChibiOS/os/hal/osal/nil/osal.h **** typedef int32_t msg_t;
+ 150:ChibiOS/os/hal/osal/nil/osal.h **** #endif
+ 151:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 152:ChibiOS/os/hal/osal/nil/osal.h **** #if 0
+ 153:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 154:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Type of system time counter.
+ 155:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 156:ChibiOS/os/hal/osal/nil/osal.h **** typedef uint32_t systime_t;
+ 157:ChibiOS/os/hal/osal/nil/osal.h **** #endif
+ 158:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 159:ChibiOS/os/hal/osal/nil/osal.h **** #if 0
+ 160:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 161:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Type of realtime counter.
+ 162:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 163:ChibiOS/os/hal/osal/nil/osal.h **** typedef uint32_t rtcnt_t;
+ 164:ChibiOS/os/hal/osal/nil/osal.h **** #endif
+ 165:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 166:ChibiOS/os/hal/osal/nil/osal.h **** #if 0
+ 167:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 168:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Type of a thread reference.
+ 169:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 170:ChibiOS/os/hal/osal/nil/osal.h **** typedef thread_t * thread_reference_t;
+ 171:ChibiOS/os/hal/osal/nil/osal.h **** #endif
+ 172:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 173:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 174:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Type of an event flags object.
+ 175:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    The content of this structure is not part of the API and should
+ 176:ChibiOS/os/hal/osal/nil/osal.h ****  *          not be relied upon. Implementers may define this structure in
+ 177:ChibiOS/os/hal/osal/nil/osal.h ****  *          an entirely different way.
+ 178:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    Retrieval and clearing of the flags are not defined in this
+ 179:ChibiOS/os/hal/osal/nil/osal.h ****  *          API and are implementation-dependent.
+ 180:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 181:ChibiOS/os/hal/osal/nil/osal.h **** typedef struct event_source event_source_t;
+ 182:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 183:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 184:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Type of an event source callback.
+ 185:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    This type is not part of the OSAL API and is provided
+ 186:ChibiOS/os/hal/osal/nil/osal.h ****  *          exclusively as an example and for convenience.
+ 187:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 188:ChibiOS/os/hal/osal/nil/osal.h **** typedef void (*eventcallback_t)(event_source_t *p);
+ 189:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 190:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 191:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Type of an event flags mask.
+ 192:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 193:ChibiOS/os/hal/osal/nil/osal.h **** typedef uint32_t eventflags_t;
+ 194:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 195:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 196:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Events source object.
+ 197:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    The content of this structure is not part of the API and should
+ 198:ChibiOS/os/hal/osal/nil/osal.h ****  *          not be relied upon. Implementers may define this structure in
+ 199:ChibiOS/os/hal/osal/nil/osal.h ****  *          an entirely different way.
+ 200:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    Retrieval and clearing of the flags are not defined in this
+ 201:ChibiOS/os/hal/osal/nil/osal.h ****  *          API and are implementation-dependent.
+ 202:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 203:ChibiOS/os/hal/osal/nil/osal.h **** struct event_source {
+ 204:ChibiOS/os/hal/osal/nil/osal.h ****   volatile eventflags_t flags;      /**< @brief Stored event flags.         */
+ 205:ChibiOS/os/hal/osal/nil/osal.h ****   eventcallback_t       cb;         /**< @brief Event source callback.      */
+ 206:ChibiOS/os/hal/osal/nil/osal.h ****   void                  *param;     /**< @brief User defined field.         */
+ 207:ChibiOS/os/hal/osal/nil/osal.h **** };
+ 208:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 209:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 210:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Type of a mutex.
+ 211:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    If the OS does not support mutexes or there is no OS then them
+ 212:ChibiOS/os/hal/osal/nil/osal.h ****  *          mechanism can be simulated.
+ 213:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 214:ChibiOS/os/hal/osal/nil/osal.h **** typedef semaphore_t mutex_t;
+ 215:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 216:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 217:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Type of a thread queue.
+ 218:ChibiOS/os/hal/osal/nil/osal.h ****  * @details A thread queue is a queue of sleeping threads, queued threads
+ 219:ChibiOS/os/hal/osal/nil/osal.h ****  *          can be dequeued one at time or all together.
+ 220:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    In this implementation it is implemented as a single reference
+ 221:ChibiOS/os/hal/osal/nil/osal.h ****  *          because there are no real threads.
+ 222:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 223:ChibiOS/os/hal/osal/nil/osal.h **** typedef struct {
+ 224:ChibiOS/os/hal/osal/nil/osal.h ****   semaphore_t   sem;
+ 225:ChibiOS/os/hal/osal/nil/osal.h **** } threads_queue_t;
+ 226:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 227:ChibiOS/os/hal/osal/nil/osal.h **** /*===========================================================================*/
+ 228:ChibiOS/os/hal/osal/nil/osal.h **** /* Module macros.                                                            */
+ 229:ChibiOS/os/hal/osal/nil/osal.h **** /*===========================================================================*/
+ 230:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 231:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 232:ChibiOS/os/hal/osal/nil/osal.h ****  * @name    Debug related macros
+ 233:ChibiOS/os/hal/osal/nil/osal.h ****  * @{
+ 234:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 235:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 236:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Condition assertion.
+ 237:ChibiOS/os/hal/osal/nil/osal.h ****  * @details If the condition check fails then the OSAL panics with a
+ 238:ChibiOS/os/hal/osal/nil/osal.h ****  *          message and halts.
+ 239:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    The condition is tested only if the @p OSAL_ENABLE_ASSERTIONS
+ 240:ChibiOS/os/hal/osal/nil/osal.h ****  *          switch is enabled.
+ 241:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    The remark string is not currently used except for putting a
+ 242:ChibiOS/os/hal/osal/nil/osal.h ****  *          comment in the code about the assertion.
+ 243:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 244:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] c         the condition to be verified to be true
+ 245:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] remark    a remark string
+ 246:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 247:ChibiOS/os/hal/osal/nil/osal.h ****  * @api
+ 248:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 249:ChibiOS/os/hal/osal/nil/osal.h **** #define osalDbgAssert(c, remark) chDbgAssert(c, remark)
+ 250:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 251:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 252:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Function parameters check.
+ 253:ChibiOS/os/hal/osal/nil/osal.h ****  * @details If the condition check fails then the OSAL panics and halts.
+ 254:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    The condition is tested only if the @p OSAL_ENABLE_CHECKS switch
+ 255:ChibiOS/os/hal/osal/nil/osal.h ****  *          is enabled.
+ 256:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 257:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] c         the condition to be verified to be true
+ 258:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 259:ChibiOS/os/hal/osal/nil/osal.h ****  * @api
+ 260:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 261:ChibiOS/os/hal/osal/nil/osal.h **** #define osalDbgCheck(c) chDbgAssert(c, "parameter check")
+ 262:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 263:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 264:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   I-Class state check.
+ 265:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    Not implemented in this simplified OSAL.
+ 266:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 267:ChibiOS/os/hal/osal/nil/osal.h **** #define osalDbgCheckClassI() /*chDbgCheckClassI()*/
+ 268:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 269:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 270:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   S-Class state check.
+ 271:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    Not implemented in this simplified OSAL.
+ 272:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 273:ChibiOS/os/hal/osal/nil/osal.h **** #define osalDbgCheckClassS() /*chDbgCheckClassS()*/
+ 274:ChibiOS/os/hal/osal/nil/osal.h **** /** @} */
+ 275:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 276:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 277:ChibiOS/os/hal/osal/nil/osal.h ****  * @name    IRQ service routines wrappers
+ 278:ChibiOS/os/hal/osal/nil/osal.h ****  * @{
+ 279:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 280:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 281:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Priority level verification macro.
+ 282:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 283:ChibiOS/os/hal/osal/nil/osal.h **** #define OSAL_IRQ_IS_VALID_PRIORITY(n) CH_IRQ_IS_VALID_KERNEL_PRIORITY(n)
+ 284:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 285:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 286:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   IRQ prologue code.
+ 287:ChibiOS/os/hal/osal/nil/osal.h ****  * @details This macro must be inserted at the start of all IRQ handlers.
+ 288:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 289:ChibiOS/os/hal/osal/nil/osal.h **** #define OSAL_IRQ_PROLOGUE() CH_IRQ_PROLOGUE()
+ 290:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 291:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 292:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   IRQ epilogue code.
+ 293:ChibiOS/os/hal/osal/nil/osal.h ****  * @details This macro must be inserted at the end of all IRQ handlers.
+ 294:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 295:ChibiOS/os/hal/osal/nil/osal.h **** #define OSAL_IRQ_EPILOGUE() CH_IRQ_EPILOGUE()
+ 296:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 297:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 298:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   IRQ handler function declaration.
+ 299:ChibiOS/os/hal/osal/nil/osal.h ****  * @details This macro hides the details of an ISR function declaration.
+ 300:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 301:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] id        a vector name as defined in @p vectors.s
+ 302:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 303:ChibiOS/os/hal/osal/nil/osal.h **** #define OSAL_IRQ_HANDLER(id) CH_IRQ_HANDLER(id)
+ 304:ChibiOS/os/hal/osal/nil/osal.h **** /** @} */
+ 305:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 306:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 307:ChibiOS/os/hal/osal/nil/osal.h ****  * @name    Time conversion utilities
+ 308:ChibiOS/os/hal/osal/nil/osal.h ****  * @{
+ 309:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 310:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 311:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Seconds to system ticks.
+ 312:ChibiOS/os/hal/osal/nil/osal.h ****  * @details Converts from seconds to system ticks number.
+ 313:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    The result is rounded upward to the next tick boundary.
+ 314:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 315:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] sec       number of seconds
+ 316:ChibiOS/os/hal/osal/nil/osal.h ****  * @return              The number of ticks.
+ 317:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 318:ChibiOS/os/hal/osal/nil/osal.h ****  * @api
+ 319:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 320:ChibiOS/os/hal/osal/nil/osal.h **** #define OSAL_S2ST(sec) S2ST(sec)
+ 321:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 322:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 323:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Milliseconds to system ticks.
+ 324:ChibiOS/os/hal/osal/nil/osal.h ****  * @details Converts from milliseconds to system ticks number.
+ 325:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    The result is rounded upward to the next tick boundary.
+ 326:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 327:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] msec      number of milliseconds
+ 328:ChibiOS/os/hal/osal/nil/osal.h ****  * @return              The number of ticks.
+ 329:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 330:ChibiOS/os/hal/osal/nil/osal.h ****  * @api
+ 331:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 332:ChibiOS/os/hal/osal/nil/osal.h **** #define OSAL_MS2ST(msec) MS2ST(msec)
+ 333:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 334:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 335:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Microseconds to system ticks.
+ 336:ChibiOS/os/hal/osal/nil/osal.h ****  * @details Converts from microseconds to system ticks number.
+ 337:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    The result is rounded upward to the next tick boundary.
+ 338:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 339:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] usec      number of microseconds
+ 340:ChibiOS/os/hal/osal/nil/osal.h ****  * @return              The number of ticks.
+ 341:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 342:ChibiOS/os/hal/osal/nil/osal.h ****  * @api
+ 343:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 344:ChibiOS/os/hal/osal/nil/osal.h **** #define OSAL_US2ST(usec) US2ST(usec)
+ 345:ChibiOS/os/hal/osal/nil/osal.h **** /** @} */
+ 346:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 347:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 348:ChibiOS/os/hal/osal/nil/osal.h ****  * @name    Time conversion utilities for the realtime counter
+ 349:ChibiOS/os/hal/osal/nil/osal.h ****  * @{
+ 350:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 351:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 352:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Seconds to realtime counter.
+ 353:ChibiOS/os/hal/osal/nil/osal.h ****  * @details Converts from seconds to realtime counter cycles.
+ 354:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    The macro assumes that @p freq >= @p 1.
+ 355:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 356:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] freq      clock frequency, in Hz, of the realtime counter
+ 357:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] sec       number of seconds
+ 358:ChibiOS/os/hal/osal/nil/osal.h ****  * @return              The number of cycles.
+ 359:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 360:ChibiOS/os/hal/osal/nil/osal.h ****  * @api
+ 361:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 362:ChibiOS/os/hal/osal/nil/osal.h **** #define OSAL_S2RTC(freq, sec) S2RTC(freq, sec)
+ 363:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 364:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 365:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Milliseconds to realtime counter.
+ 366:ChibiOS/os/hal/osal/nil/osal.h ****  * @details Converts from milliseconds to realtime counter cycles.
+ 367:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    The result is rounded upward to the next millisecond boundary.
+ 368:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    The macro assumes that @p freq >= @p 1000.
+ 369:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 370:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] freq      clock frequency, in Hz, of the realtime counter
+ 371:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] msec      number of milliseconds
+ 372:ChibiOS/os/hal/osal/nil/osal.h ****  * @return              The number of cycles.
+ 373:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 374:ChibiOS/os/hal/osal/nil/osal.h ****  * @api
+ 375:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 376:ChibiOS/os/hal/osal/nil/osal.h **** #define OSAL_MS2RTC(freq, msec) MS2RTC(freq, msec)
+ 377:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 378:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 379:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Microseconds to realtime counter.
+ 380:ChibiOS/os/hal/osal/nil/osal.h ****  * @details Converts from microseconds to realtime counter cycles.
+ 381:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    The result is rounded upward to the next microsecond boundary.
+ 382:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    The macro assumes that @p freq >= @p 1000000.
+ 383:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 384:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] freq      clock frequency, in Hz, of the realtime counter
+ 385:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] usec      number of microseconds
+ 386:ChibiOS/os/hal/osal/nil/osal.h ****  * @return              The number of cycles.
+ 387:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 388:ChibiOS/os/hal/osal/nil/osal.h ****  * @api
+ 389:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 390:ChibiOS/os/hal/osal/nil/osal.h **** #define OSAL_US2RTC(freq, usec) US2RTC(freq, usec)
+ 391:ChibiOS/os/hal/osal/nil/osal.h **** /** @} */
+ 392:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 393:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 394:ChibiOS/os/hal/osal/nil/osal.h ****  * @name    Sleep macros using absolute time
+ 395:ChibiOS/os/hal/osal/nil/osal.h ****  * @{
+ 396:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 397:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 398:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Delays the invoking thread for the specified number of seconds.
+ 399:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    The specified time is rounded up to a value allowed by the real
+ 400:ChibiOS/os/hal/osal/nil/osal.h ****  *          system tick clock.
+ 401:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    The maximum specifiable value is implementation dependent.
+ 402:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 403:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] sec       time in seconds, must be different from zero
+ 404:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 405:ChibiOS/os/hal/osal/nil/osal.h ****  * @api
+ 406:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 407:ChibiOS/os/hal/osal/nil/osal.h **** #define osalThreadSleepSeconds(sec) osalThreadSleep(OSAL_S2ST(sec))
+ 408:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 409:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 410:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Delays the invoking thread for the specified number of
+ 411:ChibiOS/os/hal/osal/nil/osal.h ****  *          milliseconds.
+ 412:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    The specified time is rounded up to a value allowed by the real
+ 413:ChibiOS/os/hal/osal/nil/osal.h ****  *          system tick clock.
+ 414:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    The maximum specifiable value is implementation dependent.
+ 415:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 416:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] msec      time in milliseconds, must be different from zero
+ 417:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 418:ChibiOS/os/hal/osal/nil/osal.h ****  * @api
+ 419:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 420:ChibiOS/os/hal/osal/nil/osal.h **** #define osalThreadSleepMilliseconds(msec) osalThreadSleep(OSAL_MS2ST(msec))
+ 421:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 422:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 423:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Delays the invoking thread for the specified number of
+ 424:ChibiOS/os/hal/osal/nil/osal.h ****  *          microseconds.
+ 425:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    The specified time is rounded up to a value allowed by the real
+ 426:ChibiOS/os/hal/osal/nil/osal.h ****  *          system tick clock.
+ 427:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    The maximum specifiable value is implementation dependent.
+ 428:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 429:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] usec      time in microseconds, must be different from zero
+ 430:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 431:ChibiOS/os/hal/osal/nil/osal.h ****  * @api
+ 432:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 433:ChibiOS/os/hal/osal/nil/osal.h **** #define osalThreadSleepMicroseconds(usec) osalThreadSleep(OSAL_US2ST(usec))
+ 434:ChibiOS/os/hal/osal/nil/osal.h **** /** @} */
+ 435:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 436:ChibiOS/os/hal/osal/nil/osal.h **** /*===========================================================================*/
+ 437:ChibiOS/os/hal/osal/nil/osal.h **** /* External declarations.                                                    */
+ 438:ChibiOS/os/hal/osal/nil/osal.h **** /*===========================================================================*/
+ 439:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 440:ChibiOS/os/hal/osal/nil/osal.h **** #ifdef __cplusplus
+ 441:ChibiOS/os/hal/osal/nil/osal.h **** extern "C" {
+ 442:ChibiOS/os/hal/osal/nil/osal.h **** #endif
+ 443:ChibiOS/os/hal/osal/nil/osal.h ****   void osalThreadDequeueNextI(threads_queue_t *tqp, msg_t msg);
+ 444:ChibiOS/os/hal/osal/nil/osal.h ****   void osalThreadDequeueAllI(threads_queue_t *tqp, msg_t msg);
+ 445:ChibiOS/os/hal/osal/nil/osal.h **** #ifdef __cplusplus
+ 446:ChibiOS/os/hal/osal/nil/osal.h **** }
+ 447:ChibiOS/os/hal/osal/nil/osal.h **** #endif
+ 448:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 449:ChibiOS/os/hal/osal/nil/osal.h **** /*===========================================================================*/
+ 450:ChibiOS/os/hal/osal/nil/osal.h **** /* Module inline functions.                                                  */
+ 451:ChibiOS/os/hal/osal/nil/osal.h **** /*===========================================================================*/
+ 452:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 453:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 454:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   OSAL module initialization.
+ 455:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 456:ChibiOS/os/hal/osal/nil/osal.h ****  * @api
+ 457:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 458:ChibiOS/os/hal/osal/nil/osal.h **** static inline void osalInit(void) {
+ 459:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 460:ChibiOS/os/hal/osal/nil/osal.h **** }
+ 461:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 462:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 463:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   System halt with error message.
+ 464:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 465:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] reason    the halt message pointer
+ 466:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 467:ChibiOS/os/hal/osal/nil/osal.h ****  * @api
+ 468:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 469:ChibiOS/os/hal/osal/nil/osal.h **** static inline void osalSysHalt(const char *reason) {
+ 470:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 471:ChibiOS/os/hal/osal/nil/osal.h ****   chSysHalt(reason);
+ 472:ChibiOS/os/hal/osal/nil/osal.h **** }
+ 473:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 474:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 475:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Disables interrupts globally.
+ 476:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 477:ChibiOS/os/hal/osal/nil/osal.h ****  * @special
+ 478:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 479:ChibiOS/os/hal/osal/nil/osal.h **** static inline void osalSysDisable(void) {
+ 480:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 481:ChibiOS/os/hal/osal/nil/osal.h ****   chSysDisable();
+ 482:ChibiOS/os/hal/osal/nil/osal.h **** }
+ 483:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 484:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 485:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Enables interrupts globally.
+ 486:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 487:ChibiOS/os/hal/osal/nil/osal.h ****  * @special
+ 488:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 489:ChibiOS/os/hal/osal/nil/osal.h **** static inline void osalSysEnable(void) {
+ 490:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 491:ChibiOS/os/hal/osal/nil/osal.h ****   chSysEnable();
+ 492:ChibiOS/os/hal/osal/nil/osal.h **** }
+ 493:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 494:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 495:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Enters a critical zone from thread context.
+ 496:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    This function cannot be used for reentrant critical zones.
+ 497:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 498:ChibiOS/os/hal/osal/nil/osal.h ****  * @special
+ 499:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 500:ChibiOS/os/hal/osal/nil/osal.h **** static inline void osalSysLock(void) {
+ 501:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 502:ChibiOS/os/hal/osal/nil/osal.h ****   chSysLock();
+ 503:ChibiOS/os/hal/osal/nil/osal.h **** }
+ 504:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 505:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 506:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Leaves a critical zone from thread context.
+ 507:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    This function cannot be used for reentrant critical zones.
+ 508:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 509:ChibiOS/os/hal/osal/nil/osal.h ****  * @special
+ 510:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 511:ChibiOS/os/hal/osal/nil/osal.h **** static inline void osalSysUnlock(void) {
+ 512:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 513:ChibiOS/os/hal/osal/nil/osal.h ****   chSysUnlock();
+ 514:ChibiOS/os/hal/osal/nil/osal.h **** }
+ 515:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 516:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 517:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Enters a critical zone from ISR context.
+ 518:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    This function cannot be used for reentrant critical zones.
+ 519:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 520:ChibiOS/os/hal/osal/nil/osal.h ****  * @special
+ 521:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 522:ChibiOS/os/hal/osal/nil/osal.h **** static inline void osalSysLockFromISR(void) {
+ 523:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 524:ChibiOS/os/hal/osal/nil/osal.h ****   chSysLockFromISR();
+ 525:ChibiOS/os/hal/osal/nil/osal.h **** }
+ 526:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 527:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 528:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Leaves a critical zone from ISR context.
+ 529:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    This function cannot be used for reentrant critical zones.
+ 530:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 531:ChibiOS/os/hal/osal/nil/osal.h ****  * @special
+ 532:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 533:ChibiOS/os/hal/osal/nil/osal.h **** static inline void osalSysUnlockFromISR(void) {
+ 534:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 535:ChibiOS/os/hal/osal/nil/osal.h ****   chSysUnlockFromISR();
+ 536:ChibiOS/os/hal/osal/nil/osal.h **** }
+ 537:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 538:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 539:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Returns the execution status and enters a critical zone.
+ 540:ChibiOS/os/hal/osal/nil/osal.h ****  * @details This functions enters into a critical zone and can be called
+ 541:ChibiOS/os/hal/osal/nil/osal.h ****  *          from any context. Because its flexibility it is less efficient
+ 542:ChibiOS/os/hal/osal/nil/osal.h ****  *          than @p chSysLock() which is preferable when the calling context
+ 543:ChibiOS/os/hal/osal/nil/osal.h ****  *          is known.
+ 544:ChibiOS/os/hal/osal/nil/osal.h ****  * @post    The system is in a critical zone.
+ 545:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 546:ChibiOS/os/hal/osal/nil/osal.h ****  * @return              The previous system status, the encoding of this
+ 547:ChibiOS/os/hal/osal/nil/osal.h ****  *                      status word is architecture-dependent and opaque.
+ 548:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 549:ChibiOS/os/hal/osal/nil/osal.h ****  * @xclass
+ 550:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 551:ChibiOS/os/hal/osal/nil/osal.h **** static inline syssts_t osalSysGetStatusAndLockX(void) {
+ 552:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 553:ChibiOS/os/hal/osal/nil/osal.h ****   return chSysGetStatusAndLockX();
+ 554:ChibiOS/os/hal/osal/nil/osal.h **** }
+ 555:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 556:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 557:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Restores the specified execution status and leaves a critical zone.
+ 558:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    A call to @p chSchRescheduleS() is automatically performed
+ 559:ChibiOS/os/hal/osal/nil/osal.h ****  *          if exiting the critical zone and if not in ISR context.
+ 560:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 561:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] sts       the system status to be restored.
+ 562:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 563:ChibiOS/os/hal/osal/nil/osal.h ****  * @xclass
+ 564:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 565:ChibiOS/os/hal/osal/nil/osal.h **** static inline void osalSysRestoreStatusX(syssts_t sts) {
+ 566:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 567:ChibiOS/os/hal/osal/nil/osal.h ****   chSysRestoreStatusX(sts);
+ 568:ChibiOS/os/hal/osal/nil/osal.h **** }
+ 569:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 570:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 571:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Polled delay.
+ 572:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    The real delay is always few cycles in excess of the specified
+ 573:ChibiOS/os/hal/osal/nil/osal.h ****  *          value.
+ 574:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 575:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] cycles    number of cycles
+ 576:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 577:ChibiOS/os/hal/osal/nil/osal.h ****  * @xclass
+ 578:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 579:ChibiOS/os/hal/osal/nil/osal.h **** #if (PORT_SUPPORTS_RT == TRUE) || defined(__DOXYGEN__)
+ 580:ChibiOS/os/hal/osal/nil/osal.h **** static inline void osalSysPolledDelayX(rtcnt_t cycles) {
+ 581:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 582:ChibiOS/os/hal/osal/nil/osal.h ****   chSysPolledDelayX(cycles);
+ 583:ChibiOS/os/hal/osal/nil/osal.h **** }
+ 584:ChibiOS/os/hal/osal/nil/osal.h **** #endif
+ 585:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 586:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 587:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Systick callback for the underlying OS.
+ 588:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    This callback is only defined if the OSAL requires such a
+ 589:ChibiOS/os/hal/osal/nil/osal.h ****  *          service from the HAL.
+ 590:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 591:ChibiOS/os/hal/osal/nil/osal.h **** #if (OSAL_ST_MODE != OSAL_ST_MODE_NONE) || defined(__DOXYGEN__)
+ 592:ChibiOS/os/hal/osal/nil/osal.h **** static inline void osalOsTimerHandlerI(void) {
+ 593:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 594:ChibiOS/os/hal/osal/nil/osal.h ****   chSysTimerHandlerI();
+ 595:ChibiOS/os/hal/osal/nil/osal.h **** }
+ 596:ChibiOS/os/hal/osal/nil/osal.h **** #endif
+ 597:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 598:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 599:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Checks if a reschedule is required and performs it.
+ 600:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    I-Class functions invoked from thread context must not reschedule
+ 601:ChibiOS/os/hal/osal/nil/osal.h ****  *          by themselves, an explicit reschedule using this function is
+ 602:ChibiOS/os/hal/osal/nil/osal.h ****  *          required in this scenario.
+ 603:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    Not implemented in this simplified OSAL.
+ 604:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 605:ChibiOS/os/hal/osal/nil/osal.h ****  * @sclass
+ 606:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 607:ChibiOS/os/hal/osal/nil/osal.h **** static inline void osalOsRescheduleS(void) {
+ 608:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 609:ChibiOS/os/hal/osal/nil/osal.h ****   chSchRescheduleS();
+ 610:ChibiOS/os/hal/osal/nil/osal.h **** }
+ 611:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 612:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 613:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Current system time.
+ 614:ChibiOS/os/hal/osal/nil/osal.h ****  * @details Returns the number of system ticks since the @p osalInit()
+ 615:ChibiOS/os/hal/osal/nil/osal.h ****  *          invocation.
+ 616:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    The counter can reach its maximum and then restart from zero.
+ 617:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    This function can be called from any context but its atomicity
+ 618:ChibiOS/os/hal/osal/nil/osal.h ****  *          is not guaranteed on architectures whose word size is less than
+ 619:ChibiOS/os/hal/osal/nil/osal.h ****  *          @p systime_t size.
+ 620:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 621:ChibiOS/os/hal/osal/nil/osal.h ****  * @return              The system time in ticks.
+ 622:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 623:ChibiOS/os/hal/osal/nil/osal.h ****  * @xclass
+ 624:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 625:ChibiOS/os/hal/osal/nil/osal.h **** static inline systime_t osalOsGetSystemTimeX(void) {
+ 626:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 627:ChibiOS/os/hal/osal/nil/osal.h ****   return chVTGetSystemTimeX();
+ 628:ChibiOS/os/hal/osal/nil/osal.h **** }
+ 629:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 630:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 631:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Checks if the specified time is within the specified time window.
+ 632:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    When start==end then the function returns always true because the
+ 633:ChibiOS/os/hal/osal/nil/osal.h ****  *          whole time range is specified.
+ 634:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    This function can be called from any context.
+ 635:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 636:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] time      the time to be verified
+ 637:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] start     the start of the time window (inclusive)
+ 638:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] end       the end of the time window (non inclusive)
+ 639:ChibiOS/os/hal/osal/nil/osal.h ****  * @retval true         current time within the specified time window.
+ 640:ChibiOS/os/hal/osal/nil/osal.h ****  * @retval false        current time not within the specified time window.
+ 641:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 642:ChibiOS/os/hal/osal/nil/osal.h ****  * @xclass
+ 643:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 644:ChibiOS/os/hal/osal/nil/osal.h **** static inline bool osalOsIsTimeWithinX(systime_t time,
+ 645:ChibiOS/os/hal/osal/nil/osal.h ****                                        systime_t start,
+ 646:ChibiOS/os/hal/osal/nil/osal.h ****                                        systime_t end) {
+ 647:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 648:ChibiOS/os/hal/osal/nil/osal.h ****   return chVTIsTimeWithinX(time, start, end);
+ 649:ChibiOS/os/hal/osal/nil/osal.h **** }
+ 650:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 651:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 652:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Suspends the invoking thread for the specified time.
+ 653:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 654:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] time      the delay in system ticks, the special values are
+ 655:ChibiOS/os/hal/osal/nil/osal.h ****  *                      handled as follow:
+ 656:ChibiOS/os/hal/osal/nil/osal.h ****  *                      - @a TIME_INFINITE is allowed but interpreted as a
+ 657:ChibiOS/os/hal/osal/nil/osal.h ****  *                        normal time specification.
+ 658:ChibiOS/os/hal/osal/nil/osal.h ****  *                      - @a TIME_IMMEDIATE this value is not allowed.
+ 659:ChibiOS/os/hal/osal/nil/osal.h ****  *                      .
+ 660:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 661:ChibiOS/os/hal/osal/nil/osal.h ****  * @sclass
+ 662:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 663:ChibiOS/os/hal/osal/nil/osal.h **** static inline void osalThreadSleepS(systime_t time) {
+ 664:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 665:ChibiOS/os/hal/osal/nil/osal.h ****   chThdSleepS(time);
+ 666:ChibiOS/os/hal/osal/nil/osal.h **** }
+ 667:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 668:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 669:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Suspends the invoking thread for the specified time.
+ 670:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 671:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] time      the delay in system ticks, the special values are
+ 672:ChibiOS/os/hal/osal/nil/osal.h ****  *                      handled as follow:
+ 673:ChibiOS/os/hal/osal/nil/osal.h ****  *                      - @a TIME_INFINITE is allowed but interpreted as a
+ 674:ChibiOS/os/hal/osal/nil/osal.h ****  *                        normal time specification.
+ 675:ChibiOS/os/hal/osal/nil/osal.h ****  *                      - @a TIME_IMMEDIATE this value is not allowed.
+ 676:ChibiOS/os/hal/osal/nil/osal.h ****  *                      .
+ 677:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 678:ChibiOS/os/hal/osal/nil/osal.h ****  * @api
+ 679:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 680:ChibiOS/os/hal/osal/nil/osal.h **** static inline void osalThreadSleep(systime_t time) {
+ 681:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 682:ChibiOS/os/hal/osal/nil/osal.h ****   chThdSleep(time);
+ 683:ChibiOS/os/hal/osal/nil/osal.h **** }
+ 684:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 685:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 686:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Sends the current thread sleeping and sets a reference variable.
+ 687:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    This function must reschedule, it can only be called from thread
+ 688:ChibiOS/os/hal/osal/nil/osal.h ****  *          context.
+ 689:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 690:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] trp       a pointer to a thread reference object
+ 691:ChibiOS/os/hal/osal/nil/osal.h ****  * @return              The wake up message.
+ 692:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 693:ChibiOS/os/hal/osal/nil/osal.h ****  * @sclass
+ 694:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 695:ChibiOS/os/hal/osal/nil/osal.h **** static inline msg_t osalThreadSuspendS(thread_reference_t *trp) {
+ 696:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 697:ChibiOS/os/hal/osal/nil/osal.h ****   return chThdSuspendTimeoutS(trp, TIME_INFINITE);
+ 698:ChibiOS/os/hal/osal/nil/osal.h **** }
+ 699:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 700:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 701:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Sends the current thread sleeping and sets a reference variable.
+ 702:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    This function must reschedule, it can only be called from thread
+ 703:ChibiOS/os/hal/osal/nil/osal.h ****  *          context.
+ 704:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 705:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] trp       a pointer to a thread reference object
+ 706:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] timeout   the timeout in system ticks, the special values are
+ 707:ChibiOS/os/hal/osal/nil/osal.h ****  *                      handled as follow:
+ 708:ChibiOS/os/hal/osal/nil/osal.h ****  *                      - @a TIME_INFINITE the thread enters an infinite sleep
+ 709:ChibiOS/os/hal/osal/nil/osal.h ****  *                        state.
+ 710:ChibiOS/os/hal/osal/nil/osal.h ****  *                      - @a TIME_IMMEDIATE the thread is not enqueued and
+ 711:ChibiOS/os/hal/osal/nil/osal.h ****  *                        the function returns @p MSG_TIMEOUT as if a timeout
+ 712:ChibiOS/os/hal/osal/nil/osal.h ****  *                        occurred.
+ 713:ChibiOS/os/hal/osal/nil/osal.h ****  *                      .
+ 714:ChibiOS/os/hal/osal/nil/osal.h ****  * @return              The wake up message.
+ 715:ChibiOS/os/hal/osal/nil/osal.h ****  * @retval MSG_TIMEOUT  if the operation timed out.
+ 716:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 717:ChibiOS/os/hal/osal/nil/osal.h ****  * @sclass
+ 718:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 719:ChibiOS/os/hal/osal/nil/osal.h **** static inline msg_t osalThreadSuspendTimeoutS(thread_reference_t *trp,
+ 720:ChibiOS/os/hal/osal/nil/osal.h ****                                               systime_t timeout) {
+ 721:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 722:ChibiOS/os/hal/osal/nil/osal.h ****   return chThdSuspendTimeoutS(trp, timeout);
+ 723:ChibiOS/os/hal/osal/nil/osal.h **** }
+ 724:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 725:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 726:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Wakes up a thread waiting on a thread reference object.
+ 727:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    This function must not reschedule because it can be called from
+ 728:ChibiOS/os/hal/osal/nil/osal.h ****  *          ISR context.
+ 729:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 730:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] trp       a pointer to a thread reference object
+ 731:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] msg       the message code
+ 732:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 733:ChibiOS/os/hal/osal/nil/osal.h ****  * @iclass
+ 734:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 735:ChibiOS/os/hal/osal/nil/osal.h **** static inline void osalThreadResumeI(thread_reference_t *trp, msg_t msg) {
+ 736:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 737:ChibiOS/os/hal/osal/nil/osal.h ****   chThdResumeI(trp, msg);
+ 738:ChibiOS/os/hal/osal/nil/osal.h **** }
+ 739:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 740:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 741:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Wakes up a thread waiting on a thread reference object.
+ 742:ChibiOS/os/hal/osal/nil/osal.h ****  * @note    This function must reschedule, it can only be called from thread
+ 743:ChibiOS/os/hal/osal/nil/osal.h ****  *          context.
+ 744:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 745:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] trp       a pointer to a thread reference object
+ 746:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] msg       the message code
+ 747:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 748:ChibiOS/os/hal/osal/nil/osal.h ****  * @iclass
+ 749:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 750:ChibiOS/os/hal/osal/nil/osal.h **** static inline void osalThreadResumeS(thread_reference_t *trp, msg_t msg) {
+ 751:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 752:ChibiOS/os/hal/osal/nil/osal.h ****   chThdResumeI(trp, msg);
+ 753:ChibiOS/os/hal/osal/nil/osal.h ****   chSchRescheduleS();
+ 754:ChibiOS/os/hal/osal/nil/osal.h **** }
+ 755:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 756:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 757:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Initializes a threads queue object.
+ 758:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 759:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[out] tqp      pointer to the threads queue object
+ 760:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 761:ChibiOS/os/hal/osal/nil/osal.h ****  * @init
+ 762:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 763:ChibiOS/os/hal/osal/nil/osal.h **** static inline void osalThreadQueueObjectInit(threads_queue_t *tqp) {
+ 764:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 765:ChibiOS/os/hal/osal/nil/osal.h ****   chSemObjectInit(&tqp->sem, (cnt_t)0);
+ 766:ChibiOS/os/hal/osal/nil/osal.h **** }
+ 767:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 768:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 769:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Enqueues the caller thread.
+ 770:ChibiOS/os/hal/osal/nil/osal.h ****  * @details The caller thread is enqueued and put to sleep until it is
+ 771:ChibiOS/os/hal/osal/nil/osal.h ****  *          dequeued or the specified timeouts expires.
+ 772:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 773:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] tqp       pointer to the threads queue object
+ 774:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] time      the timeout in system ticks, the special values are
+ 775:ChibiOS/os/hal/osal/nil/osal.h ****  *                      handled as follow:
+ 776:ChibiOS/os/hal/osal/nil/osal.h ****  *                      - @a TIME_INFINITE the thread enters an infinite sleep
+ 777:ChibiOS/os/hal/osal/nil/osal.h ****  *                        state.
+ 778:ChibiOS/os/hal/osal/nil/osal.h ****  *                      - @a TIME_IMMEDIATE the thread is not enqueued and
+ 779:ChibiOS/os/hal/osal/nil/osal.h ****  *                        the function returns @p MSG_TIMEOUT as if a timeout
+ 780:ChibiOS/os/hal/osal/nil/osal.h ****  *                        occurred.
+ 781:ChibiOS/os/hal/osal/nil/osal.h ****  *                      .
+ 782:ChibiOS/os/hal/osal/nil/osal.h ****  * @return              The message from @p osalQueueWakeupOneI() or
+ 783:ChibiOS/os/hal/osal/nil/osal.h ****  *                      @p osalQueueWakeupAllI() functions.
+ 784:ChibiOS/os/hal/osal/nil/osal.h ****  * @retval MSG_TIMEOUT  if the thread has not been dequeued within the
+ 785:ChibiOS/os/hal/osal/nil/osal.h ****  *                      specified timeout or if the function has been
+ 786:ChibiOS/os/hal/osal/nil/osal.h ****  *                      invoked with @p TIME_IMMEDIATE as timeout
+ 787:ChibiOS/os/hal/osal/nil/osal.h ****  *                      specification.
+ 788:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 789:ChibiOS/os/hal/osal/nil/osal.h ****  * @sclass
+ 790:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 791:ChibiOS/os/hal/osal/nil/osal.h **** static inline msg_t osalThreadEnqueueTimeoutS(threads_queue_t *tqp,
+ 792:ChibiOS/os/hal/osal/nil/osal.h ****                                               systime_t time) {
+ 793:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 794:ChibiOS/os/hal/osal/nil/osal.h ****   return chSemWaitTimeoutS(&tqp->sem, time);
+ 795:ChibiOS/os/hal/osal/nil/osal.h **** }
+ 796:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 797:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 798:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Initializes an event flags object.
+ 799:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 800:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[out] esp      pointer to the event flags object
+ 801:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 802:ChibiOS/os/hal/osal/nil/osal.h ****  * @init
+ 803:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 804:ChibiOS/os/hal/osal/nil/osal.h **** static inline void osalEventObjectInit(event_source_t *esp) {
+ 805:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 806:ChibiOS/os/hal/osal/nil/osal.h ****   osalDbgCheck(esp != NULL);
+ 807:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 808:ChibiOS/os/hal/osal/nil/osal.h ****   esp->flags = 0;
+ 237               		.loc 2 808 0
+ 238 001a 1A82      		std Y+2,__zero_reg__
+ 239 001c 1B82      		std Y+3,__zero_reg__
+ 240 001e 1C82      		std Y+4,__zero_reg__
+ 241 0020 1D82      		std Y+5,__zero_reg__
+ 809:ChibiOS/os/hal/osal/nil/osal.h ****   esp->cb    = NULL;
+ 242               		.loc 2 809 0
+ 243 0022 1F82      		std Y+7,__zero_reg__
+ 244 0024 1E82      		std Y+6,__zero_reg__
+ 810:ChibiOS/os/hal/osal/nil/osal.h ****   esp->param = NULL;
+ 245               		.loc 2 810 0
+ 246 0026 1986      		std Y+9,__zero_reg__
+ 247 0028 1886      		std Y+8,__zero_reg__
+ 248               	.LBE49:
+ 249               	.LBE48:
+ 131:ChibiOS/os/hal/src/serial.c ****   osalEventObjectInit(&sdp->event);
+ 132:ChibiOS/os/hal/src/serial.c ****   sdp->state = SD_STOP;
+ 250               		.loc 1 132 0
+ 251 002a 81E0      		ldi r24,lo8(1)
+ 252 002c 8A87      		std Y+10,r24
+ 133:ChibiOS/os/hal/src/serial.c ****   iqObjectInit(&sdp->iqueue, sdp->ib, SERIAL_BUFFERS_SIZE, inotify, sdp);
+ 253               		.loc 1 133 0
+ 254 002e BE01      		movw r22,r28
+ 255               	.LVL28:
+ 256 0030 675D      		subi r22,-41
+ 257 0032 7F4F      		sbci r23,-1
+ 258 0034 8E01      		movw r16,r28
+ 259 0036 40E1      		ldi r20,lo8(16)
+ 260 0038 50E0      		ldi r21,0
+ 261               	.LVL29:
+ 262 003a CE01      		movw r24,r28
+ 263 003c 0B96      		adiw r24,11
+ 264 003e 0E94 0000 		call iqObjectInit
+ 265               	.LVL30:
+ 134:ChibiOS/os/hal/src/serial.c ****   oqObjectInit(&sdp->oqueue, sdp->ob, SERIAL_BUFFERS_SIZE, onotify, sdp);
+ 266               		.loc 1 134 0
+ 267 0042 BE01      		movw r22,r28
+ 268 0044 675C      		subi r22,-57
+ 269 0046 7F4F      		sbci r23,-1
+ 270 0048 9701      		movw r18,r14
+ 271 004a 40E1      		ldi r20,lo8(16)
+ 272 004c 50E0      		ldi r21,0
+ 273 004e CE01      		movw r24,r28
+ 274 0050 4A96      		adiw r24,26
+ 275 0052 0E94 0000 		call oqObjectInit
+ 276               	.LVL31:
+ 277               	/* epilogue start */
+ 135:ChibiOS/os/hal/src/serial.c **** }
+ 278               		.loc 1 135 0
+ 279 0056 DF91      		pop r29
+ 280 0058 CF91      		pop r28
+ 281               	.LVL32:
+ 282 005a 1F91      		pop r17
+ 283 005c 0F91      		pop r16
+ 284               	.LVL33:
+ 285 005e FF90      		pop r15
+ 286 0060 EF90      		pop r14
+ 287               	.LVL34:
+ 288 0062 0895      		ret
+ 289               		.cfi_endproc
+ 290               	.LFE62:
+ 292               		.section	.text.sdStart,"ax",@progbits
+ 293               	.global	sdStart
+ 295               	sdStart:
+ 296               	.LFB63:
+ 136:ChibiOS/os/hal/src/serial.c **** 
+ 137:ChibiOS/os/hal/src/serial.c **** /**
+ 138:ChibiOS/os/hal/src/serial.c ****  * @brief   Configures and starts the driver.
+ 139:ChibiOS/os/hal/src/serial.c ****  *
+ 140:ChibiOS/os/hal/src/serial.c ****  * @param[in] sdp       pointer to a @p SerialDriver object
+ 141:ChibiOS/os/hal/src/serial.c ****  * @param[in] config    the architecture-dependent serial driver configuration.
+ 142:ChibiOS/os/hal/src/serial.c ****  *                      If this parameter is set to @p NULL then a default
+ 143:ChibiOS/os/hal/src/serial.c ****  *                      configuration is used.
+ 144:ChibiOS/os/hal/src/serial.c ****  *
+ 145:ChibiOS/os/hal/src/serial.c ****  * @api
+ 146:ChibiOS/os/hal/src/serial.c ****  */
+ 147:ChibiOS/os/hal/src/serial.c **** void sdStart(SerialDriver *sdp, const SerialConfig *config) {
+ 297               		.loc 1 147 0
+ 298               		.cfi_startproc
+ 299               	.LVL35:
+ 300 0000 CF93      		push r28
+ 301               	.LCFI6:
+ 302               		.cfi_def_cfa_offset 3
+ 303               		.cfi_offset 28, -2
+ 304 0002 DF93      		push r29
+ 305               	.LCFI7:
+ 306               		.cfi_def_cfa_offset 4
+ 307               		.cfi_offset 29, -3
+ 308               	/* prologue: function */
+ 309               	/* frame size = 0 */
+ 310               	/* stack size = 2 */
+ 311               	.L__stack_usage = 2
+ 312 0004 EC01      		movw r28,r24
+ 313               	.LBB50:
+ 314               	.LBB51:
+ 315               	.LBB52:
+ 316               		.file 3 "ChibiOS/os/nil/ports/AVR/nilcore.h"
+   1:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*
+   2:ChibiOS/os/nil/ports/AVR/nilcore.h ****     ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio.
+   3:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+   4:ChibiOS/os/nil/ports/AVR/nilcore.h ****     This file is part of ChibiOS.
+   5:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+   6:ChibiOS/os/nil/ports/AVR/nilcore.h ****     ChibiOS is free software; you can redistribute it and/or modify
+   7:ChibiOS/os/nil/ports/AVR/nilcore.h ****     it under the terms of the GNU General Public License as published by
+   8:ChibiOS/os/nil/ports/AVR/nilcore.h ****     the Free Software Foundation; either version 3 of the License, or
+   9:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (at your option) any later version.
+  10:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  11:ChibiOS/os/nil/ports/AVR/nilcore.h ****     ChibiOS is distributed in the hope that it will be useful,
+  12:ChibiOS/os/nil/ports/AVR/nilcore.h ****     but WITHOUT ANY WARRANTY; without even the implied warranty of
+  13:ChibiOS/os/nil/ports/AVR/nilcore.h ****     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  14:ChibiOS/os/nil/ports/AVR/nilcore.h ****     GNU General Public License for more details.
+  15:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  16:ChibiOS/os/nil/ports/AVR/nilcore.h ****     You should have received a copy of the GNU General Public License
+  17:ChibiOS/os/nil/ports/AVR/nilcore.h ****     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  18:ChibiOS/os/nil/ports/AVR/nilcore.h **** */
+  19:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  20:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  21:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @file    AVR/nilcore.h
+  22:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   AVR port macros and structures.
+  23:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *
+  24:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @addtogroup AVR_CORE
+  25:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @{
+  26:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  27:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  28:ChibiOS/os/nil/ports/AVR/nilcore.h **** #ifndef _NILCORE_H_
+  29:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define _NILCORE_H_
+  30:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  31:ChibiOS/os/nil/ports/AVR/nilcore.h **** #include <avr/io.h>
+  32:ChibiOS/os/nil/ports/AVR/nilcore.h **** #include <avr/interrupt.h>
+  33:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  34:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+  35:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* Module constants.                                                         */
+  36:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+  37:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  38:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  39:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @name    Architecture and Compiler
+  40:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @{
+  41:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  42:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  43:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Macro defining the port architecture.
+  44:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  45:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_ARCHITECTURE_AVR
+  46:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  47:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  48:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Name of the implemented architecture.
+  49:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  50:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_ARCHITECTURE_NAME          "AVR"
+  51:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  52:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  53:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Name of the architecture variant.
+  54:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  55:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_CORE_VARIANT_NAME          "MegaAVR"
+  56:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  57:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  58:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Compiler name and version.
+  59:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  60:ChibiOS/os/nil/ports/AVR/nilcore.h **** #if defined(__GNUC__) || defined(__DOXYGEN__)
+  61:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_COMPILER_NAME              "GCC " __VERSION__
+  62:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  63:ChibiOS/os/nil/ports/AVR/nilcore.h **** #else
+  64:ChibiOS/os/nil/ports/AVR/nilcore.h **** #error "unsupported compiler"
+  65:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif
+  66:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  67:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  68:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Port-specific information string.
+  69:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  70:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_INFO                       "16 bits code addressing"
+  71:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  72:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  73:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   This port supports a realtime counter.
+  74:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  75:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_SUPPORTS_RT                FALSE
+  76:ChibiOS/os/nil/ports/AVR/nilcore.h **** /** @} */
+  77:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  78:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+  79:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* Module pre-compile time settings.                                         */
+  80:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+  81:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  82:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  83:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Stack size for the system idle thread.
+  84:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @details This size depends on the idle thread implementation, usually
+  85:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          the idle thread should take no more space than those reserved
+  86:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          by @p PORT_INT_REQUIRED_STACK.
+  87:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @note    In this port it is set to 8.
+  88:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  89:ChibiOS/os/nil/ports/AVR/nilcore.h **** #if !defined(PORT_IDLE_THREAD_STACK_SIZE) || defined(__DOXYGEN__)
+  90:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_IDLE_THREAD_STACK_SIZE     8
+  91:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif
+  92:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  93:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  94:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Per-thread stack overhead for interrupts servicing.
+  95:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @details This constant is used in the calculation of the correct working
+  96:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          area size.
+  97:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @note    In this port the default is 32 bytes per thread.
+  98:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  99:ChibiOS/os/nil/ports/AVR/nilcore.h **** #if !defined(PORT_INT_REQUIRED_STACK) || defined(__DOXYGEN__)
+ 100:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_INT_REQUIRED_STACK         32
+ 101:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif
+ 102:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 103:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 104:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Enables an alternative timer implementation.
+ 105:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @details Usually the port uses a timer interface defined in the file
+ 106:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          @p nilcore_timer.h, if this option is enabled then the file
+ 107:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          @p nilcore_timer_alt.h is included instead.
+ 108:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 109:ChibiOS/os/nil/ports/AVR/nilcore.h **** #if !defined(PORT_USE_ALT_TIMER)
+ 110:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_USE_ALT_TIMER              FALSE
+ 111:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif
+ 112:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 113:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 114:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* Derived constants and error checks.                                       */
+ 115:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 116:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 117:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 118:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* Module data structures and types.                                         */
+ 119:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 120:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 121:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* The following code is not processed when the file is included from an
+ 122:ChibiOS/os/nil/ports/AVR/nilcore.h ****    asm module.*/
+ 123:ChibiOS/os/nil/ports/AVR/nilcore.h **** #if !defined(_FROM_ASM_)
+ 124:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 125:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 126:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Type of stack and memory alignment enforcement.
+ 127:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 128:ChibiOS/os/nil/ports/AVR/nilcore.h **** typedef uint8_t stkalign_t;
+ 129:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 130:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 131:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   System saved context.
+ 132:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @details This structure represents the inner stack frame during a context
+ 133:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          switching.
+ 134:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 135:ChibiOS/os/nil/ports/AVR/nilcore.h **** struct port_intctx {
+ 136:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       _next;
+ 137:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r29;
+ 138:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r28;
+ 139:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r17;
+ 140:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r16;
+ 141:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r15;
+ 142:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r14;
+ 143:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r13;
+ 144:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r12;
+ 145:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r11;
+ 146:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r10;
+ 147:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r9;
+ 148:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r8;
+ 149:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r7;
+ 150:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r6;
+ 151:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r5;
+ 152:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r4;
+ 153:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r3;
+ 154:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r2;
+ 155:ChibiOS/os/nil/ports/AVR/nilcore.h **** #ifdef __AVR_3_BYTE_PC__
+ 156:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       pcx;
+ 157:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif
+ 158:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       pcl;
+ 159:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       pch;
+ 160:ChibiOS/os/nil/ports/AVR/nilcore.h **** };
+ 161:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 162:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif /* !defined(_FROM_ASM_) */
+ 163:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 164:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 165:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* Module macros.                                                            */
+ 166:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 167:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 168:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 169:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Platform dependent thread stack setup.
+ 170:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @details This code usually setup the context switching frame represented
+ 171:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          by an @p port_intctx structure.
+ 172:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 173:ChibiOS/os/nil/ports/AVR/nilcore.h **** #ifdef __AVR_3_BYTE_PC__
+ 174:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_SETUP_CONTEXT(tp, wend, pf, arg) {                             \
+ 175:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp = (struct port_intctx*)(((uint8_t *)(wend)) -                \
+ 176:ChibiOS/os/nil/ports/AVR/nilcore.h ****                                          sizeof(struct port_intctx));       \
+ 177:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->r2  = (int)pf;                                              \
+ 178:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->r3  = (int)pf >> 8;                                         \
+ 179:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->r4  = (int)arg;                                             \
+ 180:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->r5  = (int)arg >> 8;                                        \
+ 181:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->pcx = (int)0;                                               \
+ 182:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->pcl = (int)_port_thread_start >> 8;                         \
+ 183:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->pch = (int)_port_thread_start;                              \
+ 184:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 185:ChibiOS/os/nil/ports/AVR/nilcore.h **** #else /* __AVR_3_BYTE_PC__ */
+ 186:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_SETUP_CONTEXT(tp, wend, pf, arg) {                             \
+ 187:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp = (struct port_intctx*)(((uint8_t *)(wend)) -                \
+ 188:ChibiOS/os/nil/ports/AVR/nilcore.h ****                                          sizeof(struct port_intctx));       \
+ 189:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->r2  = (int)pf;                                              \
+ 190:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->r3  = (int)pf >> 8;                                         \
+ 191:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->r4  = (int)arg;                                             \
+ 192:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->r5  = (int)arg >> 8;                                        \
+ 193:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->pcl = (int)_port_thread_start >> 8;                         \
+ 194:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->pch = (int)_port_thread_start;                              \
+ 195:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 196:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif /* __AVR_3_BYTE_PC__ */
+ 197:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 198:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Computes the thread working area global size.
+ 199:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @note    There is no need to perform alignments in this macro.
+ 200:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 201:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_WA_SIZE(n) ((sizeof(struct port_intctx) - 1) +                 \
+ 202:ChibiOS/os/nil/ports/AVR/nilcore.h ****                          (n) + (PORT_INT_REQUIRED_STACK))
+ 203:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 204:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 205:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   IRQ prologue code.
+ 206:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @details This macro must be inserted at the start of all IRQ handlers
+ 207:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          enabled to invoke system APIs.
+ 208:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @note    This code tricks the compiler to save all the specified registers
+ 209:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          by "touching" them.
+ 210:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 211:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_IRQ_PROLOGUE() {                                               \
+ 212:ChibiOS/os/nil/ports/AVR/nilcore.h ****   asm ("" : : : "r18", "r19", "r20", "r21", "r22", "r23", "r24",            \
+ 213:ChibiOS/os/nil/ports/AVR/nilcore.h ****                 "r25", "r26", "r27", "r30", "r31");                         \
+ 214:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 215:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 216:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 217:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   IRQ epilogue code.
+ 218:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @details This macro must be inserted at the end of all IRQ handlers
+ 219:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          enabled to invoke system APIs.
+ 220:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 221:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_IRQ_EPILOGUE() chSchRescheduleS()
+ 222:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 223:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 224:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   IRQ handler function declaration.
+ 225:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @note    @p id can be a function name or a vector number depending on the
+ 226:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          port implementation.
+ 227:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 228:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_IRQ_HANDLER(id) ISR(id)
+ 229:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 230:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 231:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Fast IRQ handler function declaration.
+ 232:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @note    @p id can be a function name or a vector number depending on the
+ 233:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          port implementation.
+ 234:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 235:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_FAST_IRQ_HANDLER(id) ISR(id)
+ 236:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 237:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 238:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Performs a context switch between two threads.
+ 239:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @details This is the most critical code in any port, this function
+ 240:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          is responsible for the context switch between 2 threads.
+ 241:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @note    The implementation of this code affects <b>directly</b> the context
+ 242:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          switch performance so optimize here as much as you can.
+ 243:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *
+ 244:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @param[in] ntp       the thread to be switched in
+ 245:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @param[in] otp       the thread to be switched out
+ 246:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 247:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define port_switch(ntp, otp) _port_switch(ntp, otp)
+ 248:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 249:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 250:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* External declarations.                                                    */
+ 251:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 252:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 253:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* The following code is not processed when the file is included from an
+ 254:ChibiOS/os/nil/ports/AVR/nilcore.h ****    asm module.*/
+ 255:ChibiOS/os/nil/ports/AVR/nilcore.h **** #if !defined(_FROM_ASM_)
+ 256:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 257:ChibiOS/os/nil/ports/AVR/nilcore.h **** #ifdef __cplusplus
+ 258:ChibiOS/os/nil/ports/AVR/nilcore.h **** extern "C" {
+ 259:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif
+ 260:ChibiOS/os/nil/ports/AVR/nilcore.h ****   void _port_irq_epilogue(void);
+ 261:ChibiOS/os/nil/ports/AVR/nilcore.h ****   void _port_switch(thread_t *ntp, thread_t *otp);
+ 262:ChibiOS/os/nil/ports/AVR/nilcore.h ****   void _port_thread_start(void);
+ 263:ChibiOS/os/nil/ports/AVR/nilcore.h **** #ifdef __cplusplus
+ 264:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 265:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif
+ 266:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 267:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif /* !defined(_FROM_ASM_) */
+ 268:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 269:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 270:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* Module inline functions.                                                  */
+ 271:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 272:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 273:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* The following code is not processed when the file is included from an
+ 274:ChibiOS/os/nil/ports/AVR/nilcore.h ****    asm module.*/
+ 275:ChibiOS/os/nil/ports/AVR/nilcore.h **** #if !defined(_FROM_ASM_)
+ 276:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 277:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 278:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Port-related initialization code.
+ 279:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 280:ChibiOS/os/nil/ports/AVR/nilcore.h **** static inline void port_init(void) {
+ 281:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 282:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 283:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 284:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 285:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Returns a word encoding the current interrupts status.
+ 286:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *
+ 287:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @return              The interrupts status.
+ 288:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 289:ChibiOS/os/nil/ports/AVR/nilcore.h **** static inline syssts_t port_get_irq_status(void) {
+ 290:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 291:ChibiOS/os/nil/ports/AVR/nilcore.h ****   return 0;
+ 292:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 293:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 294:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 295:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Checks the interrupt status.
+ 296:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *
+ 297:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @param[in] sts       the interrupt status word
+ 298:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *
+ 299:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @return              The interrupt status.
+ 300:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @retvel false        the word specified a disabled interrupts status.
+ 301:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @retvel true         the word specified an enabled interrupts status.
+ 302:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 303:ChibiOS/os/nil/ports/AVR/nilcore.h **** static inline bool port_irq_enabled(syssts_t sts) {
+ 304:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 305:ChibiOS/os/nil/ports/AVR/nilcore.h ****   return false;
+ 306:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 307:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 308:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 309:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Determines the current execution context.
+ 310:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *
+ 311:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @return              The execution context.
+ 312:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @retval false        not running in ISR mode.
+ 313:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @retval true         running in ISR mode.
+ 314:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 315:ChibiOS/os/nil/ports/AVR/nilcore.h **** static inline bool port_is_isr_context(void) {
+ 316:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 317:ChibiOS/os/nil/ports/AVR/nilcore.h ****   return false;
+ 318:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 319:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 320:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 321:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Kernel-lock action.
+ 322:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 323:ChibiOS/os/nil/ports/AVR/nilcore.h **** static inline void port_lock(void) {
+ 324:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 325:ChibiOS/os/nil/ports/AVR/nilcore.h ****   asm volatile ("cli" : : : "memory");
+ 317               		.loc 3 325 0
+ 318               	/* #APP */
+ 319               	 ;  325 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 320 0006 F894      		cli
+ 321               	 ;  0 "" 2
+ 322               	/* #NOAPP */
+ 323               	.LBE52:
+ 324               	.LBE51:
+ 325               	.LBE50:
+ 148:ChibiOS/os/hal/src/serial.c **** 
+ 149:ChibiOS/os/hal/src/serial.c ****   osalDbgCheck(sdp != NULL);
+ 150:ChibiOS/os/hal/src/serial.c **** 
+ 151:ChibiOS/os/hal/src/serial.c ****   osalSysLock();
+ 152:ChibiOS/os/hal/src/serial.c ****   osalDbgAssert((sdp->state == SD_STOP) || (sdp->state == SD_READY),
+ 153:ChibiOS/os/hal/src/serial.c ****                 "invalid state");
+ 154:ChibiOS/os/hal/src/serial.c ****   sd_lld_start(sdp, config);
+ 326               		.loc 1 154 0
+ 327 0008 0E94 0000 		call sd_lld_start
+ 328               	.LVL36:
+ 155:ChibiOS/os/hal/src/serial.c ****   sdp->state = SD_READY;
+ 329               		.loc 1 155 0
+ 330 000c 82E0      		ldi r24,lo8(2)
+ 331 000e 8A87      		std Y+10,r24
+ 332               	.LBB53:
+ 333               	.LBB54:
+ 334               	.LBB55:
+ 326:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 327:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 328:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 329:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Kernel-unlock action.
+ 330:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 331:ChibiOS/os/nil/ports/AVR/nilcore.h **** static inline void port_unlock(void) {
+ 332:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 333:ChibiOS/os/nil/ports/AVR/nilcore.h ****   asm volatile ("sei" : : : "memory");
+ 335               		.loc 3 333 0
+ 336               	/* #APP */
+ 337               	 ;  333 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 338 0010 7894      		sei
+ 339               	 ;  0 "" 2
+ 340               	/* epilogue start */
+ 341               	/* #NOAPP */
+ 342               	.LBE55:
+ 343               	.LBE54:
+ 344               	.LBE53:
+ 156:ChibiOS/os/hal/src/serial.c ****   osalSysUnlock();
+ 157:ChibiOS/os/hal/src/serial.c **** }
+ 345               		.loc 1 157 0
+ 346 0012 DF91      		pop r29
+ 347 0014 CF91      		pop r28
+ 348               	.LVL37:
+ 349 0016 0895      		ret
+ 350               		.cfi_endproc
+ 351               	.LFE63:
+ 353               		.section	.text.sdStop,"ax",@progbits
+ 354               	.global	sdStop
+ 356               	sdStop:
+ 357               	.LFB64:
+ 158:ChibiOS/os/hal/src/serial.c **** 
+ 159:ChibiOS/os/hal/src/serial.c **** /**
+ 160:ChibiOS/os/hal/src/serial.c ****  * @brief   Stops the driver.
+ 161:ChibiOS/os/hal/src/serial.c ****  * @details Any thread waiting on the driver's queues will be awakened with
+ 162:ChibiOS/os/hal/src/serial.c ****  *          the message @p Q_RESET.
+ 163:ChibiOS/os/hal/src/serial.c ****  *
+ 164:ChibiOS/os/hal/src/serial.c ****  * @param[in] sdp       pointer to a @p SerialDriver object
+ 165:ChibiOS/os/hal/src/serial.c ****  *
+ 166:ChibiOS/os/hal/src/serial.c ****  * @api
+ 167:ChibiOS/os/hal/src/serial.c ****  */
+ 168:ChibiOS/os/hal/src/serial.c **** void sdStop(SerialDriver *sdp) {
+ 358               		.loc 1 168 0
+ 359               		.cfi_startproc
+ 360               	.LVL38:
+ 361 0000 CF93      		push r28
+ 362               	.LCFI8:
+ 363               		.cfi_def_cfa_offset 3
+ 364               		.cfi_offset 28, -2
+ 365 0002 DF93      		push r29
+ 366               	.LCFI9:
+ 367               		.cfi_def_cfa_offset 4
+ 368               		.cfi_offset 29, -3
+ 369               	/* prologue: function */
+ 370               	/* frame size = 0 */
+ 371               	/* stack size = 2 */
+ 372               	.L__stack_usage = 2
+ 373 0004 EC01      		movw r28,r24
+ 374               	.LBB56:
+ 375               	.LBB57:
+ 376               	.LBB58:
+ 325:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 377               		.loc 3 325 0
+ 378               	/* #APP */
+ 379               	 ;  325 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 380 0006 F894      		cli
+ 381               	 ;  0 "" 2
+ 382               	/* #NOAPP */
+ 383               	.LBE58:
+ 384               	.LBE57:
+ 385               	.LBE56:
+ 169:ChibiOS/os/hal/src/serial.c **** 
+ 170:ChibiOS/os/hal/src/serial.c ****   osalDbgCheck(sdp != NULL);
+ 171:ChibiOS/os/hal/src/serial.c **** 
+ 172:ChibiOS/os/hal/src/serial.c ****   osalSysLock();
+ 173:ChibiOS/os/hal/src/serial.c ****   osalDbgAssert((sdp->state == SD_STOP) || (sdp->state == SD_READY),
+ 174:ChibiOS/os/hal/src/serial.c ****                 "invalid state");
+ 175:ChibiOS/os/hal/src/serial.c ****   sd_lld_stop(sdp);
+ 386               		.loc 1 175 0
+ 387 0008 0E94 0000 		call sd_lld_stop
+ 388               	.LVL39:
+ 176:ChibiOS/os/hal/src/serial.c ****   sdp->state = SD_STOP;
+ 389               		.loc 1 176 0
+ 390 000c 81E0      		ldi r24,lo8(1)
+ 391 000e 8A87      		std Y+10,r24
+ 177:ChibiOS/os/hal/src/serial.c ****   oqResetI(&sdp->oqueue);
+ 392               		.loc 1 177 0
+ 393 0010 CE01      		movw r24,r28
+ 394 0012 4A96      		adiw r24,26
+ 395 0014 0E94 0000 		call oqResetI
+ 396               	.LVL40:
+ 178:ChibiOS/os/hal/src/serial.c ****   iqResetI(&sdp->iqueue);
+ 397               		.loc 1 178 0
+ 398 0018 CE01      		movw r24,r28
+ 399 001a 0B96      		adiw r24,11
+ 400 001c 0E94 0000 		call iqResetI
+ 401               	.LVL41:
+ 402               	.LBB59:
+ 403               	.LBB60:
+ 609:ChibiOS/os/hal/osal/nil/osal.h **** }
+ 404               		.loc 2 609 0
+ 405 0020 0E94 0000 		call chSchRescheduleS
+ 406               	.LVL42:
+ 407               	.LBE60:
+ 408               	.LBE59:
+ 409               	.LBB61:
+ 410               	.LBB62:
+ 411               	.LBB63:
+ 412               		.loc 3 333 0
+ 413               	/* #APP */
+ 414               	 ;  333 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 415 0024 7894      		sei
+ 416               	 ;  0 "" 2
+ 417               	/* epilogue start */
+ 418               	/* #NOAPP */
+ 419               	.LBE63:
+ 420               	.LBE62:
+ 421               	.LBE61:
+ 179:ChibiOS/os/hal/src/serial.c ****   osalOsRescheduleS();
+ 180:ChibiOS/os/hal/src/serial.c ****   osalSysUnlock();
+ 181:ChibiOS/os/hal/src/serial.c **** }
+ 422               		.loc 1 181 0
+ 423 0026 DF91      		pop r29
+ 424 0028 CF91      		pop r28
+ 425               	.LVL43:
+ 426 002a 0895      		ret
+ 427               		.cfi_endproc
+ 428               	.LFE64:
+ 430               		.section	.text.sdIncomingDataI,"ax",@progbits
+ 431               	.global	sdIncomingDataI
+ 433               	sdIncomingDataI:
+ 434               	.LFB65:
+ 182:ChibiOS/os/hal/src/serial.c **** 
+ 183:ChibiOS/os/hal/src/serial.c **** /**
+ 184:ChibiOS/os/hal/src/serial.c ****  * @brief   Handles incoming data.
+ 185:ChibiOS/os/hal/src/serial.c ****  * @details This function must be called from the input interrupt service
+ 186:ChibiOS/os/hal/src/serial.c ****  *          routine in order to enqueue incoming data and generate the
+ 187:ChibiOS/os/hal/src/serial.c ****  *          related events.
+ 188:ChibiOS/os/hal/src/serial.c ****  * @note    The incoming data event is only generated when the input queue
+ 189:ChibiOS/os/hal/src/serial.c ****  *          becomes non-empty.
+ 190:ChibiOS/os/hal/src/serial.c ****  * @note    In order to gain some performance it is suggested to not use
+ 191:ChibiOS/os/hal/src/serial.c ****  *          this function directly but copy this code directly into the
+ 192:ChibiOS/os/hal/src/serial.c ****  *          interrupt service routine.
+ 193:ChibiOS/os/hal/src/serial.c ****  *
+ 194:ChibiOS/os/hal/src/serial.c ****  * @param[in] sdp       pointer to a @p SerialDriver structure
+ 195:ChibiOS/os/hal/src/serial.c ****  * @param[in] b         the byte to be written in the driver's Input Queue
+ 196:ChibiOS/os/hal/src/serial.c ****  *
+ 197:ChibiOS/os/hal/src/serial.c ****  * @iclass
+ 198:ChibiOS/os/hal/src/serial.c ****  */
+ 199:ChibiOS/os/hal/src/serial.c **** void sdIncomingDataI(SerialDriver *sdp, uint8_t b) {
+ 435               		.loc 1 199 0
+ 436               		.cfi_startproc
+ 437               	.LVL44:
+ 438 0000 0F93      		push r16
+ 439               	.LCFI10:
+ 440               		.cfi_def_cfa_offset 3
+ 441               		.cfi_offset 16, -2
+ 442 0002 1F93      		push r17
+ 443               	.LCFI11:
+ 444               		.cfi_def_cfa_offset 4
+ 445               		.cfi_offset 17, -3
+ 446 0004 CF93      		push r28
+ 447               	.LCFI12:
+ 448               		.cfi_def_cfa_offset 5
+ 449               		.cfi_offset 28, -4
+ 450 0006 DF93      		push r29
+ 451               	.LCFI13:
+ 452               		.cfi_def_cfa_offset 6
+ 453               		.cfi_offset 29, -5
+ 454 0008 1F92      		push __zero_reg__
+ 455               	.LCFI14:
+ 456               		.cfi_def_cfa_offset 7
+ 457 000a CDB7      		in r28,__SP_L__
+ 458 000c DEB7      		in r29,__SP_H__
+ 459               	.LCFI15:
+ 460               		.cfi_def_cfa_register 28
+ 461               	/* prologue: function */
+ 462               	/* frame size = 1 */
+ 463               	/* stack size = 5 */
+ 464               	.L__stack_usage = 5
+ 465 000e 8C01      		movw r16,r24
+ 200:ChibiOS/os/hal/src/serial.c **** 
+ 201:ChibiOS/os/hal/src/serial.c ****   osalDbgCheckClassI();
+ 202:ChibiOS/os/hal/src/serial.c ****   osalDbgCheck(sdp != NULL);
+ 203:ChibiOS/os/hal/src/serial.c **** 
+ 204:ChibiOS/os/hal/src/serial.c ****   if (iqIsEmptyI(&sdp->iqueue))
+ 466               		.loc 1 204 0
+ 467 0010 DC01      		movw r26,r24
+ 468 0012 1C96      		adiw r26,12
+ 469 0014 8D91      		ld r24,X+
+ 470 0016 9C91      		ld r25,X
+ 471 0018 1D97      		sbiw r26,12+1
+ 472               	.LVL45:
+ 473 001a 892B      		or r24,r25
+ 474 001c 01F4      		brne .L15
+ 475               	.LVL46:
+ 476               	.LBB64:
+ 477               	.LBB65:
+ 811:ChibiOS/os/hal/osal/nil/osal.h **** }
+ 812:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 813:ChibiOS/os/hal/osal/nil/osal.h **** /**
+ 814:ChibiOS/os/hal/osal/nil/osal.h ****  * @brief   Add flags to an event source object.
+ 815:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 816:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] esp       pointer to the event flags object
+ 817:ChibiOS/os/hal/osal/nil/osal.h ****  * @param[in] flags     flags to be ORed to the flags mask
+ 818:ChibiOS/os/hal/osal/nil/osal.h ****  *
+ 819:ChibiOS/os/hal/osal/nil/osal.h ****  * @iclass
+ 820:ChibiOS/os/hal/osal/nil/osal.h ****  */
+ 821:ChibiOS/os/hal/osal/nil/osal.h **** static inline void osalEventBroadcastFlagsI(event_source_t *esp,
+ 822:ChibiOS/os/hal/osal/nil/osal.h ****                                             eventflags_t flags) {
+ 823:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 824:ChibiOS/os/hal/osal/nil/osal.h ****   osalDbgCheck(esp != NULL);
+ 825:ChibiOS/os/hal/osal/nil/osal.h **** 
+ 826:ChibiOS/os/hal/osal/nil/osal.h ****   esp->flags |= flags;
+ 478               		.loc 2 826 0
+ 479 001e 1296      		adiw r26,2
+ 480 0020 8D91      		ld r24,X+
+ 481 0022 9D91      		ld r25,X+
+ 482 0024 0D90      		ld __tmp_reg__,X+
+ 483 0026 BC91      		ld r27,X
+ 484 0028 A02D      		mov r26,__tmp_reg__
+ 485 002a 8460      		ori r24,4
+ 486 002c F801      		movw r30,r16
+ 487 002e 8283      		std Z+2,r24
+ 488 0030 9383      		std Z+3,r25
+ 489 0032 A483      		std Z+4,r26
+ 490 0034 B583      		std Z+5,r27
+ 827:ChibiOS/os/hal/osal/nil/osal.h ****   if (esp->cb != NULL) {
+ 491               		.loc 2 827 0
+ 492 0036 0680      		ldd __tmp_reg__,Z+6
+ 493 0038 F781      		ldd r31,Z+7
+ 494 003a E02D      		mov r30,__tmp_reg__
+ 495 003c 3097      		sbiw r30,0
+ 496 003e 01F0      		breq .L15
+ 828:ChibiOS/os/hal/osal/nil/osal.h ****     esp->cb(esp);
+ 497               		.loc 2 828 0
+ 498 0040 C801      		movw r24,r16
+ 499 0042 0296      		adiw r24,2
+ 500               	.LVL47:
+ 501 0044 6983      		std Y+1,r22
+ 502 0046 0995      		icall
+ 503               	.LVL48:
+ 504 0048 6981      		ldd r22,Y+1
+ 505               	.LVL49:
+ 506               	.L15:
+ 507               	.LBE65:
+ 508               	.LBE64:
+ 205:ChibiOS/os/hal/src/serial.c ****     chnAddFlagsI(sdp, CHN_INPUT_AVAILABLE);
+ 206:ChibiOS/os/hal/src/serial.c ****   if (iqPutI(&sdp->iqueue, b) < Q_OK)
+ 509               		.loc 1 206 0
+ 510 004a C801      		movw r24,r16
+ 511 004c 0B96      		adiw r24,11
+ 512 004e 0E94 0000 		call iqPutI
+ 513               	.LVL50:
+ 514 0052 97FD      		sbrc r25,7
+ 515 0054 00C0      		rjmp .L27
+ 516               	.L13:
+ 517               	/* epilogue start */
+ 207:ChibiOS/os/hal/src/serial.c ****     chnAddFlagsI(sdp, SD_OVERRUN_ERROR);
+ 208:ChibiOS/os/hal/src/serial.c **** }
+ 518               		.loc 1 208 0
+ 519 0056 0F90      		pop __tmp_reg__
+ 520 0058 DF91      		pop r29
+ 521 005a CF91      		pop r28
+ 522 005c 1F91      		pop r17
+ 523 005e 0F91      		pop r16
+ 524               	.LVL51:
+ 525 0060 0895      		ret
+ 526               	.LVL52:
+ 527               	.L27:
+ 207:ChibiOS/os/hal/src/serial.c ****     chnAddFlagsI(sdp, SD_OVERRUN_ERROR);
+ 528               		.loc 1 207 0
+ 529 0062 C801      		movw r24,r16
+ 530 0064 0296      		adiw r24,2
+ 531               	.LVL53:
+ 532               	.LBB66:
+ 533               	.LBB67:
+ 826:ChibiOS/os/hal/osal/nil/osal.h ****   if (esp->cb != NULL) {
+ 534               		.loc 2 826 0
+ 535 0066 D801      		movw r26,r16
+ 536 0068 1296      		adiw r26,2
+ 537 006a 4D91      		ld r20,X+
+ 538 006c 5D91      		ld r21,X+
+ 539 006e 6D91      		ld r22,X+
+ 540 0070 7C91      		ld r23,X
+ 541 0072 1597      		sbiw r26,2+3
+ 542 0074 4068      		ori r20,128
+ 543 0076 F801      		movw r30,r16
+ 544 0078 4283      		std Z+2,r20
+ 545 007a 5383      		std Z+3,r21
+ 546 007c 6483      		std Z+4,r22
+ 547 007e 7583      		std Z+5,r23
+ 827:ChibiOS/os/hal/osal/nil/osal.h ****     esp->cb(esp);
+ 548               		.loc 2 827 0
+ 549 0080 0680      		ldd __tmp_reg__,Z+6
+ 550 0082 F781      		ldd r31,Z+7
+ 551 0084 E02D      		mov r30,__tmp_reg__
+ 552 0086 3097      		sbiw r30,0
+ 553 0088 01F0      		breq .L13
+ 554               	/* epilogue start */
+ 555               	.LBE67:
+ 556               	.LBE66:
+ 557               		.loc 1 208 0
+ 558 008a 0F90      		pop __tmp_reg__
+ 559 008c DF91      		pop r29
+ 560 008e CF91      		pop r28
+ 561 0090 1F91      		pop r17
+ 562 0092 0F91      		pop r16
+ 563               	.LVL54:
+ 564               	.LBB69:
+ 565               	.LBB68:
+ 566               		.loc 2 828 0
+ 567 0094 0994      		ijmp
+ 568               	.LVL55:
+ 569               	.LBE68:
+ 570               	.LBE69:
+ 571               		.cfi_endproc
+ 572               	.LFE65:
+ 574               		.section	.text.sdRequestDataI,"ax",@progbits
+ 575               	.global	sdRequestDataI
+ 577               	sdRequestDataI:
+ 578               	.LFB66:
+ 209:ChibiOS/os/hal/src/serial.c **** 
+ 210:ChibiOS/os/hal/src/serial.c **** /**
+ 211:ChibiOS/os/hal/src/serial.c ****  * @brief   Handles outgoing data.
+ 212:ChibiOS/os/hal/src/serial.c ****  * @details Must be called from the output interrupt service routine in order
+ 213:ChibiOS/os/hal/src/serial.c ****  *          to get the next byte to be transmitted.
+ 214:ChibiOS/os/hal/src/serial.c ****  * @note    In order to gain some performance it is suggested to not use
+ 215:ChibiOS/os/hal/src/serial.c ****  *          this function directly but copy this code directly into the
+ 216:ChibiOS/os/hal/src/serial.c ****  *          interrupt service routine.
+ 217:ChibiOS/os/hal/src/serial.c ****  *
+ 218:ChibiOS/os/hal/src/serial.c ****  * @param[in] sdp       pointer to a @p SerialDriver structure
+ 219:ChibiOS/os/hal/src/serial.c ****  * @return              The byte value read from the driver's output queue.
+ 220:ChibiOS/os/hal/src/serial.c ****  * @retval Q_EMPTY      if the queue is empty (the lower driver usually
+ 221:ChibiOS/os/hal/src/serial.c ****  *                      disables the interrupt source when this happens).
+ 222:ChibiOS/os/hal/src/serial.c ****  *
+ 223:ChibiOS/os/hal/src/serial.c ****  * @iclass
+ 224:ChibiOS/os/hal/src/serial.c ****  */
+ 225:ChibiOS/os/hal/src/serial.c **** msg_t sdRequestDataI(SerialDriver *sdp) {
+ 579               		.loc 1 225 0
+ 580               		.cfi_startproc
+ 581               	.LVL56:
+ 582 0000 0F93      		push r16
+ 583               	.LCFI16:
+ 584               		.cfi_def_cfa_offset 3
+ 585               		.cfi_offset 16, -2
+ 586 0002 1F93      		push r17
+ 587               	.LCFI17:
+ 588               		.cfi_def_cfa_offset 4
+ 589               		.cfi_offset 17, -3
+ 590 0004 CF93      		push r28
+ 591               	.LCFI18:
+ 592               		.cfi_def_cfa_offset 5
+ 593               		.cfi_offset 28, -4
+ 594 0006 DF93      		push r29
+ 595               	.LCFI19:
+ 596               		.cfi_def_cfa_offset 6
+ 597               		.cfi_offset 29, -5
+ 598               	/* prologue: function */
+ 599               	/* frame size = 0 */
+ 600               	/* stack size = 4 */
+ 601               	.L__stack_usage = 4
+ 602 0008 EC01      		movw r28,r24
+ 226:ChibiOS/os/hal/src/serial.c ****   msg_t  b;
+ 227:ChibiOS/os/hal/src/serial.c **** 
+ 228:ChibiOS/os/hal/src/serial.c ****   osalDbgCheckClassI();
+ 229:ChibiOS/os/hal/src/serial.c ****   osalDbgCheck(sdp != NULL);
+ 230:ChibiOS/os/hal/src/serial.c **** 
+ 231:ChibiOS/os/hal/src/serial.c ****   b = oqGetI(&sdp->oqueue);
+ 603               		.loc 1 231 0
+ 604 000a 4A96      		adiw r24,26
+ 605               	.LVL57:
+ 606 000c 0E94 0000 		call oqGetI
+ 607               	.LVL58:
+ 608 0010 8C01      		movw r16,r24
+ 609               	.LVL59:
+ 232:ChibiOS/os/hal/src/serial.c ****   if (b < Q_OK)
+ 610               		.loc 1 232 0
+ 611 0012 97FD      		sbrc r25,7
+ 612 0014 00C0      		rjmp .L35
+ 613               	.L30:
+ 233:ChibiOS/os/hal/src/serial.c ****     chnAddFlagsI(sdp, CHN_OUTPUT_EMPTY);
+ 234:ChibiOS/os/hal/src/serial.c ****   return b;
+ 235:ChibiOS/os/hal/src/serial.c **** }
+ 614               		.loc 1 235 0
+ 615 0016 C801      		movw r24,r16
+ 616               	/* epilogue start */
+ 617 0018 DF91      		pop r29
+ 618 001a CF91      		pop r28
+ 619               	.LVL60:
+ 620 001c 1F91      		pop r17
+ 621 001e 0F91      		pop r16
+ 622               	.LVL61:
+ 623 0020 0895      		ret
+ 624               	.LVL62:
+ 625               	.L35:
+ 233:ChibiOS/os/hal/src/serial.c ****     chnAddFlagsI(sdp, CHN_OUTPUT_EMPTY);
+ 626               		.loc 1 233 0
+ 627 0022 CE01      		movw r24,r28
+ 628 0024 0296      		adiw r24,2
+ 629               	.LVL63:
+ 630               	.LBB70:
+ 631               	.LBB71:
+ 826:ChibiOS/os/hal/osal/nil/osal.h ****   if (esp->cb != NULL) {
+ 632               		.loc 2 826 0
+ 633 0026 4A81      		ldd r20,Y+2
+ 634 0028 5B81      		ldd r21,Y+3
+ 635 002a 6C81      		ldd r22,Y+4
+ 636 002c 7D81      		ldd r23,Y+5
+ 637 002e 4860      		ori r20,8
+ 638 0030 4A83      		std Y+2,r20
+ 639 0032 5B83      		std Y+3,r21
+ 640 0034 6C83      		std Y+4,r22
+ 641 0036 7D83      		std Y+5,r23
+ 827:ChibiOS/os/hal/osal/nil/osal.h ****     esp->cb(esp);
+ 642               		.loc 2 827 0
+ 643 0038 EE81      		ldd r30,Y+6
+ 644 003a FF81      		ldd r31,Y+7
+ 645 003c 3097      		sbiw r30,0
+ 646 003e 01F0      		breq .L30
+ 647               		.loc 2 828 0
+ 648 0040 0995      		icall
+ 649               	.LVL64:
+ 650               	.LBE71:
+ 651               	.LBE70:
+ 652               		.loc 1 235 0
+ 653 0042 C801      		movw r24,r16
+ 654               	/* epilogue start */
+ 655 0044 DF91      		pop r29
+ 656 0046 CF91      		pop r28
+ 657               	.LVL65:
+ 658 0048 1F91      		pop r17
+ 659 004a 0F91      		pop r16
+ 660               	.LVL66:
+ 661 004c 0895      		ret
+ 662               		.cfi_endproc
+ 663               	.LFE66:
+ 665               		.section	.text.sdPutWouldBlock,"ax",@progbits
+ 666               	.global	sdPutWouldBlock
+ 668               	sdPutWouldBlock:
+ 669               	.LFB67:
+ 236:ChibiOS/os/hal/src/serial.c **** 
+ 237:ChibiOS/os/hal/src/serial.c **** /**
+ 238:ChibiOS/os/hal/src/serial.c ****  * @brief   Direct output check on a @p SerialDriver.
+ 239:ChibiOS/os/hal/src/serial.c ****  * @note    This function bypasses the indirect access to the channel and
+ 240:ChibiOS/os/hal/src/serial.c ****  *          checks directly the output queue. This is faster but cannot
+ 241:ChibiOS/os/hal/src/serial.c ****  *          be used to check different channels implementations.
+ 242:ChibiOS/os/hal/src/serial.c ****  *
+ 243:ChibiOS/os/hal/src/serial.c ****  * @param[in] sdp       pointer to a @p SerialDriver structure
+ 244:ChibiOS/os/hal/src/serial.c ****  * @return              The queue status.
+ 245:ChibiOS/os/hal/src/serial.c ****  * @retval false        if the next write operation would not block.
+ 246:ChibiOS/os/hal/src/serial.c ****  * @retval true         if the next write operation would block.
+ 247:ChibiOS/os/hal/src/serial.c ****  *
+ 248:ChibiOS/os/hal/src/serial.c ****  * @deprecated
+ 249:ChibiOS/os/hal/src/serial.c ****  *
+ 250:ChibiOS/os/hal/src/serial.c ****  * @api
+ 251:ChibiOS/os/hal/src/serial.c ****  */
+ 252:ChibiOS/os/hal/src/serial.c **** bool sdPutWouldBlock(SerialDriver *sdp) {
+ 670               		.loc 1 252 0
+ 671               		.cfi_startproc
+ 672               	.LVL67:
+ 673               	/* prologue: function */
+ 674               	/* frame size = 0 */
+ 675               	/* stack size = 0 */
+ 676               	.L__stack_usage = 0
+ 677               	.LBB72:
+ 678               	.LBB73:
+ 679               	.LBB74:
+ 325:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 680               		.loc 3 325 0
+ 681               	/* #APP */
+ 682               	 ;  325 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 683 0000 F894      		cli
+ 684               	 ;  0 "" 2
+ 685               	/* #NOAPP */
+ 686               	.LBE74:
+ 687               	.LBE73:
+ 688               	.LBE72:
+ 253:ChibiOS/os/hal/src/serial.c ****   bool b;
+ 254:ChibiOS/os/hal/src/serial.c **** 
+ 255:ChibiOS/os/hal/src/serial.c ****   osalSysLock();
+ 256:ChibiOS/os/hal/src/serial.c ****   b = oqIsFullI(&sdp->oqueue);
+ 689               		.loc 1 256 0
+ 690 0002 FC01      		movw r30,r24
+ 691 0004 238D      		ldd r18,Z+27
+ 692 0006 348D      		ldd r19,Z+28
+ 693               	.LVL68:
+ 694               	.LBB75:
+ 695               	.LBB76:
+ 696               	.LBB77:
+ 697               		.loc 3 333 0
+ 698               	/* #APP */
+ 699               	 ;  333 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 700 0008 7894      		sei
+ 701               	 ;  0 "" 2
+ 702               	/* #NOAPP */
+ 703               	.LBE77:
+ 704               	.LBE76:
+ 705               	.LBE75:
+ 706               		.loc 1 256 0
+ 707 000a 81E0      		ldi r24,lo8(1)
+ 708               	.LVL69:
+ 709 000c 232B      		or r18,r19
+ 710 000e 01F0      		breq .L37
+ 711 0010 80E0      		ldi r24,0
+ 712               	.L37:
+ 257:ChibiOS/os/hal/src/serial.c ****   osalSysUnlock();
+ 258:ChibiOS/os/hal/src/serial.c **** 
+ 259:ChibiOS/os/hal/src/serial.c ****   return b;
+ 260:ChibiOS/os/hal/src/serial.c **** }
+ 713               		.loc 1 260 0
+ 714 0012 0895      		ret
+ 715               		.cfi_endproc
+ 716               	.LFE67:
+ 718               		.section	.text.sdGetWouldBlock,"ax",@progbits
+ 719               	.global	sdGetWouldBlock
+ 721               	sdGetWouldBlock:
+ 722               	.LFB68:
+ 261:ChibiOS/os/hal/src/serial.c **** 
+ 262:ChibiOS/os/hal/src/serial.c **** /**
+ 263:ChibiOS/os/hal/src/serial.c ****  * @brief   Direct input check on a @p SerialDriver.
+ 264:ChibiOS/os/hal/src/serial.c ****  * @note    This function bypasses the indirect access to the channel and
+ 265:ChibiOS/os/hal/src/serial.c ****  *          checks directly the input queue. This is faster but cannot
+ 266:ChibiOS/os/hal/src/serial.c ****  *          be used to check different channels implementations.
+ 267:ChibiOS/os/hal/src/serial.c ****  *
+ 268:ChibiOS/os/hal/src/serial.c ****  * @param[in] sdp       pointer to a @p SerialDriver structure
+ 269:ChibiOS/os/hal/src/serial.c ****  * @return              The queue status.
+ 270:ChibiOS/os/hal/src/serial.c ****  * @retval false        if the next write operation would not block.
+ 271:ChibiOS/os/hal/src/serial.c ****  * @retval true         if the next write operation would block.
+ 272:ChibiOS/os/hal/src/serial.c ****  *
+ 273:ChibiOS/os/hal/src/serial.c ****  * @deprecated
+ 274:ChibiOS/os/hal/src/serial.c ****  *
+ 275:ChibiOS/os/hal/src/serial.c ****  * @api
+ 276:ChibiOS/os/hal/src/serial.c ****  */
+ 277:ChibiOS/os/hal/src/serial.c **** bool sdGetWouldBlock(SerialDriver *sdp) {
+ 723               		.loc 1 277 0
+ 724               		.cfi_startproc
+ 725               	.LVL70:
+ 726               	/* prologue: function */
+ 727               	/* frame size = 0 */
+ 728               	/* stack size = 0 */
+ 729               	.L__stack_usage = 0
+ 730               	.LBB78:
+ 731               	.LBB79:
+ 732               	.LBB80:
+ 325:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 733               		.loc 3 325 0
+ 734               	/* #APP */
+ 735               	 ;  325 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 736 0000 F894      		cli
+ 737               	 ;  0 "" 2
+ 738               	/* #NOAPP */
+ 739               	.LBE80:
+ 740               	.LBE79:
+ 741               	.LBE78:
+ 278:ChibiOS/os/hal/src/serial.c ****   bool b;
+ 279:ChibiOS/os/hal/src/serial.c **** 
+ 280:ChibiOS/os/hal/src/serial.c ****   osalSysLock();
+ 281:ChibiOS/os/hal/src/serial.c ****   b = iqIsEmptyI(&sdp->iqueue);
+ 742               		.loc 1 281 0
+ 743 0002 FC01      		movw r30,r24
+ 744 0004 2485      		ldd r18,Z+12
+ 745 0006 3585      		ldd r19,Z+13
+ 746               	.LVL71:
+ 747               	.LBB81:
+ 748               	.LBB82:
+ 749               	.LBB83:
+ 750               		.loc 3 333 0
+ 751               	/* #APP */
+ 752               	 ;  333 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 753 0008 7894      		sei
+ 754               	 ;  0 "" 2
+ 755               	/* #NOAPP */
+ 756               	.LBE83:
+ 757               	.LBE82:
+ 758               	.LBE81:
+ 759               		.loc 1 281 0
+ 760 000a 81E0      		ldi r24,lo8(1)
+ 761               	.LVL72:
+ 762 000c 232B      		or r18,r19
+ 763 000e 01F0      		breq .L42
+ 764 0010 80E0      		ldi r24,0
+ 765               	.L42:
+ 282:ChibiOS/os/hal/src/serial.c ****   osalSysUnlock();
+ 283:ChibiOS/os/hal/src/serial.c **** 
+ 284:ChibiOS/os/hal/src/serial.c ****   return b;
+ 285:ChibiOS/os/hal/src/serial.c **** }
+ 766               		.loc 1 285 0
+ 767 0012 0895      		ret
+ 768               		.cfi_endproc
+ 769               	.LFE68:
+ 771               		.section	.rodata.vmt,"a",@progbits
+ 774               	vmt:
+ 775 0000 0000      		.word	gs(write)
+ 776 0002 0000      		.word	gs(read)
+ 777 0004 0000      		.word	gs(put)
+ 778 0006 0000      		.word	gs(get)
+ 779 0008 0000      		.word	gs(putt)
+ 780 000a 0000      		.word	gs(gett)
+ 781 000c 0000      		.word	gs(writet)
+ 782 000e 0000      		.word	gs(readt)
+ 783               		.text
+ 784               	.Letext0:
+ 785               		.file 4 "c:\\program files (x86)\\atmel\\studio\\7.0\\toolchain\\avr8\\avr8-gnu-toolchain\\lib\\gc
+ 786               		.file 5 "c:\\program files (x86)\\atmel\\studio\\7.0\\toolchain\\avr8\\avr8-gnu-toolchain\\avr\\in
+ 787               		.file 6 "ChibiOS/os/nil/ports/AVR/compilers/GCC/niltypes.h"
+ 788               		.file 7 "ChibiOS/os/nil/include/nil.h"
+ 789               		.file 8 "ChibiOS/os/hal/include/hal_queues.h"
+ 790               		.file 9 "ChibiOS/os/hal/include/serial.h"
+ 791               		.file 10 "ChibiOS/os/hal/ports/AVR/serial_lld.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 serial.c
+C:\Users\Noah\AppData\Local\Temp\ccw1HJRu.s:2      *ABS*:0000003e __SP_H__
+C:\Users\Noah\AppData\Local\Temp\ccw1HJRu.s:3      *ABS*:0000003d __SP_L__
+C:\Users\Noah\AppData\Local\Temp\ccw1HJRu.s:4      *ABS*:0000003f __SREG__
+C:\Users\Noah\AppData\Local\Temp\ccw1HJRu.s:5      *ABS*:00000000 __tmp_reg__
+C:\Users\Noah\AppData\Local\Temp\ccw1HJRu.s:6      *ABS*:00000001 __zero_reg__
+C:\Users\Noah\AppData\Local\Temp\ccw1HJRu.s:12     .text.readt:00000000 readt
+C:\Users\Noah\AppData\Local\Temp\ccw1HJRu.s:32     .text.read:00000000 read
+C:\Users\Noah\AppData\Local\Temp\ccw1HJRu.s:53     .text.writet:00000000 writet
+C:\Users\Noah\AppData\Local\Temp\ccw1HJRu.s:72     .text.write:00000000 write
+C:\Users\Noah\AppData\Local\Temp\ccw1HJRu.s:93     .text.gett:00000000 gett
+C:\Users\Noah\AppData\Local\Temp\ccw1HJRu.s:112    .text.get:00000000 get
+C:\Users\Noah\AppData\Local\Temp\ccw1HJRu.s:133    .text.putt:00000000 putt
+C:\Users\Noah\AppData\Local\Temp\ccw1HJRu.s:152    .text.put:00000000 put
+C:\Users\Noah\AppData\Local\Temp\ccw1HJRu.s:174    .text.sdInit:00000000 sdInit
+C:\Users\Noah\AppData\Local\Temp\ccw1HJRu.s:191    .text.sdObjectInit:00000000 sdObjectInit
+C:\Users\Noah\AppData\Local\Temp\ccw1HJRu.s:774    .rodata.vmt:00000000 vmt
+C:\Users\Noah\AppData\Local\Temp\ccw1HJRu.s:295    .text.sdStart:00000000 sdStart
+C:\Users\Noah\AppData\Local\Temp\ccw1HJRu.s:356    .text.sdStop:00000000 sdStop
+C:\Users\Noah\AppData\Local\Temp\ccw1HJRu.s:433    .text.sdIncomingDataI:00000000 sdIncomingDataI
+C:\Users\Noah\AppData\Local\Temp\ccw1HJRu.s:577    .text.sdRequestDataI:00000000 sdRequestDataI
+C:\Users\Noah\AppData\Local\Temp\ccw1HJRu.s:668    .text.sdPutWouldBlock:00000000 sdPutWouldBlock
+C:\Users\Noah\AppData\Local\Temp\ccw1HJRu.s:721    .text.sdGetWouldBlock:00000000 sdGetWouldBlock
+
+UNDEFINED SYMBOLS
+iqReadTimeout
+oqWriteTimeout
+iqGetTimeout
+oqPutTimeout
+sd_lld_init
+iqObjectInit
+oqObjectInit
+sd_lld_start
+sd_lld_stop
+oqResetI
+iqResetI
+chSchRescheduleS
+iqPutI
+oqGetI
+__do_copy_data

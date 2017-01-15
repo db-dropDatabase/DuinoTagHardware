@@ -1,0 +1,3056 @@
+   1               		.file	"nil.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               		.section	.text.chSemSignalI.part.1,"ax",@progbits
+  12               	chSemSignalI.part.1:
+  13               	.LFB49:
+  14               		.file 1 "ChibiOS/os/nil/src/nil.c"
+   1:ChibiOS/os/nil/src/nil.c **** /*
+   2:ChibiOS/os/nil/src/nil.c ****     ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio.
+   3:ChibiOS/os/nil/src/nil.c **** 
+   4:ChibiOS/os/nil/src/nil.c ****     This file is part of ChibiOS.
+   5:ChibiOS/os/nil/src/nil.c **** 
+   6:ChibiOS/os/nil/src/nil.c ****     ChibiOS is free software; you can redistribute it and/or modify
+   7:ChibiOS/os/nil/src/nil.c ****     it under the terms of the GNU General Public License as published by
+   8:ChibiOS/os/nil/src/nil.c ****     the Free Software Foundation; either version 3 of the License, or
+   9:ChibiOS/os/nil/src/nil.c ****     (at your option) any later version.
+  10:ChibiOS/os/nil/src/nil.c **** 
+  11:ChibiOS/os/nil/src/nil.c ****     ChibiOS is distributed in the hope that it will be useful,
+  12:ChibiOS/os/nil/src/nil.c ****     but WITHOUT ANY WARRANTY; without even the implied warranty of
+  13:ChibiOS/os/nil/src/nil.c ****     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  14:ChibiOS/os/nil/src/nil.c ****     GNU General Public License for more details.
+  15:ChibiOS/os/nil/src/nil.c **** 
+  16:ChibiOS/os/nil/src/nil.c ****     You should have received a copy of the GNU General Public License
+  17:ChibiOS/os/nil/src/nil.c ****     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  18:ChibiOS/os/nil/src/nil.c **** */
+  19:ChibiOS/os/nil/src/nil.c **** 
+  20:ChibiOS/os/nil/src/nil.c **** /**
+  21:ChibiOS/os/nil/src/nil.c ****  * @file    nil.c
+  22:ChibiOS/os/nil/src/nil.c ****  * @brief   Nil RTOS main source file.
+  23:ChibiOS/os/nil/src/nil.c ****  *
+  24:ChibiOS/os/nil/src/nil.c ****  * @addtogroup NIL_KERNEL
+  25:ChibiOS/os/nil/src/nil.c ****  * @{
+  26:ChibiOS/os/nil/src/nil.c ****  */
+  27:ChibiOS/os/nil/src/nil.c **** 
+  28:ChibiOS/os/nil/src/nil.c **** #include "nil.h"
+  29:ChibiOS/os/nil/src/nil.c **** 
+  30:ChibiOS/os/nil/src/nil.c **** /*===========================================================================*/
+  31:ChibiOS/os/nil/src/nil.c **** /* Module local definitions.                                                 */
+  32:ChibiOS/os/nil/src/nil.c **** /*===========================================================================*/
+  33:ChibiOS/os/nil/src/nil.c **** 
+  34:ChibiOS/os/nil/src/nil.c **** /*===========================================================================*/
+  35:ChibiOS/os/nil/src/nil.c **** /* Module exported variables.                                                */
+  36:ChibiOS/os/nil/src/nil.c **** /*===========================================================================*/
+  37:ChibiOS/os/nil/src/nil.c **** 
+  38:ChibiOS/os/nil/src/nil.c **** /**
+  39:ChibiOS/os/nil/src/nil.c ****  * @brief   System data structures.
+  40:ChibiOS/os/nil/src/nil.c ****  */
+  41:ChibiOS/os/nil/src/nil.c **** nil_system_t nil;
+  42:ChibiOS/os/nil/src/nil.c **** 
+  43:ChibiOS/os/nil/src/nil.c **** /*===========================================================================*/
+  44:ChibiOS/os/nil/src/nil.c **** /* Module local variables.                                                   */
+  45:ChibiOS/os/nil/src/nil.c **** /*===========================================================================*/
+  46:ChibiOS/os/nil/src/nil.c **** 
+  47:ChibiOS/os/nil/src/nil.c **** /*===========================================================================*/
+  48:ChibiOS/os/nil/src/nil.c **** /* Module local functions.                                                   */
+  49:ChibiOS/os/nil/src/nil.c **** /*===========================================================================*/
+  50:ChibiOS/os/nil/src/nil.c **** 
+  51:ChibiOS/os/nil/src/nil.c **** /*===========================================================================*/
+  52:ChibiOS/os/nil/src/nil.c **** /* Module interrupt handlers.                                                */
+  53:ChibiOS/os/nil/src/nil.c **** /*===========================================================================*/
+  54:ChibiOS/os/nil/src/nil.c **** 
+  55:ChibiOS/os/nil/src/nil.c **** /*===========================================================================*/
+  56:ChibiOS/os/nil/src/nil.c **** /* Module exported functions.                                                */
+  57:ChibiOS/os/nil/src/nil.c **** /*===========================================================================*/
+  58:ChibiOS/os/nil/src/nil.c **** 
+  59:ChibiOS/os/nil/src/nil.c **** /**
+  60:ChibiOS/os/nil/src/nil.c ****  * @brief   Initializes the kernel.
+  61:ChibiOS/os/nil/src/nil.c ****  * @details Initializes the kernel structures, the current instructions flow
+  62:ChibiOS/os/nil/src/nil.c ****  *          becomes the idle thread upon return. The idle thread must not
+  63:ChibiOS/os/nil/src/nil.c ****  *          invoke any kernel primitive able to change state to not runnable.
+  64:ChibiOS/os/nil/src/nil.c ****  * @note    This function assumes that the @p nil global variable has been
+  65:ChibiOS/os/nil/src/nil.c ****  *          zeroed by the runtime environment. If this is not the case then
+  66:ChibiOS/os/nil/src/nil.c ****  *          make sure to clear it before calling this function.
+  67:ChibiOS/os/nil/src/nil.c ****  *
+  68:ChibiOS/os/nil/src/nil.c ****  * @special
+  69:ChibiOS/os/nil/src/nil.c ****  */
+  70:ChibiOS/os/nil/src/nil.c **** void chSysInit(void) {
+  71:ChibiOS/os/nil/src/nil.c ****   thread_t *tp;
+  72:ChibiOS/os/nil/src/nil.c ****   const thread_config_t *tcp;
+  73:ChibiOS/os/nil/src/nil.c **** 
+  74:ChibiOS/os/nil/src/nil.c ****   /* Port layer initialization.*/
+  75:ChibiOS/os/nil/src/nil.c ****   port_init();
+  76:ChibiOS/os/nil/src/nil.c **** 
+  77:ChibiOS/os/nil/src/nil.c ****   /* System initialization hook.*/
+  78:ChibiOS/os/nil/src/nil.c ****   NIL_CFG_SYSTEM_INIT_HOOK();
+  79:ChibiOS/os/nil/src/nil.c **** 
+  80:ChibiOS/os/nil/src/nil.c ****   /* Iterates through the list of defined threads.*/
+  81:ChibiOS/os/nil/src/nil.c ****   tp = &nil.threads[0];
+  82:ChibiOS/os/nil/src/nil.c ****   tcp = nil_thd_configs;
+  83:ChibiOS/os/nil/src/nil.c ****   while (tp < &nil.threads[NIL_CFG_NUM_THREADS]) {
+  84:ChibiOS/os/nil/src/nil.c **** #if NIL_CFG_ENABLE_STACK_CHECK
+  85:ChibiOS/os/nil/src/nil.c ****     tp->stklim  = (stkalign_t *)tcp->wbase;
+  86:ChibiOS/os/nil/src/nil.c **** #endif
+  87:ChibiOS/os/nil/src/nil.c **** 
+  88:ChibiOS/os/nil/src/nil.c ****     /* Port dependent thread initialization.*/
+  89:ChibiOS/os/nil/src/nil.c ****     PORT_SETUP_CONTEXT(tp, tcp->wend, tcp->funcp, tcp->arg);
+  90:ChibiOS/os/nil/src/nil.c **** 
+  91:ChibiOS/os/nil/src/nil.c ****     /* Initialization hook.*/
+  92:ChibiOS/os/nil/src/nil.c ****     NIL_CFG_THREAD_EXT_INIT_HOOK(tp);
+  93:ChibiOS/os/nil/src/nil.c **** 
+  94:ChibiOS/os/nil/src/nil.c ****     tp++;
+  95:ChibiOS/os/nil/src/nil.c ****     tcp++;
+  96:ChibiOS/os/nil/src/nil.c ****   }
+  97:ChibiOS/os/nil/src/nil.c **** 
+  98:ChibiOS/os/nil/src/nil.c **** #if NIL_CFG_ENABLE_STACK_CHECK
+  99:ChibiOS/os/nil/src/nil.c ****   /* The idle thread is a special case because its stack is set up by the
+ 100:ChibiOS/os/nil/src/nil.c ****      runtime environment.*/
+ 101:ChibiOS/os/nil/src/nil.c ****   tp->stklim  = THD_IDLE_BASE;
+ 102:ChibiOS/os/nil/src/nil.c **** #endif
+ 103:ChibiOS/os/nil/src/nil.c **** 
+ 104:ChibiOS/os/nil/src/nil.c ****   /* Runs the highest priority thread, the current one becomes the idle
+ 105:ChibiOS/os/nil/src/nil.c ****      thread.*/
+ 106:ChibiOS/os/nil/src/nil.c ****   nil.current = nil.next = nil.threads;
+ 107:ChibiOS/os/nil/src/nil.c ****   port_switch(nil.current, tp);
+ 108:ChibiOS/os/nil/src/nil.c **** 
+ 109:ChibiOS/os/nil/src/nil.c ****   /* Interrupts enabled for the idle thread.*/
+ 110:ChibiOS/os/nil/src/nil.c ****   chSysEnable();
+ 111:ChibiOS/os/nil/src/nil.c **** }
+ 112:ChibiOS/os/nil/src/nil.c **** 
+ 113:ChibiOS/os/nil/src/nil.c **** /**
+ 114:ChibiOS/os/nil/src/nil.c ****  * @brief   Halts the system.
+ 115:ChibiOS/os/nil/src/nil.c ****  * @details This function is invoked by the operating system when an
+ 116:ChibiOS/os/nil/src/nil.c ****  *          unrecoverable error is detected, for example because a programming
+ 117:ChibiOS/os/nil/src/nil.c ****  *          error in the application code that triggers an assertion while
+ 118:ChibiOS/os/nil/src/nil.c ****  *          in debug mode.
+ 119:ChibiOS/os/nil/src/nil.c ****  * @note    Can be invoked from any system state.
+ 120:ChibiOS/os/nil/src/nil.c ****  *
+ 121:ChibiOS/os/nil/src/nil.c ****  * @param[in] reason        pointer to an error string
+ 122:ChibiOS/os/nil/src/nil.c ****  *
+ 123:ChibiOS/os/nil/src/nil.c ****  * @special
+ 124:ChibiOS/os/nil/src/nil.c ****  */
+ 125:ChibiOS/os/nil/src/nil.c **** void chSysHalt(const char *reason) {
+ 126:ChibiOS/os/nil/src/nil.c **** 
+ 127:ChibiOS/os/nil/src/nil.c ****   port_disable();
+ 128:ChibiOS/os/nil/src/nil.c **** 
+ 129:ChibiOS/os/nil/src/nil.c **** #if NIL_DBG_ENABLED
+ 130:ChibiOS/os/nil/src/nil.c ****   nil.dbg_panic_msg = reason;
+ 131:ChibiOS/os/nil/src/nil.c **** #else
+ 132:ChibiOS/os/nil/src/nil.c ****   (void)reason;
+ 133:ChibiOS/os/nil/src/nil.c **** #endif
+ 134:ChibiOS/os/nil/src/nil.c **** 
+ 135:ChibiOS/os/nil/src/nil.c ****   NIL_CFG_SYSTEM_HALT_HOOK(reason);
+ 136:ChibiOS/os/nil/src/nil.c **** 
+ 137:ChibiOS/os/nil/src/nil.c ****   /* Harmless infinite loop.*/
+ 138:ChibiOS/os/nil/src/nil.c ****   while (true) {
+ 139:ChibiOS/os/nil/src/nil.c ****   }
+ 140:ChibiOS/os/nil/src/nil.c **** }
+ 141:ChibiOS/os/nil/src/nil.c **** 
+ 142:ChibiOS/os/nil/src/nil.c **** /**
+ 143:ChibiOS/os/nil/src/nil.c ****  * @brief   Time management handler.
+ 144:ChibiOS/os/nil/src/nil.c ****  * @note    This handler has to be invoked by a periodic ISR in order to
+ 145:ChibiOS/os/nil/src/nil.c ****  *          reschedule the waiting threads.
+ 146:ChibiOS/os/nil/src/nil.c ****  *
+ 147:ChibiOS/os/nil/src/nil.c ****  * @iclass
+ 148:ChibiOS/os/nil/src/nil.c ****  */
+ 149:ChibiOS/os/nil/src/nil.c **** void chSysTimerHandlerI(void) {
+ 150:ChibiOS/os/nil/src/nil.c **** 
+ 151:ChibiOS/os/nil/src/nil.c **** #if NIL_CFG_ST_TIMEDELTA == 0
+ 152:ChibiOS/os/nil/src/nil.c ****   thread_t *tp = &nil.threads[0];
+ 153:ChibiOS/os/nil/src/nil.c ****   nil.systime++;
+ 154:ChibiOS/os/nil/src/nil.c ****   do {
+ 155:ChibiOS/os/nil/src/nil.c ****     /* Is the thread in a wait state with timeout?.*/
+ 156:ChibiOS/os/nil/src/nil.c ****     if (tp->timeout > (systime_t)0) {
+ 157:ChibiOS/os/nil/src/nil.c **** 
+ 158:ChibiOS/os/nil/src/nil.c ****       chDbgAssert(!NIL_THD_IS_READY(tp), "is ready");
+ 159:ChibiOS/os/nil/src/nil.c **** 
+ 160:ChibiOS/os/nil/src/nil.c ****      /* Did the timer reach zero?*/
+ 161:ChibiOS/os/nil/src/nil.c ****       if (--tp->timeout == (systime_t)0) {
+ 162:ChibiOS/os/nil/src/nil.c ****         /* Timeout on semaphores requires a special handling because the
+ 163:ChibiOS/os/nil/src/nil.c ****            semaphore counter must be incremented.*/
+ 164:ChibiOS/os/nil/src/nil.c ****         /*lint -save -e9013 [15.7] There is no else because it is not needed.*/
+ 165:ChibiOS/os/nil/src/nil.c ****         if (NIL_THD_IS_WTSEM(tp)) {
+ 166:ChibiOS/os/nil/src/nil.c ****           tp->u1.semp->cnt++;
+ 167:ChibiOS/os/nil/src/nil.c ****         }
+ 168:ChibiOS/os/nil/src/nil.c ****         else if (NIL_THD_IS_SUSP(tp)) {
+ 169:ChibiOS/os/nil/src/nil.c ****           *tp->u1.trp = NULL;
+ 170:ChibiOS/os/nil/src/nil.c ****         }
+ 171:ChibiOS/os/nil/src/nil.c ****         /*lint -restore*/
+ 172:ChibiOS/os/nil/src/nil.c ****         (void) chSchReadyI(tp, MSG_TIMEOUT);
+ 173:ChibiOS/os/nil/src/nil.c ****       }
+ 174:ChibiOS/os/nil/src/nil.c ****     }
+ 175:ChibiOS/os/nil/src/nil.c ****     /* Lock released in order to give a preemption chance on those
+ 176:ChibiOS/os/nil/src/nil.c ****        architectures supporting IRQ preemption.*/
+ 177:ChibiOS/os/nil/src/nil.c ****     chSysUnlockFromISR();
+ 178:ChibiOS/os/nil/src/nil.c ****     tp++;
+ 179:ChibiOS/os/nil/src/nil.c ****     chSysLockFromISR();
+ 180:ChibiOS/os/nil/src/nil.c ****   } while (tp < &nil.threads[NIL_CFG_NUM_THREADS]);
+ 181:ChibiOS/os/nil/src/nil.c **** #else
+ 182:ChibiOS/os/nil/src/nil.c ****   thread_t *tp = &nil.threads[0];
+ 183:ChibiOS/os/nil/src/nil.c ****   systime_t next = (systime_t)0;
+ 184:ChibiOS/os/nil/src/nil.c **** 
+ 185:ChibiOS/os/nil/src/nil.c ****   chDbgAssert(nil.nexttime == port_timer_get_alarm(), "time mismatch");
+ 186:ChibiOS/os/nil/src/nil.c **** 
+ 187:ChibiOS/os/nil/src/nil.c ****   do {
+ 188:ChibiOS/os/nil/src/nil.c ****     /* Is the thread in a wait state with timeout?.*/
+ 189:ChibiOS/os/nil/src/nil.c ****     if (tp->timeout > (systime_t)0) {
+ 190:ChibiOS/os/nil/src/nil.c **** 
+ 191:ChibiOS/os/nil/src/nil.c ****       chDbgAssert(!NIL_THD_IS_READY(tp), "is ready");
+ 192:ChibiOS/os/nil/src/nil.c ****       chDbgAssert(tp->timeout >= (nil.nexttime - nil.lasttime), "skipped one");
+ 193:ChibiOS/os/nil/src/nil.c **** 
+ 194:ChibiOS/os/nil/src/nil.c ****       tp->timeout -= nil.nexttime - nil.lasttime;
+ 195:ChibiOS/os/nil/src/nil.c ****       if (tp->timeout == (systime_t)0) {
+ 196:ChibiOS/os/nil/src/nil.c ****         /* Timeout on semaphores requires a special handling because the
+ 197:ChibiOS/os/nil/src/nil.c ****            semaphore counter must be incremented.*/
+ 198:ChibiOS/os/nil/src/nil.c ****         /*lint -save -e9013 [15.7] There is no else because it is not needed.*/
+ 199:ChibiOS/os/nil/src/nil.c ****        if (NIL_THD_IS_WTSEM(tp)) {
+ 200:ChibiOS/os/nil/src/nil.c ****           tp->u1.semp->cnt++;
+ 201:ChibiOS/os/nil/src/nil.c ****         }
+ 202:ChibiOS/os/nil/src/nil.c ****         else if (NIL_THD_IS_SUSP(tp)) {
+ 203:ChibiOS/os/nil/src/nil.c ****           *tp->u1.trp = NULL;
+ 204:ChibiOS/os/nil/src/nil.c ****         }
+ 205:ChibiOS/os/nil/src/nil.c ****         /*lint -restore*/
+ 206:ChibiOS/os/nil/src/nil.c ****         (void) chSchReadyI(tp, MSG_TIMEOUT);
+ 207:ChibiOS/os/nil/src/nil.c ****       }
+ 208:ChibiOS/os/nil/src/nil.c ****       else {
+ 209:ChibiOS/os/nil/src/nil.c ****         if (tp->timeout <= (systime_t)(next - (systime_t)1)) {
+ 210:ChibiOS/os/nil/src/nil.c ****           next = tp->timeout;
+ 211:ChibiOS/os/nil/src/nil.c ****         }
+ 212:ChibiOS/os/nil/src/nil.c ****       }
+ 213:ChibiOS/os/nil/src/nil.c ****     }
+ 214:ChibiOS/os/nil/src/nil.c ****     /* Lock released in order to give a preemption chance on those
+ 215:ChibiOS/os/nil/src/nil.c ****        architectures supporting IRQ preemption.*/
+ 216:ChibiOS/os/nil/src/nil.c ****     chSysUnlockFromISR();
+ 217:ChibiOS/os/nil/src/nil.c ****     tp++;
+ 218:ChibiOS/os/nil/src/nil.c ****     chSysLockFromISR();
+ 219:ChibiOS/os/nil/src/nil.c ****   } while (tp < &nil.threads[NIL_CFG_NUM_THREADS]);
+ 220:ChibiOS/os/nil/src/nil.c ****   nil.lasttime = nil.nexttime;
+ 221:ChibiOS/os/nil/src/nil.c ****   if (next > (systime_t)0) {
+ 222:ChibiOS/os/nil/src/nil.c ****     nil.nexttime += next;
+ 223:ChibiOS/os/nil/src/nil.c ****     port_timer_set_alarm(nil.nexttime);
+ 224:ChibiOS/os/nil/src/nil.c ****   }
+ 225:ChibiOS/os/nil/src/nil.c ****   else {
+ 226:ChibiOS/os/nil/src/nil.c ****     /* No tick event needed.*/
+ 227:ChibiOS/os/nil/src/nil.c ****     port_timer_stop_alarm();
+ 228:ChibiOS/os/nil/src/nil.c ****   }
+ 229:ChibiOS/os/nil/src/nil.c **** #endif
+ 230:ChibiOS/os/nil/src/nil.c **** }
+ 231:ChibiOS/os/nil/src/nil.c **** 
+ 232:ChibiOS/os/nil/src/nil.c **** /**
+ 233:ChibiOS/os/nil/src/nil.c ****  * @brief   Unconditionally enters the kernel lock state.
+ 234:ChibiOS/os/nil/src/nil.c ****  * @note    Can be called without previous knowledge of the current lock state.
+ 235:ChibiOS/os/nil/src/nil.c ****  *          The final state is "s-locked".
+ 236:ChibiOS/os/nil/src/nil.c ****  *
+ 237:ChibiOS/os/nil/src/nil.c ****  * @special
+ 238:ChibiOS/os/nil/src/nil.c ****  */
+ 239:ChibiOS/os/nil/src/nil.c **** void chSysUnconditionalLock(void) {
+ 240:ChibiOS/os/nil/src/nil.c **** 
+ 241:ChibiOS/os/nil/src/nil.c ****   if (port_irq_enabled(port_get_irq_status())) {
+ 242:ChibiOS/os/nil/src/nil.c ****     chSysLock();
+ 243:ChibiOS/os/nil/src/nil.c ****   }
+ 244:ChibiOS/os/nil/src/nil.c **** }
+ 245:ChibiOS/os/nil/src/nil.c **** 
+ 246:ChibiOS/os/nil/src/nil.c **** /**
+ 247:ChibiOS/os/nil/src/nil.c ****  * @brief   Unconditionally leaves the kernel lock state.
+ 248:ChibiOS/os/nil/src/nil.c ****  * @note    Can be called without previous knowledge of the current lock state.
+ 249:ChibiOS/os/nil/src/nil.c ****  *          The final state is "normal".
+ 250:ChibiOS/os/nil/src/nil.c ****  *
+ 251:ChibiOS/os/nil/src/nil.c ****  * @special
+ 252:ChibiOS/os/nil/src/nil.c ****  */
+ 253:ChibiOS/os/nil/src/nil.c **** void chSysUnconditionalUnlock(void) {
+ 254:ChibiOS/os/nil/src/nil.c **** 
+ 255:ChibiOS/os/nil/src/nil.c ****   if (!port_irq_enabled(port_get_irq_status())) {
+ 256:ChibiOS/os/nil/src/nil.c ****     chSysUnlock();
+ 257:ChibiOS/os/nil/src/nil.c ****   }
+ 258:ChibiOS/os/nil/src/nil.c **** }
+ 259:ChibiOS/os/nil/src/nil.c **** 
+ 260:ChibiOS/os/nil/src/nil.c **** /**
+ 261:ChibiOS/os/nil/src/nil.c ****  * @brief   Returns the execution status and enters a critical zone.
+ 262:ChibiOS/os/nil/src/nil.c ****  * @details This functions enters into a critical zone and can be called
+ 263:ChibiOS/os/nil/src/nil.c ****  *          from any context. Because its flexibility it is less efficient
+ 264:ChibiOS/os/nil/src/nil.c ****  *          than @p chSysLock() which is preferable when the calling context
+ 265:ChibiOS/os/nil/src/nil.c ****  *          is known.
+ 266:ChibiOS/os/nil/src/nil.c ****  * @post    The system is in a critical zone.
+ 267:ChibiOS/os/nil/src/nil.c ****  *
+ 268:ChibiOS/os/nil/src/nil.c ****  * @return              The previous system status, the encoding of this
+ 269:ChibiOS/os/nil/src/nil.c ****  *                      status word is architecture-dependent and opaque.
+ 270:ChibiOS/os/nil/src/nil.c ****  *
+ 271:ChibiOS/os/nil/src/nil.c ****  * @xclass
+ 272:ChibiOS/os/nil/src/nil.c ****  */
+ 273:ChibiOS/os/nil/src/nil.c **** syssts_t chSysGetStatusAndLockX(void) {
+ 274:ChibiOS/os/nil/src/nil.c **** 
+ 275:ChibiOS/os/nil/src/nil.c ****   syssts_t sts = port_get_irq_status();
+ 276:ChibiOS/os/nil/src/nil.c ****   if (port_irq_enabled(sts)) {
+ 277:ChibiOS/os/nil/src/nil.c ****     if (port_is_isr_context()) {
+ 278:ChibiOS/os/nil/src/nil.c ****       chSysLockFromISR();
+ 279:ChibiOS/os/nil/src/nil.c ****     }
+ 280:ChibiOS/os/nil/src/nil.c ****     else {
+ 281:ChibiOS/os/nil/src/nil.c ****       chSysLock();
+ 282:ChibiOS/os/nil/src/nil.c ****     }
+ 283:ChibiOS/os/nil/src/nil.c ****   }
+ 284:ChibiOS/os/nil/src/nil.c ****   return sts;
+ 285:ChibiOS/os/nil/src/nil.c **** }
+ 286:ChibiOS/os/nil/src/nil.c **** 
+ 287:ChibiOS/os/nil/src/nil.c **** /**
+ 288:ChibiOS/os/nil/src/nil.c ****  * @brief   Restores the specified execution status and leaves a critical zone.
+ 289:ChibiOS/os/nil/src/nil.c ****  * @note    A call to @p chSchRescheduleS() is automatically performed
+ 290:ChibiOS/os/nil/src/nil.c ****  *          if exiting the critical zone and if not in ISR context.
+ 291:ChibiOS/os/nil/src/nil.c ****  *
+ 292:ChibiOS/os/nil/src/nil.c ****  * @param[in] sts       the system status to be restored.
+ 293:ChibiOS/os/nil/src/nil.c ****  *
+ 294:ChibiOS/os/nil/src/nil.c ****  * @xclass
+ 295:ChibiOS/os/nil/src/nil.c ****  */
+ 296:ChibiOS/os/nil/src/nil.c **** void chSysRestoreStatusX(syssts_t sts) {
+ 297:ChibiOS/os/nil/src/nil.c **** 
+ 298:ChibiOS/os/nil/src/nil.c ****   if (port_irq_enabled(sts)) {
+ 299:ChibiOS/os/nil/src/nil.c ****     if (port_is_isr_context()) {
+ 300:ChibiOS/os/nil/src/nil.c ****       chSysUnlockFromISR();
+ 301:ChibiOS/os/nil/src/nil.c ****     }
+ 302:ChibiOS/os/nil/src/nil.c ****     else {
+ 303:ChibiOS/os/nil/src/nil.c ****       chSchRescheduleS();
+ 304:ChibiOS/os/nil/src/nil.c ****       chSysUnlock();
+ 305:ChibiOS/os/nil/src/nil.c ****     }
+ 306:ChibiOS/os/nil/src/nil.c ****   }
+ 307:ChibiOS/os/nil/src/nil.c **** }
+ 308:ChibiOS/os/nil/src/nil.c **** 
+ 309:ChibiOS/os/nil/src/nil.c **** #if (PORT_SUPPORTS_RT == TRUE) || defined(__DOXYGEN__)
+ 310:ChibiOS/os/nil/src/nil.c **** /**
+ 311:ChibiOS/os/nil/src/nil.c ****  * @brief   Realtime window test.
+ 312:ChibiOS/os/nil/src/nil.c ****  * @details This function verifies if the current realtime counter value
+ 313:ChibiOS/os/nil/src/nil.c ****  *          lies within the specified range or not. The test takes care
+ 314:ChibiOS/os/nil/src/nil.c ****  *          of the realtime counter wrapping to zero on overflow.
+ 315:ChibiOS/os/nil/src/nil.c ****  * @note    When start==end then the function returns always true because the
+ 316:ChibiOS/os/nil/src/nil.c ****  *          whole time range is specified.
+ 317:ChibiOS/os/nil/src/nil.c ****  * @note    This function is only available if the port layer supports the
+ 318:ChibiOS/os/nil/src/nil.c ****  *          option @p PORT_SUPPORTS_RT.
+ 319:ChibiOS/os/nil/src/nil.c ****  *
+ 320:ChibiOS/os/nil/src/nil.c ****  * @param[in] cnt       the counter value to be tested
+ 321:ChibiOS/os/nil/src/nil.c ****  * @param[in] start     the start of the time window (inclusive)
+ 322:ChibiOS/os/nil/src/nil.c ****  * @param[in] end       the end of the time window (non inclusive)
+ 323:ChibiOS/os/nil/src/nil.c ****  * @retval true         current time within the specified time window.
+ 324:ChibiOS/os/nil/src/nil.c ****  * @retval false        current time not within the specified time window.
+ 325:ChibiOS/os/nil/src/nil.c ****  *
+ 326:ChibiOS/os/nil/src/nil.c ****  * @xclass
+ 327:ChibiOS/os/nil/src/nil.c ****  */
+ 328:ChibiOS/os/nil/src/nil.c **** bool chSysIsCounterWithinX(rtcnt_t cnt, rtcnt_t start, rtcnt_t end) {
+ 329:ChibiOS/os/nil/src/nil.c **** 
+ 330:ChibiOS/os/nil/src/nil.c ****   return (bool)((cnt - start) < (end - start));
+ 331:ChibiOS/os/nil/src/nil.c **** }
+ 332:ChibiOS/os/nil/src/nil.c **** 
+ 333:ChibiOS/os/nil/src/nil.c **** /**
+ 334:ChibiOS/os/nil/src/nil.c ****  * @brief   Polled delay.
+ 335:ChibiOS/os/nil/src/nil.c ****  * @note    The real delay is always few cycles in excess of the specified
+ 336:ChibiOS/os/nil/src/nil.c ****  *          value.
+ 337:ChibiOS/os/nil/src/nil.c ****  * @note    This function is only available if the port layer supports the
+ 338:ChibiOS/os/nil/src/nil.c ****  *          option @p PORT_SUPPORTS_RT.
+ 339:ChibiOS/os/nil/src/nil.c ****  *
+ 340:ChibiOS/os/nil/src/nil.c ****  * @param[in] cycles    number of cycles
+ 341:ChibiOS/os/nil/src/nil.c ****  *
+ 342:ChibiOS/os/nil/src/nil.c ****  * @xclass
+ 343:ChibiOS/os/nil/src/nil.c ****  */
+ 344:ChibiOS/os/nil/src/nil.c **** void chSysPolledDelayX(rtcnt_t cycles) {
+ 345:ChibiOS/os/nil/src/nil.c ****   rtcnt_t start = chSysGetRealtimeCounterX();
+ 346:ChibiOS/os/nil/src/nil.c ****   rtcnt_t end  = start + cycles;
+ 347:ChibiOS/os/nil/src/nil.c **** 
+ 348:ChibiOS/os/nil/src/nil.c ****   while (chSysIsCounterWithinX(chSysGetRealtimeCounterX(), start, end)) {
+ 349:ChibiOS/os/nil/src/nil.c ****   }
+ 350:ChibiOS/os/nil/src/nil.c **** }
+ 351:ChibiOS/os/nil/src/nil.c **** #endif /* PORT_SUPPORTS_RT == TRUE */
+ 352:ChibiOS/os/nil/src/nil.c **** 
+ 353:ChibiOS/os/nil/src/nil.c **** /**
+ 354:ChibiOS/os/nil/src/nil.c ****  * @brief   Makes the specified thread ready for execution.
+ 355:ChibiOS/os/nil/src/nil.c ****  *
+ 356:ChibiOS/os/nil/src/nil.c ****  * @param[in] tp        pointer to the @p thread_t object
+ 357:ChibiOS/os/nil/src/nil.c ****  * @param[in] msg       the wakeup message
+ 358:ChibiOS/os/nil/src/nil.c ****  *
+ 359:ChibiOS/os/nil/src/nil.c ****  * @return              The same reference passed as parameter.
+ 360:ChibiOS/os/nil/src/nil.c ****  */
+ 361:ChibiOS/os/nil/src/nil.c **** thread_t *chSchReadyI(thread_t *tp, msg_t msg) {
+ 362:ChibiOS/os/nil/src/nil.c **** 
+ 363:ChibiOS/os/nil/src/nil.c ****   chDbgAssert((tp >= nil.threads) &&
+ 364:ChibiOS/os/nil/src/nil.c ****               (tp < &nil.threads[NIL_CFG_NUM_THREADS]),
+ 365:ChibiOS/os/nil/src/nil.c ****               "pointer out of range");
+ 366:ChibiOS/os/nil/src/nil.c ****   chDbgAssert(!NIL_THD_IS_READY(tp), "already ready");
+ 367:ChibiOS/os/nil/src/nil.c ****   chDbgAssert(nil.next <= nil.current, "priority ordering");
+ 368:ChibiOS/os/nil/src/nil.c **** 
+ 369:ChibiOS/os/nil/src/nil.c ****   tp->u1.msg = msg;
+ 370:ChibiOS/os/nil/src/nil.c ****   tp->state = NIL_STATE_READY;
+ 371:ChibiOS/os/nil/src/nil.c ****   tp->timeout = (systime_t)0;
+ 372:ChibiOS/os/nil/src/nil.c ****   if (tp < nil.next) {
+ 373:ChibiOS/os/nil/src/nil.c ****     nil.next = tp;
+ 374:ChibiOS/os/nil/src/nil.c ****   }
+ 375:ChibiOS/os/nil/src/nil.c ****   return tp;
+ 376:ChibiOS/os/nil/src/nil.c **** }
+ 377:ChibiOS/os/nil/src/nil.c **** 
+ 378:ChibiOS/os/nil/src/nil.c **** /**
+ 379:ChibiOS/os/nil/src/nil.c ****  * @brief   Reschedules if needed.
+ 380:ChibiOS/os/nil/src/nil.c ****  *
+ 381:ChibiOS/os/nil/src/nil.c ****  * @sclass
+ 382:ChibiOS/os/nil/src/nil.c ****  */
+ 383:ChibiOS/os/nil/src/nil.c **** void chSchRescheduleS(void) {
+ 384:ChibiOS/os/nil/src/nil.c **** 
+ 385:ChibiOS/os/nil/src/nil.c ****   if (chSchIsRescRequiredI()) {
+ 386:ChibiOS/os/nil/src/nil.c ****     thread_t *otp = nil.current;
+ 387:ChibiOS/os/nil/src/nil.c **** 
+ 388:ChibiOS/os/nil/src/nil.c ****     nil.current = nil.next;
+ 389:ChibiOS/os/nil/src/nil.c ****     if (otp == &nil.threads[NIL_CFG_NUM_THREADS]) {
+ 390:ChibiOS/os/nil/src/nil.c ****       NIL_CFG_IDLE_LEAVE_HOOK();
+ 391:ChibiOS/os/nil/src/nil.c ****     }
+ 392:ChibiOS/os/nil/src/nil.c ****     port_switch(nil.next, otp);
+ 393:ChibiOS/os/nil/src/nil.c ****   }
+ 394:ChibiOS/os/nil/src/nil.c **** }
+ 395:ChibiOS/os/nil/src/nil.c **** 
+ 396:ChibiOS/os/nil/src/nil.c **** /**
+ 397:ChibiOS/os/nil/src/nil.c ****  * @brief   Puts the current thread to sleep into the specified state with
+ 398:ChibiOS/os/nil/src/nil.c ****  *          timeout specification.
+ 399:ChibiOS/os/nil/src/nil.c ****  * @details The thread goes into a sleeping state, if it is not awakened
+ 400:ChibiOS/os/nil/src/nil.c ****  *          explicitly within the specified system time then it is forcibly
+ 401:ChibiOS/os/nil/src/nil.c ****  *          awakened with a @p NIL_MSG_TMO low level message.
+ 402:ChibiOS/os/nil/src/nil.c ****  *
+ 403:ChibiOS/os/nil/src/nil.c ****  * @param[in] newstate  the new thread state or a semaphore pointer
+ 404:ChibiOS/os/nil/src/nil.c ****  * @param[in] timeout   the number of ticks before the operation timeouts.
+ 405:ChibiOS/os/nil/src/nil.c ****  *                      the following special values are allowed:
+ 406:ChibiOS/os/nil/src/nil.c ****  *                      - @a TIME_INFINITE no timeout.
+ 407:ChibiOS/os/nil/src/nil.c ****  *                      .
+ 408:ChibiOS/os/nil/src/nil.c ****  * @return              The wakeup message.
+ 409:ChibiOS/os/nil/src/nil.c ****  * @retval NIL_MSG_TMO  if a timeout occurred.
+ 410:ChibiOS/os/nil/src/nil.c ****  *
+ 411:ChibiOS/os/nil/src/nil.c ****  * @sclass
+ 412:ChibiOS/os/nil/src/nil.c ****  */
+ 413:ChibiOS/os/nil/src/nil.c **** msg_t chSchGoSleepTimeoutS(tstate_t newstate, systime_t timeout) {
+ 414:ChibiOS/os/nil/src/nil.c ****   thread_t *ntp, *otp = nil.current;
+ 415:ChibiOS/os/nil/src/nil.c **** 
+ 416:ChibiOS/os/nil/src/nil.c ****   chDbgAssert(otp != &nil.threads[NIL_CFG_NUM_THREADS],
+ 417:ChibiOS/os/nil/src/nil.c ****                "idle cannot sleep");
+ 418:ChibiOS/os/nil/src/nil.c **** 
+ 419:ChibiOS/os/nil/src/nil.c ****   /* Storing the wait object for the current thread.*/
+ 420:ChibiOS/os/nil/src/nil.c ****   otp->state = newstate;
+ 421:ChibiOS/os/nil/src/nil.c **** 
+ 422:ChibiOS/os/nil/src/nil.c **** #if NIL_CFG_ST_TIMEDELTA > 0
+ 423:ChibiOS/os/nil/src/nil.c ****   if (timeout != TIME_INFINITE) {
+ 424:ChibiOS/os/nil/src/nil.c ****     systime_t abstime;
+ 425:ChibiOS/os/nil/src/nil.c **** 
+ 426:ChibiOS/os/nil/src/nil.c ****     /* TIMEDELTA makes sure to have enough time to reprogram the timer
+ 427:ChibiOS/os/nil/src/nil.c ****        before the free-running timer counter reaches the selected timeout.*/
+ 428:ChibiOS/os/nil/src/nil.c ****     if (timeout < (systime_t)NIL_CFG_ST_TIMEDELTA) {
+ 429:ChibiOS/os/nil/src/nil.c ****       timeout = (systime_t)NIL_CFG_ST_TIMEDELTA;
+ 430:ChibiOS/os/nil/src/nil.c ****     }
+ 431:ChibiOS/os/nil/src/nil.c **** 
+ 432:ChibiOS/os/nil/src/nil.c ****     /* Absolute time of the timeout event.*/
+ 433:ChibiOS/os/nil/src/nil.c ****     abstime = chVTGetSystemTimeX() + timeout;
+ 434:ChibiOS/os/nil/src/nil.c **** 
+ 435:ChibiOS/os/nil/src/nil.c ****     if (nil.lasttime == nil.nexttime) {
+ 436:ChibiOS/os/nil/src/nil.c ****       /* Special case, first thread asking for a timeout.*/
+ 437:ChibiOS/os/nil/src/nil.c ****       port_timer_start_alarm(abstime);
+ 438:ChibiOS/os/nil/src/nil.c ****       nil.nexttime = abstime;
+ 439:ChibiOS/os/nil/src/nil.c ****     }
+ 440:ChibiOS/os/nil/src/nil.c ****     else {
+ 441:ChibiOS/os/nil/src/nil.c ****       /* Special case, there are already other threads with a timeout
+ 442:ChibiOS/os/nil/src/nil.c ****          activated, evaluating the order.*/
+ 443:ChibiOS/os/nil/src/nil.c ****       if (chVTIsTimeWithinX(abstime, nil.lasttime, nil.nexttime)) {
+ 444:ChibiOS/os/nil/src/nil.c ****         port_timer_set_alarm(abstime);
+ 445:ChibiOS/os/nil/src/nil.c ****         nil.nexttime = abstime;
+ 446:ChibiOS/os/nil/src/nil.c ****       }
+ 447:ChibiOS/os/nil/src/nil.c ****     }
+ 448:ChibiOS/os/nil/src/nil.c **** 
+ 449:ChibiOS/os/nil/src/nil.c ****     /* Timeout settings.*/
+ 450:ChibiOS/os/nil/src/nil.c ****     otp->timeout = abstime - nil.lasttime;
+ 451:ChibiOS/os/nil/src/nil.c ****   }
+ 452:ChibiOS/os/nil/src/nil.c **** #else
+ 453:ChibiOS/os/nil/src/nil.c **** 
+ 454:ChibiOS/os/nil/src/nil.c ****   /* Timeout settings.*/
+ 455:ChibiOS/os/nil/src/nil.c ****   otp->timeout = timeout;
+ 456:ChibiOS/os/nil/src/nil.c **** #endif
+ 457:ChibiOS/os/nil/src/nil.c **** 
+ 458:ChibiOS/os/nil/src/nil.c ****   /* Scanning the whole threads array.*/
+ 459:ChibiOS/os/nil/src/nil.c ****   ntp = nil.threads;
+ 460:ChibiOS/os/nil/src/nil.c ****   while (true) {
+ 461:ChibiOS/os/nil/src/nil.c ****     /* Is this thread ready to execute?*/
+ 462:ChibiOS/os/nil/src/nil.c ****     if (NIL_THD_IS_READY(ntp)) {
+ 463:ChibiOS/os/nil/src/nil.c ****       nil.current = nil.next = ntp;
+ 464:ChibiOS/os/nil/src/nil.c ****       if (ntp == &nil.threads[NIL_CFG_NUM_THREADS]) {
+ 465:ChibiOS/os/nil/src/nil.c ****         NIL_CFG_IDLE_ENTER_HOOK();
+ 466:ChibiOS/os/nil/src/nil.c ****       }
+ 467:ChibiOS/os/nil/src/nil.c ****       port_switch(ntp, otp);
+ 468:ChibiOS/os/nil/src/nil.c ****       return nil.current->u1.msg;
+ 469:ChibiOS/os/nil/src/nil.c ****     }
+ 470:ChibiOS/os/nil/src/nil.c **** 
+ 471:ChibiOS/os/nil/src/nil.c ****     /* Points to the next thread in lowering priority order.*/
+ 472:ChibiOS/os/nil/src/nil.c ****     ntp++;
+ 473:ChibiOS/os/nil/src/nil.c ****     chDbgAssert(ntp <= &nil.threads[NIL_CFG_NUM_THREADS],
+ 474:ChibiOS/os/nil/src/nil.c ****                 "pointer out of range");
+ 475:ChibiOS/os/nil/src/nil.c ****   }
+ 476:ChibiOS/os/nil/src/nil.c **** }
+ 477:ChibiOS/os/nil/src/nil.c **** 
+ 478:ChibiOS/os/nil/src/nil.c **** /**
+ 479:ChibiOS/os/nil/src/nil.c ****  * @brief   Sends the current thread sleeping and sets a reference variable.
+ 480:ChibiOS/os/nil/src/nil.c ****  * @note    This function must reschedule, it can only be called from thread
+ 481:ChibiOS/os/nil/src/nil.c ****  *          context.
+ 482:ChibiOS/os/nil/src/nil.c ****  *
+ 483:ChibiOS/os/nil/src/nil.c ****  * @param[in] trp       a pointer to a thread reference object
+ 484:ChibiOS/os/nil/src/nil.c ****  * @param[in] timeout   the number of ticks before the operation timeouts,
+ 485:ChibiOS/os/nil/src/nil.c ****  *                      the following special values are allowed:
+ 486:ChibiOS/os/nil/src/nil.c ****  *                      - @a TIME_INFINITE no timeout.
+ 487:ChibiOS/os/nil/src/nil.c ****  *                      .
+ 488:ChibiOS/os/nil/src/nil.c ****  * @return              The wake up message.
+ 489:ChibiOS/os/nil/src/nil.c ****  *
+ 490:ChibiOS/os/nil/src/nil.c ****  * @sclass
+ 491:ChibiOS/os/nil/src/nil.c ****  */
+ 492:ChibiOS/os/nil/src/nil.c **** msg_t chThdSuspendTimeoutS(thread_reference_t *trp, systime_t timeout) {
+ 493:ChibiOS/os/nil/src/nil.c **** 
+ 494:ChibiOS/os/nil/src/nil.c ****   chDbgAssert(*trp == NULL, "not NULL");
+ 495:ChibiOS/os/nil/src/nil.c **** 
+ 496:ChibiOS/os/nil/src/nil.c ****   *trp = nil.current;
+ 497:ChibiOS/os/nil/src/nil.c ****   nil.current->u1.trp = trp;
+ 498:ChibiOS/os/nil/src/nil.c ****   return chSchGoSleepTimeoutS(NIL_STATE_SUSP, timeout);
+ 499:ChibiOS/os/nil/src/nil.c **** }
+ 500:ChibiOS/os/nil/src/nil.c **** 
+ 501:ChibiOS/os/nil/src/nil.c **** /**
+ 502:ChibiOS/os/nil/src/nil.c ****  * @brief   Wakes up a thread waiting on a thread reference object.
+ 503:ChibiOS/os/nil/src/nil.c ****  * @note    This function must not reschedule because it can be called from
+ 504:ChibiOS/os/nil/src/nil.c ****  *          ISR context.
+ 505:ChibiOS/os/nil/src/nil.c ****  *
+ 506:ChibiOS/os/nil/src/nil.c ****  * @param[in] trp       a pointer to a thread reference object
+ 507:ChibiOS/os/nil/src/nil.c ****  * @param[in] msg       the message code
+ 508:ChibiOS/os/nil/src/nil.c ****  *
+ 509:ChibiOS/os/nil/src/nil.c ****  * @iclass
+ 510:ChibiOS/os/nil/src/nil.c ****  */
+ 511:ChibiOS/os/nil/src/nil.c **** void chThdResumeI(thread_reference_t *trp, msg_t msg) {
+ 512:ChibiOS/os/nil/src/nil.c **** 
+ 513:ChibiOS/os/nil/src/nil.c ****   if (*trp != NULL) {
+ 514:ChibiOS/os/nil/src/nil.c ****     thread_reference_t tr = *trp;
+ 515:ChibiOS/os/nil/src/nil.c **** 
+ 516:ChibiOS/os/nil/src/nil.c ****     chDbgAssert(NIL_THD_IS_SUSP(tr), "not suspended");
+ 517:ChibiOS/os/nil/src/nil.c **** 
+ 518:ChibiOS/os/nil/src/nil.c ****     *trp = NULL;
+ 519:ChibiOS/os/nil/src/nil.c ****     (void) chSchReadyI(tr, msg);
+ 520:ChibiOS/os/nil/src/nil.c ****   }
+ 521:ChibiOS/os/nil/src/nil.c **** }
+ 522:ChibiOS/os/nil/src/nil.c **** 
+ 523:ChibiOS/os/nil/src/nil.c **** /**
+ 524:ChibiOS/os/nil/src/nil.c ****  * @brief   Suspends the invoking thread for the specified time.
+ 525:ChibiOS/os/nil/src/nil.c ****  *
+ 526:ChibiOS/os/nil/src/nil.c ****  * @param[in] timeout   the delay in system ticks
+ 527:ChibiOS/os/nil/src/nil.c ****  *
+ 528:ChibiOS/os/nil/src/nil.c ****  * @api
+ 529:ChibiOS/os/nil/src/nil.c ****  */
+ 530:ChibiOS/os/nil/src/nil.c **** void chThdSleep(systime_t timeout) {
+ 531:ChibiOS/os/nil/src/nil.c **** 
+ 532:ChibiOS/os/nil/src/nil.c ****   chSysLock();
+ 533:ChibiOS/os/nil/src/nil.c ****   chThdSleepS(timeout);
+ 534:ChibiOS/os/nil/src/nil.c ****   chSysUnlock();
+ 535:ChibiOS/os/nil/src/nil.c **** }
+ 536:ChibiOS/os/nil/src/nil.c **** 
+ 537:ChibiOS/os/nil/src/nil.c **** /**
+ 538:ChibiOS/os/nil/src/nil.c ****  * @brief   Suspends the invoking thread until the system time arrives to the
+ 539:ChibiOS/os/nil/src/nil.c ****  *          specified value.
+ 540:ChibiOS/os/nil/src/nil.c ****  *
+ 541:ChibiOS/os/nil/src/nil.c ****  * @param[in] abstime   absolute system time
+ 542:ChibiOS/os/nil/src/nil.c ****  *
+ 543:ChibiOS/os/nil/src/nil.c ****  * @api
+ 544:ChibiOS/os/nil/src/nil.c ****  */
+ 545:ChibiOS/os/nil/src/nil.c **** void chThdSleepUntil(systime_t abstime) {
+ 546:ChibiOS/os/nil/src/nil.c **** 
+ 547:ChibiOS/os/nil/src/nil.c ****   chSysLock();
+ 548:ChibiOS/os/nil/src/nil.c ****   chThdSleepUntilS(abstime);
+ 549:ChibiOS/os/nil/src/nil.c ****   chSysUnlock();
+ 550:ChibiOS/os/nil/src/nil.c **** }
+ 551:ChibiOS/os/nil/src/nil.c **** 
+ 552:ChibiOS/os/nil/src/nil.c **** /**
+ 553:ChibiOS/os/nil/src/nil.c ****  * @brief   Performs a wait operation on a semaphore with timeout specification.
+ 554:ChibiOS/os/nil/src/nil.c ****  *
+ 555:ChibiOS/os/nil/src/nil.c ****  * @param[in] sp        pointer to a @p semaphore_t structure
+ 556:ChibiOS/os/nil/src/nil.c ****  * @param[in] timeout   the number of ticks before the operation timeouts,
+ 557:ChibiOS/os/nil/src/nil.c ****  *                      the following special values are allowed:
+ 558:ChibiOS/os/nil/src/nil.c ****  *                      - @a TIME_IMMEDIATE immediate timeout.
+ 559:ChibiOS/os/nil/src/nil.c ****  *                      - @a TIME_INFINITE no timeout.
+ 560:ChibiOS/os/nil/src/nil.c ****  *                      .
+ 561:ChibiOS/os/nil/src/nil.c ****  * @return              A message specifying how the invoking thread has been
+ 562:ChibiOS/os/nil/src/nil.c ****  *                      released from the semaphore.
+ 563:ChibiOS/os/nil/src/nil.c ****  * @retval NIL_MSG_OK   if the thread has not stopped on the semaphore or the
+ 564:ChibiOS/os/nil/src/nil.c ****  *                      semaphore has been signaled.
+ 565:ChibiOS/os/nil/src/nil.c ****  * @retval NIL_MSG_RST  if the semaphore has been reset using @p chSemReset().
+ 566:ChibiOS/os/nil/src/nil.c ****  * @retval NIL_MSG_TMO  if the semaphore has not been signaled or reset within
+ 567:ChibiOS/os/nil/src/nil.c ****  *                      the specified timeout.
+ 568:ChibiOS/os/nil/src/nil.c ****  *
+ 569:ChibiOS/os/nil/src/nil.c ****  * @api
+ 570:ChibiOS/os/nil/src/nil.c ****  */
+ 571:ChibiOS/os/nil/src/nil.c **** msg_t chSemWaitTimeout(semaphore_t *sp, systime_t timeout) {
+ 572:ChibiOS/os/nil/src/nil.c ****   msg_t msg;
+ 573:ChibiOS/os/nil/src/nil.c **** 
+ 574:ChibiOS/os/nil/src/nil.c ****   chSysLock();
+ 575:ChibiOS/os/nil/src/nil.c ****   msg = chSemWaitTimeoutS(sp, timeout);
+ 576:ChibiOS/os/nil/src/nil.c ****   chSysUnlock();
+ 577:ChibiOS/os/nil/src/nil.c **** 
+ 578:ChibiOS/os/nil/src/nil.c ****   return msg;
+ 579:ChibiOS/os/nil/src/nil.c **** }
+ 580:ChibiOS/os/nil/src/nil.c **** 
+ 581:ChibiOS/os/nil/src/nil.c **** /**
+ 582:ChibiOS/os/nil/src/nil.c ****  * @brief   Performs a wait operation on a semaphore with timeout specification.
+ 583:ChibiOS/os/nil/src/nil.c ****  *
+ 584:ChibiOS/os/nil/src/nil.c ****  * @param[in] sp        pointer to a @p semaphore_t structure
+ 585:ChibiOS/os/nil/src/nil.c ****  * @param[in] timeout   the number of ticks before the operation timeouts,
+ 586:ChibiOS/os/nil/src/nil.c ****  *                      the following special values are allowed:
+ 587:ChibiOS/os/nil/src/nil.c ****  *                      - @a TIME_IMMEDIATE immediate timeout.
+ 588:ChibiOS/os/nil/src/nil.c ****  *                      - @a TIME_INFINITE no timeout.
+ 589:ChibiOS/os/nil/src/nil.c ****  *                      .
+ 590:ChibiOS/os/nil/src/nil.c ****  * @return              A message specifying how the invoking thread has been
+ 591:ChibiOS/os/nil/src/nil.c ****  *                      released from the semaphore.
+ 592:ChibiOS/os/nil/src/nil.c ****  * @retval NIL_MSG_OK   if the thread has not stopped on the semaphore or the
+ 593:ChibiOS/os/nil/src/nil.c ****  *                      semaphore has been signaled.
+ 594:ChibiOS/os/nil/src/nil.c ****  * @retval NIL_MSG_RST  if the semaphore has been reset using @p chSemReset().
+ 595:ChibiOS/os/nil/src/nil.c ****  * @retval NIL_MSG_TMO  if the semaphore has not been signaled or reset within
+ 596:ChibiOS/os/nil/src/nil.c ****  *                      the specified timeout.
+ 597:ChibiOS/os/nil/src/nil.c ****  *
+ 598:ChibiOS/os/nil/src/nil.c ****  * @sclass
+ 599:ChibiOS/os/nil/src/nil.c ****  */
+ 600:ChibiOS/os/nil/src/nil.c **** msg_t chSemWaitTimeoutS(semaphore_t *sp, systime_t timeout) {
+ 601:ChibiOS/os/nil/src/nil.c **** 
+ 602:ChibiOS/os/nil/src/nil.c ****   /* Note, the semaphore counter is a volatile variable so accesses are
+ 603:ChibiOS/os/nil/src/nil.c ****      manually optimized.*/
+ 604:ChibiOS/os/nil/src/nil.c ****   cnt_t cnt = sp->cnt;
+ 605:ChibiOS/os/nil/src/nil.c ****   if (cnt <= (cnt_t)0) {
+ 606:ChibiOS/os/nil/src/nil.c ****     if (TIME_IMMEDIATE == timeout) {
+ 607:ChibiOS/os/nil/src/nil.c ****       return MSG_TIMEOUT;
+ 608:ChibiOS/os/nil/src/nil.c ****     }
+ 609:ChibiOS/os/nil/src/nil.c ****     sp->cnt = cnt - (cnt_t)1;
+ 610:ChibiOS/os/nil/src/nil.c ****     nil.current->u1.semp = sp;
+ 611:ChibiOS/os/nil/src/nil.c ****     return chSchGoSleepTimeoutS(NIL_STATE_WTSEM, timeout);
+ 612:ChibiOS/os/nil/src/nil.c ****   }
+ 613:ChibiOS/os/nil/src/nil.c ****   sp->cnt = cnt - (cnt_t)1;
+ 614:ChibiOS/os/nil/src/nil.c ****   return MSG_OK;
+ 615:ChibiOS/os/nil/src/nil.c **** }
+ 616:ChibiOS/os/nil/src/nil.c **** 
+ 617:ChibiOS/os/nil/src/nil.c **** /**
+ 618:ChibiOS/os/nil/src/nil.c ****  * @brief   Performs a signal operation on a semaphore.
+ 619:ChibiOS/os/nil/src/nil.c ****  *
+ 620:ChibiOS/os/nil/src/nil.c ****  * @param[in] sp    pointer to a @p semaphore_t structure
+ 621:ChibiOS/os/nil/src/nil.c ****  *
+ 622:ChibiOS/os/nil/src/nil.c ****  * @api
+ 623:ChibiOS/os/nil/src/nil.c ****  */
+ 624:ChibiOS/os/nil/src/nil.c **** void chSemSignal(semaphore_t *sp) {
+ 625:ChibiOS/os/nil/src/nil.c **** 
+ 626:ChibiOS/os/nil/src/nil.c ****   chSysLock();
+ 627:ChibiOS/os/nil/src/nil.c ****   chSemSignalI(sp);
+ 628:ChibiOS/os/nil/src/nil.c ****   chSchRescheduleS();
+ 629:ChibiOS/os/nil/src/nil.c ****   chSysUnlock();
+ 630:ChibiOS/os/nil/src/nil.c **** }
+ 631:ChibiOS/os/nil/src/nil.c **** 
+ 632:ChibiOS/os/nil/src/nil.c **** /**
+ 633:ChibiOS/os/nil/src/nil.c ****  * @brief   Performs a signal operation on a semaphore.
+ 634:ChibiOS/os/nil/src/nil.c ****  * @post    This function does not reschedule so a call to a rescheduling
+ 635:ChibiOS/os/nil/src/nil.c ****  *          function must be performed before unlocking the kernel. Note that
+ 636:ChibiOS/os/nil/src/nil.c ****  *          interrupt handlers always reschedule on exit so an explicit
+ 637:ChibiOS/os/nil/src/nil.c ****  *          reschedule must not be performed in ISRs.
+ 638:ChibiOS/os/nil/src/nil.c ****  *
+ 639:ChibiOS/os/nil/src/nil.c ****  * @param[in] sp    pointer to a @p semaphore_t structure
+ 640:ChibiOS/os/nil/src/nil.c ****  *
+ 641:ChibiOS/os/nil/src/nil.c ****  * @iclass
+ 642:ChibiOS/os/nil/src/nil.c ****  */
+ 643:ChibiOS/os/nil/src/nil.c **** void chSemSignalI(semaphore_t *sp) {
+  15               		.loc 1 643 0
+  16               		.cfi_startproc
+  17               	.LVL0:
+  18               	/* prologue: function */
+  19               	/* frame size = 0 */
+  20               	/* stack size = 0 */
+  21               	.L__stack_usage = 0
+  22               	.LBB113:
+ 644:ChibiOS/os/nil/src/nil.c **** 
+ 645:ChibiOS/os/nil/src/nil.c ****   if (++sp->cnt <= (cnt_t)0) {
+ 646:ChibiOS/os/nil/src/nil.c ****     thread_reference_t tr = nil.threads;
+ 647:ChibiOS/os/nil/src/nil.c ****     while (true) {
+ 648:ChibiOS/os/nil/src/nil.c ****       /* Is this thread waiting on this semaphore?*/
+ 649:ChibiOS/os/nil/src/nil.c ****       if (tr->u1.semp == sp) {
+  23               		.loc 1 649 0
+  24 0000 2091 0000 		lds r18,nil+11
+  25 0004 3091 0000 		lds r19,nil+11+1
+  26 0008 E0E0      		ldi r30,lo8(nil+8)
+  27 000a F0E0      		ldi r31,hi8(nil+8)
+  28               	.LVL1:
+  29 000c 2817      		cp r18,r24
+  30 000e 3907      		cpc r19,r25
+  31 0010 01F0      		breq .L4
+  32               	.L2:
+ 650:ChibiOS/os/nil/src/nil.c **** 
+ 651:ChibiOS/os/nil/src/nil.c ****         chDbgAssert(NIL_THD_IS_WTSEM(tr), "not waiting");
+ 652:ChibiOS/os/nil/src/nil.c **** 
+ 653:ChibiOS/os/nil/src/nil.c ****         (void) chSchReadyI(tr, MSG_OK);
+ 654:ChibiOS/os/nil/src/nil.c ****         return;
+ 655:ChibiOS/os/nil/src/nil.c ****       }
+ 656:ChibiOS/os/nil/src/nil.c ****       tr++;
+  33               		.loc 1 656 0
+  34 0012 3896      		adiw r30,8
+  35               	.LVL2:
+ 649:ChibiOS/os/nil/src/nil.c **** 
+  36               		.loc 1 649 0
+  37 0014 2381      		ldd r18,Z+3
+  38 0016 3481      		ldd r19,Z+4
+  39 0018 2817      		cp r18,r24
+  40 001a 3907      		cpc r19,r25
+  41 001c 01F4      		brne .L2
+  42               	.L4:
+  43               	.LVL3:
+  44               	.LBB114:
+  45               	.LBB115:
+ 369:ChibiOS/os/nil/src/nil.c ****   tp->state = NIL_STATE_READY;
+  46               		.loc 1 369 0
+  47 001e 1482      		std Z+4,__zero_reg__
+  48 0020 1382      		std Z+3,__zero_reg__
+ 370:ChibiOS/os/nil/src/nil.c ****   tp->timeout = (systime_t)0;
+  49               		.loc 1 370 0
+  50 0022 1282      		std Z+2,__zero_reg__
+ 371:ChibiOS/os/nil/src/nil.c ****   if (tp < nil.next) {
+  51               		.loc 1 371 0
+  52 0024 1682      		std Z+6,__zero_reg__
+  53 0026 1582      		std Z+5,__zero_reg__
+ 372:ChibiOS/os/nil/src/nil.c ****     nil.next = tp;
+  54               		.loc 1 372 0
+  55 0028 8091 0000 		lds r24,nil+2
+  56 002c 9091 0000 		lds r25,nil+2+1
+  57               	.LVL4:
+  58 0030 E817      		cp r30,r24
+  59 0032 F907      		cpc r31,r25
+  60 0034 00F4      		brsh .L1
+ 373:ChibiOS/os/nil/src/nil.c ****   }
+  61               		.loc 1 373 0
+  62 0036 F093 0000 		sts nil+2+1,r31
+  63 003a E093 0000 		sts nil+2,r30
+  64 003e 0895      		ret
+  65               	.L1:
+  66 0040 0895      		ret
+  67               	.LBE115:
+  68               	.LBE114:
+  69               	.LBE113:
+  70               		.cfi_endproc
+  71               	.LFE49:
+  73               		.section	.text.chSysInit,"ax",@progbits
+  74               	.global	chSysInit
+  76               	chSysInit:
+  77               	.LFB24:
+  70:ChibiOS/os/nil/src/nil.c ****   thread_t *tp;
+  78               		.loc 1 70 0
+  79               		.cfi_startproc
+  80 0000 CF93      		push r28
+  81               	.LCFI0:
+  82               		.cfi_def_cfa_offset 3
+  83               		.cfi_offset 28, -2
+  84 0002 DF93      		push r29
+  85               	.LCFI1:
+  86               		.cfi_def_cfa_offset 4
+  87               		.cfi_offset 29, -3
+  88               	/* prologue: function */
+  89               	/* frame size = 0 */
+  90               	/* stack size = 2 */
+  91               	.L__stack_usage = 2
+  92               	.LVL5:
+  93 0004 80E0      		ldi r24,lo8(gs(_port_thread_start))
+  94 0006 90E0      		ldi r25,hi8(gs(_port_thread_start))
+  95 0008 492F      		mov r20,r25
+  82:ChibiOS/os/nil/src/nil.c ****   while (tp < &nil.threads[NIL_CFG_NUM_THREADS]) {
+  96               		.loc 1 82 0
+  97 000a A0E0      		ldi r26,lo8(nil_thd_configs)
+  98 000c B0E0      		ldi r27,hi8(nil_thd_configs)
+  81:ChibiOS/os/nil/src/nil.c ****   tcp = nil_thd_configs;
+  99               		.loc 1 81 0
+ 100 000e 20E0      		ldi r18,lo8(nil+8)
+ 101 0010 30E0      		ldi r19,hi8(nil+8)
+ 102               	.LVL6:
+ 103 0012 F901      		movw r30,r18
+ 104               	.LVL7:
+ 105               	.L8:
+  89:ChibiOS/os/nil/src/nil.c **** 
+ 106               		.loc 1 89 0
+ 107 0014 1296      		adiw r26,2
+ 108 0016 CD91      		ld r28,X+
+ 109 0018 DC91      		ld r29,X
+ 110 001a 1397      		sbiw r26,2+1
+ 111 001c 6597      		sbiw r28,21
+ 112 001e D183      		std Z+1,r29
+ 113 0020 C083      		st Z,r28
+ 114 0022 1696      		adiw r26,6
+ 115 0024 9C91      		ld r25,X
+ 116 0026 1697      		sbiw r26,6
+ 117 0028 9A8B      		std Y+18,r25
+ 118 002a C081      		ld r28,Z
+ 119 002c D181      		ldd r29,Z+1
+ 120 002e 1796      		adiw r26,7
+ 121 0030 9C91      		ld r25,X
+ 122 0032 1797      		sbiw r26,7
+ 123 0034 998B      		std Y+17,r25
+ 124 0036 C081      		ld r28,Z
+ 125 0038 D181      		ldd r29,Z+1
+ 126 003a 1896      		adiw r26,8
+ 127 003c 9C91      		ld r25,X
+ 128 003e 1897      		sbiw r26,8
+ 129 0040 988B      		std Y+16,r25
+ 130 0042 C081      		ld r28,Z
+ 131 0044 D181      		ldd r29,Z+1
+ 132 0046 1996      		adiw r26,9
+ 133 0048 9C91      		ld r25,X
+ 134 004a 1997      		sbiw r26,9
+ 135 004c 9F87      		std Y+15,r25
+ 136 004e C081      		ld r28,Z
+ 137 0050 D181      		ldd r29,Z+1
+ 138 0052 4B8B      		std Y+19,r20
+ 139 0054 C081      		ld r28,Z
+ 140 0056 D181      		ldd r29,Z+1
+ 141 0058 8C8B      		std Y+20,r24
+  94:ChibiOS/os/nil/src/nil.c ****     tcp++;
+ 142               		.loc 1 94 0
+ 143 005a 3896      		adiw r30,8
+ 144               	.LVL8:
+  95:ChibiOS/os/nil/src/nil.c ****   }
+ 145               		.loc 1 95 0
+ 146 005c 1A96      		adiw r26,10
+ 147               	.LVL9:
+  83:ChibiOS/os/nil/src/nil.c **** #if NIL_CFG_ENABLE_STACK_CHECK
+ 148               		.loc 1 83 0
+ 149 005e 90E0      		ldi r25,hi8(nil_thd_configs+20)
+ 150 0060 A030      		cpi r26,lo8(nil_thd_configs+20)
+ 151 0062 B907      		cpc r27,r25
+ 152 0064 01F4      		brne .L8
+ 106:ChibiOS/os/nil/src/nil.c ****   port_switch(nil.current, tp);
+ 153               		.loc 1 106 0
+ 154 0066 3093 0000 		sts nil+2+1,r19
+ 155 006a 2093 0000 		sts nil+2,r18
+ 156 006e 3093 0000 		sts nil+1,r19
+ 157 0072 2093 0000 		sts nil,r18
+ 107:ChibiOS/os/nil/src/nil.c **** 
+ 158               		.loc 1 107 0
+ 159 0076 60E0      		ldi r22,lo8(nil+24)
+ 160 0078 70E0      		ldi r23,hi8(nil+24)
+ 161 007a 80E0      		ldi r24,lo8(nil+8)
+ 162 007c 90E0      		ldi r25,hi8(nil+8)
+ 163 007e 0E94 0000 		call _port_switch
+ 164               	.LVL10:
+ 165               	.LBB116:
+ 166               	.LBB117:
+ 167               		.file 2 "ChibiOS/os/nil/ports/AVR/nilcore.h"
+   1:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*
+   2:ChibiOS/os/nil/ports/AVR/nilcore.h ****     ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio.
+   3:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+   4:ChibiOS/os/nil/ports/AVR/nilcore.h ****     This file is part of ChibiOS.
+   5:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+   6:ChibiOS/os/nil/ports/AVR/nilcore.h ****     ChibiOS is free software; you can redistribute it and/or modify
+   7:ChibiOS/os/nil/ports/AVR/nilcore.h ****     it under the terms of the GNU General Public License as published by
+   8:ChibiOS/os/nil/ports/AVR/nilcore.h ****     the Free Software Foundation; either version 3 of the License, or
+   9:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (at your option) any later version.
+  10:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  11:ChibiOS/os/nil/ports/AVR/nilcore.h ****     ChibiOS is distributed in the hope that it will be useful,
+  12:ChibiOS/os/nil/ports/AVR/nilcore.h ****     but WITHOUT ANY WARRANTY; without even the implied warranty of
+  13:ChibiOS/os/nil/ports/AVR/nilcore.h ****     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  14:ChibiOS/os/nil/ports/AVR/nilcore.h ****     GNU General Public License for more details.
+  15:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  16:ChibiOS/os/nil/ports/AVR/nilcore.h ****     You should have received a copy of the GNU General Public License
+  17:ChibiOS/os/nil/ports/AVR/nilcore.h ****     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  18:ChibiOS/os/nil/ports/AVR/nilcore.h **** */
+  19:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  20:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  21:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @file    AVR/nilcore.h
+  22:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   AVR port macros and structures.
+  23:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *
+  24:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @addtogroup AVR_CORE
+  25:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @{
+  26:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  27:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  28:ChibiOS/os/nil/ports/AVR/nilcore.h **** #ifndef _NILCORE_H_
+  29:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define _NILCORE_H_
+  30:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  31:ChibiOS/os/nil/ports/AVR/nilcore.h **** #include <avr/io.h>
+  32:ChibiOS/os/nil/ports/AVR/nilcore.h **** #include <avr/interrupt.h>
+  33:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  34:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+  35:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* Module constants.                                                         */
+  36:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+  37:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  38:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  39:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @name    Architecture and Compiler
+  40:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @{
+  41:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  42:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  43:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Macro defining the port architecture.
+  44:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  45:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_ARCHITECTURE_AVR
+  46:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  47:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  48:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Name of the implemented architecture.
+  49:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  50:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_ARCHITECTURE_NAME          "AVR"
+  51:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  52:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  53:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Name of the architecture variant.
+  54:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  55:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_CORE_VARIANT_NAME          "MegaAVR"
+  56:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  57:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  58:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Compiler name and version.
+  59:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  60:ChibiOS/os/nil/ports/AVR/nilcore.h **** #if defined(__GNUC__) || defined(__DOXYGEN__)
+  61:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_COMPILER_NAME              "GCC " __VERSION__
+  62:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  63:ChibiOS/os/nil/ports/AVR/nilcore.h **** #else
+  64:ChibiOS/os/nil/ports/AVR/nilcore.h **** #error "unsupported compiler"
+  65:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif
+  66:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  67:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  68:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Port-specific information string.
+  69:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  70:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_INFO                       "16 bits code addressing"
+  71:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  72:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  73:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   This port supports a realtime counter.
+  74:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  75:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_SUPPORTS_RT                FALSE
+  76:ChibiOS/os/nil/ports/AVR/nilcore.h **** /** @} */
+  77:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  78:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+  79:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* Module pre-compile time settings.                                         */
+  80:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+  81:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  82:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  83:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Stack size for the system idle thread.
+  84:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @details This size depends on the idle thread implementation, usually
+  85:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          the idle thread should take no more space than those reserved
+  86:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          by @p PORT_INT_REQUIRED_STACK.
+  87:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @note    In this port it is set to 8.
+  88:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  89:ChibiOS/os/nil/ports/AVR/nilcore.h **** #if !defined(PORT_IDLE_THREAD_STACK_SIZE) || defined(__DOXYGEN__)
+  90:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_IDLE_THREAD_STACK_SIZE     8
+  91:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif
+  92:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+  93:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+  94:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Per-thread stack overhead for interrupts servicing.
+  95:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @details This constant is used in the calculation of the correct working
+  96:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          area size.
+  97:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @note    In this port the default is 32 bytes per thread.
+  98:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+  99:ChibiOS/os/nil/ports/AVR/nilcore.h **** #if !defined(PORT_INT_REQUIRED_STACK) || defined(__DOXYGEN__)
+ 100:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_INT_REQUIRED_STACK         32
+ 101:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif
+ 102:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 103:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 104:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Enables an alternative timer implementation.
+ 105:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @details Usually the port uses a timer interface defined in the file
+ 106:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          @p nilcore_timer.h, if this option is enabled then the file
+ 107:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          @p nilcore_timer_alt.h is included instead.
+ 108:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 109:ChibiOS/os/nil/ports/AVR/nilcore.h **** #if !defined(PORT_USE_ALT_TIMER)
+ 110:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_USE_ALT_TIMER              FALSE
+ 111:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif
+ 112:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 113:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 114:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* Derived constants and error checks.                                       */
+ 115:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 116:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 117:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 118:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* Module data structures and types.                                         */
+ 119:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 120:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 121:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* The following code is not processed when the file is included from an
+ 122:ChibiOS/os/nil/ports/AVR/nilcore.h ****    asm module.*/
+ 123:ChibiOS/os/nil/ports/AVR/nilcore.h **** #if !defined(_FROM_ASM_)
+ 124:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 125:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 126:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Type of stack and memory alignment enforcement.
+ 127:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 128:ChibiOS/os/nil/ports/AVR/nilcore.h **** typedef uint8_t stkalign_t;
+ 129:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 130:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 131:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   System saved context.
+ 132:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @details This structure represents the inner stack frame during a context
+ 133:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          switching.
+ 134:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 135:ChibiOS/os/nil/ports/AVR/nilcore.h **** struct port_intctx {
+ 136:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       _next;
+ 137:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r29;
+ 138:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r28;
+ 139:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r17;
+ 140:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r16;
+ 141:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r15;
+ 142:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r14;
+ 143:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r13;
+ 144:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r12;
+ 145:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r11;
+ 146:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r10;
+ 147:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r9;
+ 148:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r8;
+ 149:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r7;
+ 150:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r6;
+ 151:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r5;
+ 152:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r4;
+ 153:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r3;
+ 154:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       r2;
+ 155:ChibiOS/os/nil/ports/AVR/nilcore.h **** #ifdef __AVR_3_BYTE_PC__
+ 156:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       pcx;
+ 157:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif
+ 158:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       pcl;
+ 159:ChibiOS/os/nil/ports/AVR/nilcore.h ****   uint8_t       pch;
+ 160:ChibiOS/os/nil/ports/AVR/nilcore.h **** };
+ 161:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 162:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif /* !defined(_FROM_ASM_) */
+ 163:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 164:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 165:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* Module macros.                                                            */
+ 166:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 167:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 168:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 169:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Platform dependent thread stack setup.
+ 170:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @details This code usually setup the context switching frame represented
+ 171:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          by an @p port_intctx structure.
+ 172:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 173:ChibiOS/os/nil/ports/AVR/nilcore.h **** #ifdef __AVR_3_BYTE_PC__
+ 174:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_SETUP_CONTEXT(tp, wend, pf, arg) {                             \
+ 175:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp = (struct port_intctx*)(((uint8_t *)(wend)) -                \
+ 176:ChibiOS/os/nil/ports/AVR/nilcore.h ****                                          sizeof(struct port_intctx));       \
+ 177:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->r2  = (int)pf;                                              \
+ 178:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->r3  = (int)pf >> 8;                                         \
+ 179:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->r4  = (int)arg;                                             \
+ 180:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->r5  = (int)arg >> 8;                                        \
+ 181:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->pcx = (int)0;                                               \
+ 182:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->pcl = (int)_port_thread_start >> 8;                         \
+ 183:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->pch = (int)_port_thread_start;                              \
+ 184:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 185:ChibiOS/os/nil/ports/AVR/nilcore.h **** #else /* __AVR_3_BYTE_PC__ */
+ 186:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_SETUP_CONTEXT(tp, wend, pf, arg) {                             \
+ 187:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp = (struct port_intctx*)(((uint8_t *)(wend)) -                \
+ 188:ChibiOS/os/nil/ports/AVR/nilcore.h ****                                          sizeof(struct port_intctx));       \
+ 189:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->r2  = (int)pf;                                              \
+ 190:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->r3  = (int)pf >> 8;                                         \
+ 191:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->r4  = (int)arg;                                             \
+ 192:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->r5  = (int)arg >> 8;                                        \
+ 193:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->pcl = (int)_port_thread_start >> 8;                         \
+ 194:ChibiOS/os/nil/ports/AVR/nilcore.h ****     (tp)->ctxp->pch = (int)_port_thread_start;                              \
+ 195:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 196:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif /* __AVR_3_BYTE_PC__ */
+ 197:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 198:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Computes the thread working area global size.
+ 199:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @note    There is no need to perform alignments in this macro.
+ 200:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 201:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_WA_SIZE(n) ((sizeof(struct port_intctx) - 1) +                 \
+ 202:ChibiOS/os/nil/ports/AVR/nilcore.h ****                          (n) + (PORT_INT_REQUIRED_STACK))
+ 203:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 204:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 205:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   IRQ prologue code.
+ 206:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @details This macro must be inserted at the start of all IRQ handlers
+ 207:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          enabled to invoke system APIs.
+ 208:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @note    This code tricks the compiler to save all the specified registers
+ 209:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          by "touching" them.
+ 210:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 211:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_IRQ_PROLOGUE() {                                               \
+ 212:ChibiOS/os/nil/ports/AVR/nilcore.h ****   asm ("" : : : "r18", "r19", "r20", "r21", "r22", "r23", "r24",            \
+ 213:ChibiOS/os/nil/ports/AVR/nilcore.h ****                 "r25", "r26", "r27", "r30", "r31");                         \
+ 214:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 215:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 216:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 217:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   IRQ epilogue code.
+ 218:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @details This macro must be inserted at the end of all IRQ handlers
+ 219:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          enabled to invoke system APIs.
+ 220:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 221:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_IRQ_EPILOGUE() chSchRescheduleS()
+ 222:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 223:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 224:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   IRQ handler function declaration.
+ 225:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @note    @p id can be a function name or a vector number depending on the
+ 226:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          port implementation.
+ 227:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 228:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_IRQ_HANDLER(id) ISR(id)
+ 229:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 230:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 231:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Fast IRQ handler function declaration.
+ 232:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @note    @p id can be a function name or a vector number depending on the
+ 233:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          port implementation.
+ 234:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 235:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define PORT_FAST_IRQ_HANDLER(id) ISR(id)
+ 236:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 237:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 238:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Performs a context switch between two threads.
+ 239:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @details This is the most critical code in any port, this function
+ 240:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          is responsible for the context switch between 2 threads.
+ 241:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @note    The implementation of this code affects <b>directly</b> the context
+ 242:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *          switch performance so optimize here as much as you can.
+ 243:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *
+ 244:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @param[in] ntp       the thread to be switched in
+ 245:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @param[in] otp       the thread to be switched out
+ 246:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 247:ChibiOS/os/nil/ports/AVR/nilcore.h **** #define port_switch(ntp, otp) _port_switch(ntp, otp)
+ 248:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 249:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 250:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* External declarations.                                                    */
+ 251:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 252:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 253:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* The following code is not processed when the file is included from an
+ 254:ChibiOS/os/nil/ports/AVR/nilcore.h ****    asm module.*/
+ 255:ChibiOS/os/nil/ports/AVR/nilcore.h **** #if !defined(_FROM_ASM_)
+ 256:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 257:ChibiOS/os/nil/ports/AVR/nilcore.h **** #ifdef __cplusplus
+ 258:ChibiOS/os/nil/ports/AVR/nilcore.h **** extern "C" {
+ 259:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif
+ 260:ChibiOS/os/nil/ports/AVR/nilcore.h ****   void _port_irq_epilogue(void);
+ 261:ChibiOS/os/nil/ports/AVR/nilcore.h ****   void _port_switch(thread_t *ntp, thread_t *otp);
+ 262:ChibiOS/os/nil/ports/AVR/nilcore.h ****   void _port_thread_start(void);
+ 263:ChibiOS/os/nil/ports/AVR/nilcore.h **** #ifdef __cplusplus
+ 264:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 265:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif
+ 266:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 267:ChibiOS/os/nil/ports/AVR/nilcore.h **** #endif /* !defined(_FROM_ASM_) */
+ 268:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 269:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 270:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* Module inline functions.                                                  */
+ 271:ChibiOS/os/nil/ports/AVR/nilcore.h **** /*===========================================================================*/
+ 272:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 273:ChibiOS/os/nil/ports/AVR/nilcore.h **** /* The following code is not processed when the file is included from an
+ 274:ChibiOS/os/nil/ports/AVR/nilcore.h ****    asm module.*/
+ 275:ChibiOS/os/nil/ports/AVR/nilcore.h **** #if !defined(_FROM_ASM_)
+ 276:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 277:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 278:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Port-related initialization code.
+ 279:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 280:ChibiOS/os/nil/ports/AVR/nilcore.h **** static inline void port_init(void) {
+ 281:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 282:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 283:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 284:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 285:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Returns a word encoding the current interrupts status.
+ 286:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *
+ 287:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @return              The interrupts status.
+ 288:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 289:ChibiOS/os/nil/ports/AVR/nilcore.h **** static inline syssts_t port_get_irq_status(void) {
+ 290:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 291:ChibiOS/os/nil/ports/AVR/nilcore.h ****   return 0;
+ 292:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 293:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 294:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 295:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Checks the interrupt status.
+ 296:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *
+ 297:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @param[in] sts       the interrupt status word
+ 298:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *
+ 299:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @return              The interrupt status.
+ 300:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @retvel false        the word specified a disabled interrupts status.
+ 301:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @retvel true         the word specified an enabled interrupts status.
+ 302:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 303:ChibiOS/os/nil/ports/AVR/nilcore.h **** static inline bool port_irq_enabled(syssts_t sts) {
+ 304:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 305:ChibiOS/os/nil/ports/AVR/nilcore.h ****   return false;
+ 306:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 307:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 308:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 309:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Determines the current execution context.
+ 310:ChibiOS/os/nil/ports/AVR/nilcore.h ****  *
+ 311:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @return              The execution context.
+ 312:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @retval false        not running in ISR mode.
+ 313:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @retval true         running in ISR mode.
+ 314:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 315:ChibiOS/os/nil/ports/AVR/nilcore.h **** static inline bool port_is_isr_context(void) {
+ 316:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 317:ChibiOS/os/nil/ports/AVR/nilcore.h ****   return false;
+ 318:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 319:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 320:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 321:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Kernel-lock action.
+ 322:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 323:ChibiOS/os/nil/ports/AVR/nilcore.h **** static inline void port_lock(void) {
+ 324:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 325:ChibiOS/os/nil/ports/AVR/nilcore.h ****   asm volatile ("cli" : : : "memory");
+ 326:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 327:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 328:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 329:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Kernel-unlock action.
+ 330:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 331:ChibiOS/os/nil/ports/AVR/nilcore.h **** static inline void port_unlock(void) {
+ 332:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 333:ChibiOS/os/nil/ports/AVR/nilcore.h ****   asm volatile ("sei" : : : "memory");
+ 334:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 335:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 336:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 337:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Kernel-lock action from an interrupt handler.
+ 338:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @note    This function is empty in this port.
+ 339:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 340:ChibiOS/os/nil/ports/AVR/nilcore.h **** static inline void port_lock_from_isr(void) {
+ 341:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 342:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 343:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 344:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 345:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Kernel-unlock action from an interrupt handler.
+ 346:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @note    This function is empty in this port.
+ 347:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 348:ChibiOS/os/nil/ports/AVR/nilcore.h **** static inline void port_unlock_from_isr(void) {
+ 349:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 350:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 351:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 352:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 353:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Disables all the interrupt sources.
+ 354:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 355:ChibiOS/os/nil/ports/AVR/nilcore.h **** static inline void port_disable(void) {
+ 356:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 357:ChibiOS/os/nil/ports/AVR/nilcore.h ****   asm volatile ("cli" : : : "memory");
+ 358:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 359:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 360:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 361:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Disables the interrupt sources below kernel-level priority.
+ 362:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 363:ChibiOS/os/nil/ports/AVR/nilcore.h **** static inline void port_suspend(void) {
+ 364:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 365:ChibiOS/os/nil/ports/AVR/nilcore.h ****   asm volatile ("cli" : : : "memory");
+ 366:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 367:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 368:ChibiOS/os/nil/ports/AVR/nilcore.h **** /**
+ 369:ChibiOS/os/nil/ports/AVR/nilcore.h ****  * @brief   Enables all the interrupt sources.
+ 370:ChibiOS/os/nil/ports/AVR/nilcore.h ****  */
+ 371:ChibiOS/os/nil/ports/AVR/nilcore.h **** static inline void port_enable(void) {
+ 372:ChibiOS/os/nil/ports/AVR/nilcore.h **** 
+ 373:ChibiOS/os/nil/ports/AVR/nilcore.h ****   asm volatile ("sei" : : : "memory");
+ 168               		.loc 2 373 0
+ 169               	/* #APP */
+ 170               	 ;  373 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 171 0082 7894      		sei
+ 172               	 ;  0 "" 2
+ 173               	/* epilogue start */
+ 174               	/* #NOAPP */
+ 175               	.LBE117:
+ 176               	.LBE116:
+ 111:ChibiOS/os/nil/src/nil.c **** 
+ 177               		.loc 1 111 0
+ 178 0084 DF91      		pop r29
+ 179 0086 CF91      		pop r28
+ 180 0088 0895      		ret
+ 181               		.cfi_endproc
+ 182               	.LFE24:
+ 184               		.section	.text.chSysHalt,"ax",@progbits
+ 185               	.global	chSysHalt
+ 187               	chSysHalt:
+ 188               	.LFB25:
+ 125:ChibiOS/os/nil/src/nil.c **** 
+ 189               		.loc 1 125 0
+ 190               		.cfi_startproc
+ 191               	.LVL11:
+ 192               	/* prologue: function */
+ 193               	/* frame size = 0 */
+ 194               	/* stack size = 0 */
+ 195               	.L__stack_usage = 0
+ 196               	.LBB118:
+ 197               	.LBB119:
+ 357:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 198               		.loc 2 357 0
+ 199               	/* #APP */
+ 200               	 ;  357 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 201 0000 F894      		cli
+ 202               	 ;  0 "" 2
+ 203               	/* #NOAPP */
+ 204               	.L11:
+ 205               	.LBE119:
+ 206               	.LBE118:
+ 139:ChibiOS/os/nil/src/nil.c **** }
+ 207               		.loc 1 139 0 discriminator 1
+ 208 0002 00C0      		rjmp .L11
+ 209               		.cfi_endproc
+ 210               	.LFE25:
+ 212               		.section	.text.chSysTimerHandlerI,"ax",@progbits
+ 213               	.global	chSysTimerHandlerI
+ 215               	chSysTimerHandlerI:
+ 216               	.LFB26:
+ 149:ChibiOS/os/nil/src/nil.c **** 
+ 217               		.loc 1 149 0
+ 218               		.cfi_startproc
+ 219 0000 EF92      		push r14
+ 220               	.LCFI2:
+ 221               		.cfi_def_cfa_offset 3
+ 222               		.cfi_offset 14, -2
+ 223 0002 FF92      		push r15
+ 224               	.LCFI3:
+ 225               		.cfi_def_cfa_offset 4
+ 226               		.cfi_offset 15, -3
+ 227 0004 0F93      		push r16
+ 228               	.LCFI4:
+ 229               		.cfi_def_cfa_offset 5
+ 230               		.cfi_offset 16, -4
+ 231 0006 1F93      		push r17
+ 232               	.LCFI5:
+ 233               		.cfi_def_cfa_offset 6
+ 234               		.cfi_offset 17, -5
+ 235 0008 CF93      		push r28
+ 236               	.LCFI6:
+ 237               		.cfi_def_cfa_offset 7
+ 238               		.cfi_offset 28, -6
+ 239 000a DF93      		push r29
+ 240               	.LCFI7:
+ 241               		.cfi_def_cfa_offset 8
+ 242               		.cfi_offset 29, -7
+ 243               	/* prologue: function */
+ 244               	/* frame size = 0 */
+ 245               	/* stack size = 6 */
+ 246               	.L__stack_usage = 6
+ 247               	.LVL12:
+ 248 000c 8091 0000 		lds r24,nil+6
+ 249 0010 9091 0000 		lds r25,nil+6+1
+ 194:ChibiOS/os/nil/src/nil.c ****       if (tp->timeout == (systime_t)0) {
+ 250               		.loc 1 194 0
+ 251 0014 6091 0000 		lds r22,nil+4
+ 252 0018 7091 0000 		lds r23,nil+4+1
+ 253 001c E0E0      		ldi r30,lo8(nil+10)
+ 254 001e F0E0      		ldi r31,hi8(nil+10)
+ 183:ChibiOS/os/nil/src/nil.c **** 
+ 255               		.loc 1 183 0
+ 256 0020 40E0      		ldi r20,0
+ 257 0022 50E0      		ldi r21,0
+ 258               	.LBB120:
+ 259               	.LBB121:
+ 369:ChibiOS/os/nil/src/nil.c ****   tp->state = NIL_STATE_READY;
+ 260               		.loc 1 369 0
+ 261 0024 EE24      		clr r14
+ 262 0026 EA94      		dec r14
+ 263 0028 FE2C      		mov r15,r14
+ 264               	.LVL13:
+ 265               	.L17:
+ 266 002a DF01      		movw r26,r30
+ 267 002c 1297      		sbiw r26,2
+ 268               	.LVL14:
+ 269               	.LBE121:
+ 270               	.LBE120:
+ 189:ChibiOS/os/nil/src/nil.c **** 
+ 271               		.loc 1 189 0
+ 272 002e 1596      		adiw r26,5
+ 273 0030 2D91      		ld r18,X+
+ 274 0032 3C91      		ld r19,X
+ 275 0034 1697      		sbiw r26,5+1
+ 276 0036 232B      		or r18,r19
+ 277 0038 01F0      		breq .L13
+ 194:ChibiOS/os/nil/src/nil.c ****       if (tp->timeout == (systime_t)0) {
+ 278               		.loc 1 194 0
+ 279 003a 1596      		adiw r26,5
+ 280 003c 2D91      		ld r18,X+
+ 281 003e 3C91      		ld r19,X
+ 282 0040 1697      		sbiw r26,5+1
+ 283 0042 260F      		add r18,r22
+ 284 0044 371F      		adc r19,r23
+ 285 0046 281B      		sub r18,r24
+ 286 0048 390B      		sbc r19,r25
+ 287 004a 1696      		adiw r26,5+1
+ 288 004c 3C93      		st X,r19
+ 289 004e 2E93      		st -X,r18
+ 290 0050 1597      		sbiw r26,5
+ 195:ChibiOS/os/nil/src/nil.c ****         /* Timeout on semaphores requires a special handling because the
+ 291               		.loc 1 195 0
+ 292 0052 1596      		adiw r26,5
+ 293 0054 2D91      		ld r18,X+
+ 294 0056 3C91      		ld r19,X
+ 295 0058 1697      		sbiw r26,5+1
+ 296 005a 232B      		or r18,r19
+ 297 005c 01F4      		brne .L14
+ 199:ChibiOS/os/nil/src/nil.c ****           tp->u1.semp->cnt++;
+ 298               		.loc 1 199 0
+ 299 005e 2081      		ld r18,Z
+ 300 0060 2330      		cpi r18,lo8(3)
+ 301 0062 01F4      		brne .+2
+ 302 0064 00C0      		rjmp .L23
+ 202:ChibiOS/os/nil/src/nil.c ****           *tp->u1.trp = NULL;
+ 303               		.loc 1 202 0
+ 304 0066 2230      		cpi r18,lo8(2)
+ 305 0068 01F4      		brne .+2
+ 306 006a 00C0      		rjmp .L24
+ 307               	.L16:
+ 308               	.LVL15:
+ 309               	.LBB123:
+ 310               	.LBB122:
+ 369:ChibiOS/os/nil/src/nil.c ****   tp->state = NIL_STATE_READY;
+ 311               		.loc 1 369 0
+ 312 006c F282      		std Z+2,r15
+ 313 006e E182      		std Z+1,r14
+ 370:ChibiOS/os/nil/src/nil.c ****   tp->timeout = (systime_t)0;
+ 314               		.loc 1 370 0
+ 315 0070 1082      		st Z,__zero_reg__
+ 371:ChibiOS/os/nil/src/nil.c ****   if (tp < nil.next) {
+ 316               		.loc 1 371 0
+ 317 0072 1696      		adiw r26,5+1
+ 318 0074 1C92      		st X,__zero_reg__
+ 319 0076 1E92      		st -X,__zero_reg__
+ 320 0078 1597      		sbiw r26,5
+ 372:ChibiOS/os/nil/src/nil.c ****     nil.next = tp;
+ 321               		.loc 1 372 0
+ 322 007a 2091 0000 		lds r18,nil+2
+ 323 007e 3091 0000 		lds r19,nil+2+1
+ 324 0082 A217      		cp r26,r18
+ 325 0084 B307      		cpc r27,r19
+ 326 0086 00F4      		brsh .L13
+ 373:ChibiOS/os/nil/src/nil.c ****   }
+ 327               		.loc 1 373 0
+ 328 0088 B093 0000 		sts nil+2+1,r27
+ 329 008c A093 0000 		sts nil+2,r26
+ 330               	.LVL16:
+ 331               	.L13:
+ 332 0090 3896      		adiw r30,8
+ 333               	.LVL17:
+ 334               	.LBE122:
+ 335               	.LBE123:
+ 219:ChibiOS/os/nil/src/nil.c ****   nil.lasttime = nil.nexttime;
+ 336               		.loc 1 219 0
+ 337 0092 D0E0      		ldi r29,hi8(nil+26)
+ 338 0094 E030      		cpi r30,lo8(nil+26)
+ 339 0096 FD07      		cpc r31,r29
+ 340 0098 01F4      		brne .L17
+ 220:ChibiOS/os/nil/src/nil.c ****   if (next > (systime_t)0) {
+ 341               		.loc 1 220 0
+ 342 009a 9093 0000 		sts nil+4+1,r25
+ 343 009e 8093 0000 		sts nil+4,r24
+ 221:ChibiOS/os/nil/src/nil.c ****     nil.nexttime += next;
+ 344               		.loc 1 221 0
+ 345 00a2 4115      		cp r20,__zero_reg__
+ 346 00a4 5105      		cpc r21,__zero_reg__
+ 347 00a6 01F4      		brne .L25
+ 348               	/* epilogue start */
+ 230:ChibiOS/os/nil/src/nil.c **** 
+ 349               		.loc 1 230 0
+ 350 00a8 DF91      		pop r29
+ 351 00aa CF91      		pop r28
+ 352 00ac 1F91      		pop r17
+ 353 00ae 0F91      		pop r16
+ 354 00b0 FF90      		pop r15
+ 355 00b2 EF90      		pop r14
+ 356               	.LBB124:
+ 357               	.LBB125:
+ 358               		.file 3 "ChibiOS/os/nil/ports/AVR/nilcore_timer.h"
+   1:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** /*
+   2:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****     ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio.
+   3:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** 
+   4:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****     This file is part of ChibiOS.
+   5:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** 
+   6:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****     ChibiOS is free software; you can redistribute it and/or modify
+   7:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****     it under the terms of the GNU General Public License as published by
+   8:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****     the Free Software Foundation; either version 3 of the License, or
+   9:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****     (at your option) any later version.
+  10:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** 
+  11:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****     ChibiOS is distributed in the hope that it will be useful,
+  12:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****     but WITHOUT ANY WARRANTY; without even the implied warranty of
+  13:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  14:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****     GNU General Public License for more details.
+  15:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** 
+  16:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****     You should have received a copy of the GNU General Public License
+  17:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  18:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** */
+  19:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** 
+  20:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** /**
+  21:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****  * @file    AVR/nilcore_timer.h
+  22:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****  * @brief   System timer header file.
+  23:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****  *
+  24:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****  * @addtogroup AVR_TIMER
+  25:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****  * @{
+  26:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****  */
+  27:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** 
+  28:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** #ifndef _NILCORE_TIMER_H_
+  29:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** #define _NILCORE_TIMER_H_
+  30:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** 
+  31:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** /* This is the only header in the HAL designed to be include-able alone.*/
+  32:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** #include "st.h"
+  33:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** 
+  34:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** /*===========================================================================*/
+  35:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** /* Module constants.                                                         */
+  36:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** /*===========================================================================*/
+  37:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** 
+  38:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** /*===========================================================================*/
+  39:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** /* Module pre-compile time settings.                                         */
+  40:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** /*===========================================================================*/
+  41:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** 
+  42:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** /*===========================================================================*/
+  43:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** /* Derived constants and error checks.                                       */
+  44:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** /*===========================================================================*/
+  45:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** 
+  46:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** /*===========================================================================*/
+  47:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** /* Module data structures and types.                                         */
+  48:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** /*===========================================================================*/
+  49:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** 
+  50:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** /*===========================================================================*/
+  51:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** /* Module macros.                                                            */
+  52:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** /*===========================================================================*/
+  53:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** 
+  54:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** /*===========================================================================*/
+  55:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** /* External declarations.                                                    */
+  56:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** /*===========================================================================*/
+  57:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** 
+  58:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** /*===========================================================================*/
+  59:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** /* Module inline functions.                                                  */
+  60:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** /*===========================================================================*/
+  61:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** 
+  62:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** /**
+  63:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****  * @brief   Starts the alarm.
+  64:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****  * @note    Makes sure that no spurious alarms are triggered after
+  65:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****  *          this call.
+  66:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****  *
+  67:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****  * @param[in] time      the time to be set for the first alarm
+  68:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****  *
+  69:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****  * @notapi
+  70:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****  */
+  71:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** static inline void port_timer_start_alarm(systime_t time) {
+  72:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** 
+  73:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****   stStartAlarm(time);
+  74:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** }
+  75:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** 
+  76:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** /**
+  77:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****  * @brief   Stops the alarm interrupt.
+  78:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****  *
+  79:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****  * @notapi
+  80:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****  */
+  81:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** static inline void port_timer_stop_alarm(void) {
+  82:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** 
+  83:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****   stStopAlarm();
+ 359               		.loc 3 83 0
+ 360 00b4 0C94 0000 		jmp stStopAlarm
+ 361               	.LVL18:
+ 362               	.L14:
+ 363               	.LBE125:
+ 364               	.LBE124:
+ 209:ChibiOS/os/nil/src/nil.c ****           next = tp->timeout;
+ 365               		.loc 1 209 0
+ 366 00b8 1596      		adiw r26,5
+ 367 00ba 0D91      		ld r16,X+
+ 368 00bc 1C91      		ld r17,X
+ 369 00be 1697      		sbiw r26,5+1
+ 370 00c0 9A01      		movw r18,r20
+ 371 00c2 2150      		subi r18,1
+ 372 00c4 3109      		sbc r19,__zero_reg__
+ 373 00c6 2017      		cp r18,r16
+ 374 00c8 3107      		cpc r19,r17
+ 375 00ca 00F0      		brlo .L13
+ 210:ChibiOS/os/nil/src/nil.c ****         }
+ 376               		.loc 1 210 0
+ 377 00cc 1596      		adiw r26,5
+ 378 00ce 4D91      		ld r20,X+
+ 379 00d0 5C91      		ld r21,X
+ 380 00d2 1697      		sbiw r26,5+1
+ 381               	.LVL19:
+ 382 00d4 00C0      		rjmp .L13
+ 383               	.LVL20:
+ 384               	.L25:
+ 222:ChibiOS/os/nil/src/nil.c ****     port_timer_set_alarm(nil.nexttime);
+ 385               		.loc 1 222 0
+ 386 00d6 840F      		add r24,r20
+ 387 00d8 951F      		adc r25,r21
+ 388 00da 9093 0000 		sts nil+6+1,r25
+ 389 00de 8093 0000 		sts nil+6,r24
+ 390               	.LVL21:
+ 391               	/* epilogue start */
+ 230:ChibiOS/os/nil/src/nil.c **** 
+ 392               		.loc 1 230 0
+ 393 00e2 DF91      		pop r29
+ 394 00e4 CF91      		pop r28
+ 395 00e6 1F91      		pop r17
+ 396 00e8 0F91      		pop r16
+ 397 00ea FF90      		pop r15
+ 398 00ec EF90      		pop r14
+ 399               	.LBB126:
+ 400               	.LBB127:
+  84:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** }
+  85:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** 
+  86:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** /**
+  87:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****  * @brief   Sets the alarm time.
+  88:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****  *
+  89:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****  * @param[in] time      the time to be set for the next alarm
+  90:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****  *
+  91:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****  * @notapi
+  92:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****  */
+  93:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** static inline void port_timer_set_alarm(systime_t time) {
+  94:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** 
+  95:ChibiOS/os/nil/ports/AVR/nilcore_timer.h ****   stSetAlarm(time);
+ 401               		.loc 3 95 0
+ 402 00ee 0C94 0000 		jmp stSetAlarm
+ 403               	.LVL22:
+ 404               	.L23:
+ 405               	.LBE127:
+ 406               	.LBE126:
+ 200:ChibiOS/os/nil/src/nil.c ****         }
+ 407               		.loc 1 200 0
+ 408 00f2 0181      		ldd r16,Z+1
+ 409 00f4 1281      		ldd r17,Z+2
+ 410 00f6 E801      		movw r28,r16
+ 411 00f8 2881      		ld r18,Y
+ 412 00fa 2F5F      		subi r18,lo8(-(1))
+ 413 00fc 2883      		st Y,r18
+ 414 00fe 00C0      		rjmp .L16
+ 415               	.L24:
+ 203:ChibiOS/os/nil/src/nil.c ****         }
+ 416               		.loc 1 203 0
+ 417 0100 2181      		ldd r18,Z+1
+ 418 0102 3281      		ldd r19,Z+2
+ 419 0104 E901      		movw r28,r18
+ 420 0106 1982      		std Y+1,__zero_reg__
+ 421 0108 1882      		st Y,__zero_reg__
+ 422 010a 00C0      		rjmp .L16
+ 423               		.cfi_endproc
+ 424               	.LFE26:
+ 426               		.section	.text.chSysUnconditionalLock,"ax",@progbits
+ 427               	.global	chSysUnconditionalLock
+ 429               	chSysUnconditionalLock:
+ 430               	.LFB27:
+ 239:ChibiOS/os/nil/src/nil.c **** 
+ 431               		.loc 1 239 0
+ 432               		.cfi_startproc
+ 433               	/* prologue: function */
+ 434               	/* frame size = 0 */
+ 435               	/* stack size = 0 */
+ 436               	.L__stack_usage = 0
+ 437               	.LVL23:
+ 438 0000 0895      		ret
+ 439               		.cfi_endproc
+ 440               	.LFE27:
+ 442               		.section	.text.chSysUnconditionalUnlock,"ax",@progbits
+ 443               	.global	chSysUnconditionalUnlock
+ 445               	chSysUnconditionalUnlock:
+ 446               	.LFB28:
+ 253:ChibiOS/os/nil/src/nil.c **** 
+ 447               		.loc 1 253 0
+ 448               		.cfi_startproc
+ 449               	/* prologue: function */
+ 450               	/* frame size = 0 */
+ 451               	/* stack size = 0 */
+ 452               	.L__stack_usage = 0
+ 453               	.LVL24:
+ 454               	.LBB128:
+ 455               	.LBB129:
+ 333:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 456               		.loc 2 333 0
+ 457               	/* #APP */
+ 458               	 ;  333 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 459 0000 7894      		sei
+ 460               	 ;  0 "" 2
+ 461               	/* #NOAPP */
+ 462 0002 0895      		ret
+ 463               	.LBE129:
+ 464               	.LBE128:
+ 465               		.cfi_endproc
+ 466               	.LFE28:
+ 468               		.section	.text.chSysGetStatusAndLockX,"ax",@progbits
+ 469               	.global	chSysGetStatusAndLockX
+ 471               	chSysGetStatusAndLockX:
+ 472               	.LFB29:
+ 273:ChibiOS/os/nil/src/nil.c **** 
+ 473               		.loc 1 273 0
+ 474               		.cfi_startproc
+ 475               	/* prologue: function */
+ 476               	/* frame size = 0 */
+ 477               	/* stack size = 0 */
+ 478               	.L__stack_usage = 0
+ 479               	.LVL25:
+ 285:ChibiOS/os/nil/src/nil.c **** 
+ 480               		.loc 1 285 0
+ 481 0000 80E0      		ldi r24,0
+ 482 0002 0895      		ret
+ 483               		.cfi_endproc
+ 484               	.LFE29:
+ 486               		.section	.text.chSysRestoreStatusX,"ax",@progbits
+ 487               	.global	chSysRestoreStatusX
+ 489               	chSysRestoreStatusX:
+ 490               	.LFB30:
+ 296:ChibiOS/os/nil/src/nil.c **** 
+ 491               		.loc 1 296 0
+ 492               		.cfi_startproc
+ 493               	.LVL26:
+ 494               	/* prologue: function */
+ 495               	/* frame size = 0 */
+ 496               	/* stack size = 0 */
+ 497               	.L__stack_usage = 0
+ 498 0000 0895      		ret
+ 499               		.cfi_endproc
+ 500               	.LFE30:
+ 502               		.section	.text.chSchReadyI,"ax",@progbits
+ 503               	.global	chSchReadyI
+ 505               	chSchReadyI:
+ 506               	.LFB31:
+ 361:ChibiOS/os/nil/src/nil.c **** 
+ 507               		.loc 1 361 0
+ 508               		.cfi_startproc
+ 509               	.LVL27:
+ 510               	/* prologue: function */
+ 511               	/* frame size = 0 */
+ 512               	/* stack size = 0 */
+ 513               	.L__stack_usage = 0
+ 369:ChibiOS/os/nil/src/nil.c ****   tp->state = NIL_STATE_READY;
+ 514               		.loc 1 369 0
+ 515 0000 FC01      		movw r30,r24
+ 516 0002 7483      		std Z+4,r23
+ 517 0004 6383      		std Z+3,r22
+ 370:ChibiOS/os/nil/src/nil.c ****   tp->timeout = (systime_t)0;
+ 518               		.loc 1 370 0
+ 519 0006 1282      		std Z+2,__zero_reg__
+ 371:ChibiOS/os/nil/src/nil.c ****   if (tp < nil.next) {
+ 520               		.loc 1 371 0
+ 521 0008 1682      		std Z+6,__zero_reg__
+ 522 000a 1582      		std Z+5,__zero_reg__
+ 372:ChibiOS/os/nil/src/nil.c ****     nil.next = tp;
+ 523               		.loc 1 372 0
+ 524 000c 2091 0000 		lds r18,nil+2
+ 525 0010 3091 0000 		lds r19,nil+2+1
+ 526 0014 8217      		cp r24,r18
+ 527 0016 9307      		cpc r25,r19
+ 528 0018 00F4      		brsh .L31
+ 373:ChibiOS/os/nil/src/nil.c ****   }
+ 529               		.loc 1 373 0
+ 530 001a 9093 0000 		sts nil+2+1,r25
+ 531 001e 8093 0000 		sts nil+2,r24
+ 532               	.L31:
+ 376:ChibiOS/os/nil/src/nil.c **** 
+ 533               		.loc 1 376 0
+ 534 0022 0895      		ret
+ 535               		.cfi_endproc
+ 536               	.LFE31:
+ 538               		.section	.text.chSchRescheduleS,"ax",@progbits
+ 539               	.global	chSchRescheduleS
+ 541               	chSchRescheduleS:
+ 542               	.LFB32:
+ 383:ChibiOS/os/nil/src/nil.c **** 
+ 543               		.loc 1 383 0
+ 544               		.cfi_startproc
+ 545               	/* prologue: function */
+ 546               	/* frame size = 0 */
+ 547               	/* stack size = 0 */
+ 548               	.L__stack_usage = 0
+ 385:ChibiOS/os/nil/src/nil.c ****     thread_t *otp = nil.current;
+ 549               		.loc 1 385 0
+ 550 0000 6091 0000 		lds r22,nil
+ 551 0004 7091 0000 		lds r23,nil+1
+ 552 0008 8091 0000 		lds r24,nil+2
+ 553 000c 9091 0000 		lds r25,nil+2+1
+ 554 0010 6817      		cp r22,r24
+ 555 0012 7907      		cpc r23,r25
+ 556 0014 01F0      		breq .L32
+ 557               	.LVL28:
+ 558               	.LBB130:
+ 388:ChibiOS/os/nil/src/nil.c ****     if (otp == &nil.threads[NIL_CFG_NUM_THREADS]) {
+ 559               		.loc 1 388 0
+ 560 0016 9093 0000 		sts nil+1,r25
+ 561 001a 8093 0000 		sts nil,r24
+ 392:ChibiOS/os/nil/src/nil.c ****   }
+ 562               		.loc 1 392 0
+ 563 001e 0C94 0000 		jmp _port_switch
+ 564               	.LVL29:
+ 565               	.L32:
+ 566 0022 0895      		ret
+ 567               	.LBE130:
+ 568               		.cfi_endproc
+ 569               	.LFE32:
+ 571               		.section	.text.chSchGoSleepTimeoutS,"ax",@progbits
+ 572               	.global	chSchGoSleepTimeoutS
+ 574               	chSchGoSleepTimeoutS:
+ 575               	.LFB33:
+ 413:ChibiOS/os/nil/src/nil.c ****   thread_t *ntp, *otp = nil.current;
+ 576               		.loc 1 413 0
+ 577               		.cfi_startproc
+ 578               	.LVL30:
+ 579 0000 0F93      		push r16
+ 580               	.LCFI8:
+ 581               		.cfi_def_cfa_offset 3
+ 582               		.cfi_offset 16, -2
+ 583 0002 1F93      		push r17
+ 584               	.LCFI9:
+ 585               		.cfi_def_cfa_offset 4
+ 586               		.cfi_offset 17, -3
+ 587 0004 CF93      		push r28
+ 588               	.LCFI10:
+ 589               		.cfi_def_cfa_offset 5
+ 590               		.cfi_offset 28, -4
+ 591 0006 DF93      		push r29
+ 592               	.LCFI11:
+ 593               		.cfi_def_cfa_offset 6
+ 594               		.cfi_offset 29, -5
+ 595               	/* prologue: function */
+ 596               	/* frame size = 0 */
+ 597               	/* stack size = 4 */
+ 598               	.L__stack_usage = 4
+ 414:ChibiOS/os/nil/src/nil.c **** 
+ 599               		.loc 1 414 0
+ 600 0008 0091 0000 		lds r16,nil
+ 601 000c 1091 0000 		lds r17,nil+1
+ 602               	.LVL31:
+ 420:ChibiOS/os/nil/src/nil.c **** 
+ 603               		.loc 1 420 0
+ 604 0010 F801      		movw r30,r16
+ 605 0012 8283      		std Z+2,r24
+ 423:ChibiOS/os/nil/src/nil.c ****     systime_t abstime;
+ 606               		.loc 1 423 0
+ 607 0014 6115      		cp r22,__zero_reg__
+ 608 0016 7105      		cpc r23,__zero_reg__
+ 609 0018 01F0      		breq .L35
+ 610               	.LBB131:
+ 428:ChibiOS/os/nil/src/nil.c ****       timeout = (systime_t)NIL_CFG_ST_TIMEDELTA;
+ 611               		.loc 1 428 0
+ 612 001a 6230      		cpi r22,2
+ 613 001c 7105      		cpc r23,__zero_reg__
+ 614 001e 00F4      		brsh .+2
+ 615 0020 00C0      		rjmp .L49
+ 616               	.LVL32:
+ 617               	.L36:
+ 618               	.LBB132:
+ 619               	.LBB133:
+ 620               	.LBB134:
+ 621               		.file 4 "ChibiOS/os/hal/ports/AVR/st_lld.h"
+   1:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*
+   2:ChibiOS/os/hal/ports/AVR/st_lld.h ****     ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio
+   3:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+   4:ChibiOS/os/hal/ports/AVR/st_lld.h ****     Licensed under the Apache License, Version 2.0 (the "License");
+   5:ChibiOS/os/hal/ports/AVR/st_lld.h ****     you may not use this file except in compliance with the License.
+   6:ChibiOS/os/hal/ports/AVR/st_lld.h ****     You may obtain a copy of the License at
+   7:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+   8:ChibiOS/os/hal/ports/AVR/st_lld.h ****         http://www.apache.org/licenses/LICENSE-2.0
+   9:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  10:ChibiOS/os/hal/ports/AVR/st_lld.h ****     Unless required by applicable law or agreed to in writing, software
+  11:ChibiOS/os/hal/ports/AVR/st_lld.h ****     distributed under the License is distributed on an "AS IS" BASIS,
+  12:ChibiOS/os/hal/ports/AVR/st_lld.h ****     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  13:ChibiOS/os/hal/ports/AVR/st_lld.h ****     See the License for the specific language governing permissions and
+  14:ChibiOS/os/hal/ports/AVR/st_lld.h ****     limitations under the License.
+  15:ChibiOS/os/hal/ports/AVR/st_lld.h **** */
+  16:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  17:ChibiOS/os/hal/ports/AVR/st_lld.h **** /**
+  18:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @file    AVR/st_lld.h
+  19:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @brief   ST Driver subsystem low level driver header.
+  20:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @details This header is designed to be include-able without having to
+  21:ChibiOS/os/hal/ports/AVR/st_lld.h ****  *          include other files from the HAL.
+  22:ChibiOS/os/hal/ports/AVR/st_lld.h ****  *
+  23:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @addtogroup AVR
+  24:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @{
+  25:ChibiOS/os/hal/ports/AVR/st_lld.h ****  */
+  26:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  27:ChibiOS/os/hal/ports/AVR/st_lld.h **** #ifndef _ST_LLD_H_
+  28:ChibiOS/os/hal/ports/AVR/st_lld.h **** #define _ST_LLD_H_
+  29:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  30:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  31:ChibiOS/os/hal/ports/AVR/st_lld.h **** /* Driver constants.                                                         */
+  32:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  33:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  34:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  35:ChibiOS/os/hal/ports/AVR/st_lld.h **** /* Driver pre-compile time settings.                                         */
+  36:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  37:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  38:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*
+  39:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * TODO: for models that have many timers,
+  40:ChibiOS/os/hal/ports/AVR/st_lld.h ****  *       could add AVR_ST_USE_TIMER
+  41:ChibiOS/os/hal/ports/AVR/st_lld.h ****  */
+  42:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  43:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  44:ChibiOS/os/hal/ports/AVR/st_lld.h **** /* Derived constants and error checks.                                       */
+  45:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  46:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  47:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*
+  48:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * TODO: error checks for valid timer selected
+  49:ChibiOS/os/hal/ports/AVR/st_lld.h ****  */
+  50:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  51:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  52:ChibiOS/os/hal/ports/AVR/st_lld.h **** /* Driver data structures and types.                                         */
+  53:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  54:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  55:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  56:ChibiOS/os/hal/ports/AVR/st_lld.h **** /* Driver macros.                                                            */
+  57:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  58:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  59:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  60:ChibiOS/os/hal/ports/AVR/st_lld.h **** /* External declarations.                                                    */
+  61:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  62:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  63:ChibiOS/os/hal/ports/AVR/st_lld.h **** #ifdef __cplusplus
+  64:ChibiOS/os/hal/ports/AVR/st_lld.h **** extern "C" {
+  65:ChibiOS/os/hal/ports/AVR/st_lld.h **** #endif
+  66:ChibiOS/os/hal/ports/AVR/st_lld.h ****   void st_lld_init(void);
+  67:ChibiOS/os/hal/ports/AVR/st_lld.h **** #ifdef __cplusplus
+  68:ChibiOS/os/hal/ports/AVR/st_lld.h **** }
+  69:ChibiOS/os/hal/ports/AVR/st_lld.h **** #endif
+  70:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  71:ChibiOS/os/hal/ports/AVR/st_lld.h **** #ifdef __AVR_ATmega128__
+  72:ChibiOS/os/hal/ports/AVR/st_lld.h **** #define TIFR_REG TIFR
+  73:ChibiOS/os/hal/ports/AVR/st_lld.h **** #define TIMSK_REG TIMSK
+  74:ChibiOS/os/hal/ports/AVR/st_lld.h **** #else
+  75:ChibiOS/os/hal/ports/AVR/st_lld.h **** #define TIFR_REG TIFR1
+  76:ChibiOS/os/hal/ports/AVR/st_lld.h **** #define TIMSK_REG TIMSK1
+  77:ChibiOS/os/hal/ports/AVR/st_lld.h **** #endif
+  78:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  79:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  80:ChibiOS/os/hal/ports/AVR/st_lld.h **** /* Driver inline functions.                                                  */
+  81:ChibiOS/os/hal/ports/AVR/st_lld.h **** /*===========================================================================*/
+  82:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  83:ChibiOS/os/hal/ports/AVR/st_lld.h **** /**
+  84:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @brief   Returns the time counter value.
+  85:ChibiOS/os/hal/ports/AVR/st_lld.h ****  *
+  86:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @return              The counter value.
+  87:ChibiOS/os/hal/ports/AVR/st_lld.h ****  *
+  88:ChibiOS/os/hal/ports/AVR/st_lld.h ****  * @notapi
+  89:ChibiOS/os/hal/ports/AVR/st_lld.h ****  */
+  90:ChibiOS/os/hal/ports/AVR/st_lld.h **** static inline systime_t st_lld_get_counter(void) {
+  91:ChibiOS/os/hal/ports/AVR/st_lld.h **** 
+  92:ChibiOS/os/hal/ports/AVR/st_lld.h ****   return (systime_t) TCNT1;
+ 622               		.loc 4 92 0
+ 623 0022 8091 8400 		lds r24,132
+ 624 0026 9091 8500 		lds r25,132+1
+ 625               	.LVL33:
+ 626               	.LBE134:
+ 627               	.LBE133:
+ 628               	.LBE132:
+ 433:ChibiOS/os/nil/src/nil.c **** 
+ 629               		.loc 1 433 0
+ 630 002a EB01      		movw r28,r22
+ 631 002c C80F      		add r28,r24
+ 632 002e D91F      		adc r29,r25
+ 633               	.LVL34:
+ 435:ChibiOS/os/nil/src/nil.c ****       /* Special case, first thread asking for a timeout.*/
+ 634               		.loc 1 435 0
+ 635 0030 8091 0000 		lds r24,nil+4
+ 636 0034 9091 0000 		lds r25,nil+4+1
+ 637 0038 2091 0000 		lds r18,nil+6
+ 638 003c 3091 0000 		lds r19,nil+6+1
+ 639 0040 8217      		cp r24,r18
+ 640 0042 9307      		cpc r25,r19
+ 641 0044 01F0      		breq .L50
+ 443:ChibiOS/os/nil/src/nil.c ****         port_timer_set_alarm(abstime);
+ 642               		.loc 1 443 0
+ 643 0046 281B      		sub r18,r24
+ 644 0048 390B      		sbc r19,r25
+ 645 004a AE01      		movw r20,r28
+ 646 004c 481B      		sub r20,r24
+ 647 004e 590B      		sbc r21,r25
+ 648 0050 4217      		cp r20,r18
+ 649 0052 5307      		cpc r21,r19
+ 650 0054 00F0      		brlo .L51
+ 651               	.LVL35:
+ 652               	.L38:
+ 450:ChibiOS/os/nil/src/nil.c ****   }
+ 653               		.loc 1 450 0
+ 654 0056 C81B      		sub r28,r24
+ 655 0058 D90B      		sbc r29,r25
+ 656               	.LVL36:
+ 657 005a F801      		movw r30,r16
+ 658 005c D683      		std Z+6,r29
+ 659 005e C583      		std Z+5,r28
+ 660               	.L35:
+ 661               	.LVL37:
+ 662               	.LBE131:
+ 462:ChibiOS/os/nil/src/nil.c ****       nil.current = nil.next = ntp;
+ 663               		.loc 1 462 0
+ 664 0060 8091 0000 		lds r24,nil+10
+ 665 0064 8823      		tst r24
+ 666 0066 01F0      		breq .L52
+ 667 0068 20E0      		ldi r18,lo8(nil+18)
+ 668 006a 30E0      		ldi r19,hi8(nil+18)
+ 669               	.LVL38:
+ 670               	.L41:
+ 671 006c A901      		movw r20,r18
+ 672 006e 4250      		subi r20,2
+ 673 0070 5109      		sbc r21,__zero_reg__
+ 674               	.LVL39:
+ 675 0072 285F      		subi r18,-8
+ 676 0074 3F4F      		sbci r19,-1
+ 677 0076 F901      		movw r30,r18
+ 678 0078 3897      		sbiw r30,8
+ 679 007a 9081      		ld r25,Z
+ 680 007c 9111      		cpse r25,__zero_reg__
+ 681 007e 00C0      		rjmp .L41
+ 682               	.L40:
+ 463:ChibiOS/os/nil/src/nil.c ****       if (ntp == &nil.threads[NIL_CFG_NUM_THREADS]) {
+ 683               		.loc 1 463 0
+ 684 0080 5093 0000 		sts nil+2+1,r21
+ 685 0084 4093 0000 		sts nil+2,r20
+ 686 0088 5093 0000 		sts nil+1,r21
+ 687 008c 4093 0000 		sts nil,r20
+ 467:ChibiOS/os/nil/src/nil.c ****       return nil.current->u1.msg;
+ 688               		.loc 1 467 0
+ 689 0090 B801      		movw r22,r16
+ 690 0092 CA01      		movw r24,r20
+ 691 0094 0E94 0000 		call _port_switch
+ 692               	.LVL40:
+ 468:ChibiOS/os/nil/src/nil.c ****     }
+ 693               		.loc 1 468 0
+ 694 0098 E091 0000 		lds r30,nil
+ 695 009c F091 0000 		lds r31,nil+1
+ 696 00a0 8381      		ldd r24,Z+3
+ 697 00a2 9481      		ldd r25,Z+4
+ 698               	/* epilogue start */
+ 476:ChibiOS/os/nil/src/nil.c **** 
+ 699               		.loc 1 476 0
+ 700 00a4 DF91      		pop r29
+ 701 00a6 CF91      		pop r28
+ 702 00a8 1F91      		pop r17
+ 703 00aa 0F91      		pop r16
+ 704               	.LVL41:
+ 705 00ac 0895      		ret
+ 706               	.LVL42:
+ 707               	.L49:
+ 708               	.LBB139:
+ 429:ChibiOS/os/nil/src/nil.c ****     }
+ 709               		.loc 1 429 0
+ 710 00ae 62E0      		ldi r22,lo8(2)
+ 711 00b0 70E0      		ldi r23,0
+ 712               	.LVL43:
+ 713 00b2 00C0      		rjmp .L36
+ 714               	.LVL44:
+ 715               	.L50:
+ 716               	.LBB135:
+ 717               	.LBB136:
+  73:ChibiOS/os/nil/ports/AVR/nilcore_timer.h **** }
+ 718               		.loc 3 73 0
+ 719 00b4 CE01      		movw r24,r28
+ 720 00b6 0E94 0000 		call stStartAlarm
+ 721               	.LVL45:
+ 722               	.LBE136:
+ 723               	.LBE135:
+ 438:ChibiOS/os/nil/src/nil.c ****     }
+ 724               		.loc 1 438 0
+ 725 00ba D093 0000 		sts nil+6+1,r29
+ 726 00be C093 0000 		sts nil+6,r28
+ 727 00c2 8091 0000 		lds r24,nil+4
+ 728 00c6 9091 0000 		lds r25,nil+4+1
+ 729 00ca 00C0      		rjmp .L38
+ 730               	.LVL46:
+ 731               	.L51:
+ 732               	.LBB137:
+ 733               	.LBB138:
+ 734               		.loc 3 95 0
+ 735 00cc CE01      		movw r24,r28
+ 736 00ce 0E94 0000 		call stSetAlarm
+ 737               	.LVL47:
+ 738               	.LBE138:
+ 739               	.LBE137:
+ 445:ChibiOS/os/nil/src/nil.c ****       }
+ 740               		.loc 1 445 0
+ 741 00d2 D093 0000 		sts nil+6+1,r29
+ 742 00d6 C093 0000 		sts nil+6,r28
+ 743 00da 8091 0000 		lds r24,nil+4
+ 744 00de 9091 0000 		lds r25,nil+4+1
+ 745 00e2 00C0      		rjmp .L38
+ 746               	.LVL48:
+ 747               	.L52:
+ 748               	.LBE139:
+ 459:ChibiOS/os/nil/src/nil.c ****   while (true) {
+ 749               		.loc 1 459 0
+ 750 00e4 40E0      		ldi r20,lo8(nil+8)
+ 751 00e6 50E0      		ldi r21,hi8(nil+8)
+ 752               	.LVL49:
+ 753 00e8 00C0      		rjmp .L40
+ 754               		.cfi_endproc
+ 755               	.LFE33:
+ 757               		.section	.text.chThdSuspendTimeoutS,"ax",@progbits
+ 758               	.global	chThdSuspendTimeoutS
+ 760               	chThdSuspendTimeoutS:
+ 761               	.LFB34:
+ 492:ChibiOS/os/nil/src/nil.c **** 
+ 762               		.loc 1 492 0
+ 763               		.cfi_startproc
+ 764               	.LVL50:
+ 765               	/* prologue: function */
+ 766               	/* frame size = 0 */
+ 767               	/* stack size = 0 */
+ 768               	.L__stack_usage = 0
+ 496:ChibiOS/os/nil/src/nil.c ****   nil.current->u1.trp = trp;
+ 769               		.loc 1 496 0
+ 770 0000 E0E0      		ldi r30,lo8(nil)
+ 771 0002 F0E0      		ldi r31,hi8(nil)
+ 772 0004 2081      		ld r18,Z
+ 773 0006 3181      		ldd r19,Z+1
+ 774 0008 DC01      		movw r26,r24
+ 775 000a 2D93      		st X+,r18
+ 776 000c 3C93      		st X,r19
+ 497:ChibiOS/os/nil/src/nil.c ****   return chSchGoSleepTimeoutS(NIL_STATE_SUSP, timeout);
+ 777               		.loc 1 497 0
+ 778 000e 0190      		ld __tmp_reg__,Z+
+ 779 0010 F081      		ld r31,Z
+ 780 0012 E02D      		mov r30,__tmp_reg__
+ 781 0014 9483      		std Z+4,r25
+ 782 0016 8383      		std Z+3,r24
+ 498:ChibiOS/os/nil/src/nil.c **** }
+ 783               		.loc 1 498 0
+ 784 0018 82E0      		ldi r24,lo8(2)
+ 785               	.LVL51:
+ 786 001a 0C94 0000 		jmp chSchGoSleepTimeoutS
+ 787               	.LVL52:
+ 788               		.cfi_endproc
+ 789               	.LFE34:
+ 791               		.section	.text.chThdResumeI,"ax",@progbits
+ 792               	.global	chThdResumeI
+ 794               	chThdResumeI:
+ 795               	.LFB35:
+ 511:ChibiOS/os/nil/src/nil.c **** 
+ 796               		.loc 1 511 0
+ 797               		.cfi_startproc
+ 798               	.LVL53:
+ 799               	/* prologue: function */
+ 800               	/* frame size = 0 */
+ 801               	/* stack size = 0 */
+ 802               	.L__stack_usage = 0
+ 513:ChibiOS/os/nil/src/nil.c ****     thread_reference_t tr = *trp;
+ 803               		.loc 1 513 0
+ 804 0000 DC01      		movw r26,r24
+ 805 0002 ED91      		ld r30,X+
+ 806 0004 FC91      		ld r31,X
+ 807 0006 1197      		sbiw r26,1
+ 808 0008 3097      		sbiw r30,0
+ 809 000a 01F0      		breq .L54
+ 810               	.LVL54:
+ 811               	.LBB140:
+ 518:ChibiOS/os/nil/src/nil.c ****     (void) chSchReadyI(tr, msg);
+ 812               		.loc 1 518 0
+ 813 000c 1D92      		st X+,__zero_reg__
+ 814 000e 1C92      		st X,__zero_reg__
+ 815               	.LVL55:
+ 816               	.LBB141:
+ 817               	.LBB142:
+ 369:ChibiOS/os/nil/src/nil.c ****   tp->state = NIL_STATE_READY;
+ 818               		.loc 1 369 0
+ 819 0010 7483      		std Z+4,r23
+ 820 0012 6383      		std Z+3,r22
+ 370:ChibiOS/os/nil/src/nil.c ****   tp->timeout = (systime_t)0;
+ 821               		.loc 1 370 0
+ 822 0014 1282      		std Z+2,__zero_reg__
+ 371:ChibiOS/os/nil/src/nil.c ****   if (tp < nil.next) {
+ 823               		.loc 1 371 0
+ 824 0016 1682      		std Z+6,__zero_reg__
+ 825 0018 1582      		std Z+5,__zero_reg__
+ 372:ChibiOS/os/nil/src/nil.c ****     nil.next = tp;
+ 826               		.loc 1 372 0
+ 827 001a 8091 0000 		lds r24,nil+2
+ 828 001e 9091 0000 		lds r25,nil+2+1
+ 829               	.LVL56:
+ 830 0022 E817      		cp r30,r24
+ 831 0024 F907      		cpc r31,r25
+ 832 0026 00F4      		brsh .L54
+ 373:ChibiOS/os/nil/src/nil.c ****   }
+ 833               		.loc 1 373 0
+ 834 0028 F093 0000 		sts nil+2+1,r31
+ 835 002c E093 0000 		sts nil+2,r30
+ 836               	.LVL57:
+ 837               	.L54:
+ 838 0030 0895      		ret
+ 839               	.LBE142:
+ 840               	.LBE141:
+ 841               	.LBE140:
+ 842               		.cfi_endproc
+ 843               	.LFE35:
+ 845               		.section	.text.chThdSleep,"ax",@progbits
+ 846               	.global	chThdSleep
+ 848               	chThdSleep:
+ 849               	.LFB36:
+ 530:ChibiOS/os/nil/src/nil.c **** 
+ 850               		.loc 1 530 0
+ 851               		.cfi_startproc
+ 852               	.LVL58:
+ 853               	/* prologue: function */
+ 854               	/* frame size = 0 */
+ 855               	/* stack size = 0 */
+ 856               	.L__stack_usage = 0
+ 857               	.LBB143:
+ 858               	.LBB144:
+ 325:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 859               		.loc 2 325 0
+ 860               	/* #APP */
+ 861               	 ;  325 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 862 0000 F894      		cli
+ 863               	 ;  0 "" 2
+ 864               	/* #NOAPP */
+ 865               	.LBE144:
+ 866               	.LBE143:
+ 533:ChibiOS/os/nil/src/nil.c ****   chSysUnlock();
+ 867               		.loc 1 533 0
+ 868 0002 BC01      		movw r22,r24
+ 869 0004 81E0      		ldi r24,lo8(1)
+ 870               	.LVL59:
+ 871 0006 0E94 0000 		call chSchGoSleepTimeoutS
+ 872               	.LVL60:
+ 873               	.LBB145:
+ 874               	.LBB146:
+ 333:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 875               		.loc 2 333 0
+ 876               	/* #APP */
+ 877               	 ;  333 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 878 000a 7894      		sei
+ 879               	 ;  0 "" 2
+ 880               	/* #NOAPP */
+ 881 000c 0895      		ret
+ 882               	.LBE146:
+ 883               	.LBE145:
+ 884               		.cfi_endproc
+ 885               	.LFE36:
+ 887               		.section	.text.chThdSleepUntil,"ax",@progbits
+ 888               	.global	chThdSleepUntil
+ 890               	chThdSleepUntil:
+ 891               	.LFB37:
+ 545:ChibiOS/os/nil/src/nil.c **** 
+ 892               		.loc 1 545 0
+ 893               		.cfi_startproc
+ 894               	.LVL61:
+ 895               	/* prologue: function */
+ 896               	/* frame size = 0 */
+ 897               	/* stack size = 0 */
+ 898               	.L__stack_usage = 0
+ 899               	.LBB147:
+ 900               	.LBB148:
+ 325:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 901               		.loc 2 325 0
+ 902               	/* #APP */
+ 903               	 ;  325 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 904 0000 F894      		cli
+ 905               	 ;  0 "" 2
+ 906               	/* #NOAPP */
+ 907               	.LBE148:
+ 908               	.LBE147:
+ 909               	.LBB149:
+ 910               	.LBB150:
+ 911               	.LBB151:
+ 912               		.loc 4 92 0
+ 913 0002 2091 8400 		lds r18,132
+ 914 0006 3091 8500 		lds r19,132+1
+ 915               	.LBE151:
+ 916               	.LBE150:
+ 917               	.LBE149:
+ 548:ChibiOS/os/nil/src/nil.c ****   chSysUnlock();
+ 918               		.loc 1 548 0
+ 919 000a BC01      		movw r22,r24
+ 920 000c 621B      		sub r22,r18
+ 921 000e 730B      		sbc r23,r19
+ 922 0010 81E0      		ldi r24,lo8(1)
+ 923               	.LVL62:
+ 924 0012 0E94 0000 		call chSchGoSleepTimeoutS
+ 925               	.LVL63:
+ 926               	.LBB152:
+ 927               	.LBB153:
+ 333:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 928               		.loc 2 333 0
+ 929               	/* #APP */
+ 930               	 ;  333 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 931 0016 7894      		sei
+ 932               	 ;  0 "" 2
+ 933               	/* #NOAPP */
+ 934 0018 0895      		ret
+ 935               	.LBE153:
+ 936               	.LBE152:
+ 937               		.cfi_endproc
+ 938               	.LFE37:
+ 940               		.section	.text.chSemWaitTimeoutS,"ax",@progbits
+ 941               	.global	chSemWaitTimeoutS
+ 943               	chSemWaitTimeoutS:
+ 944               	.LFB39:
+ 600:ChibiOS/os/nil/src/nil.c **** 
+ 945               		.loc 1 600 0
+ 946               		.cfi_startproc
+ 947               	.LVL64:
+ 948               	/* prologue: function */
+ 949               	/* frame size = 0 */
+ 950               	/* stack size = 0 */
+ 951               	.L__stack_usage = 0
+ 952 0000 FC01      		movw r30,r24
+ 604:ChibiOS/os/nil/src/nil.c ****   if (cnt <= (cnt_t)0) {
+ 953               		.loc 1 604 0
+ 954 0002 9081      		ld r25,Z
+ 955               	.LVL65:
+ 605:ChibiOS/os/nil/src/nil.c ****     if (TIME_IMMEDIATE == timeout) {
+ 956               		.loc 1 605 0
+ 957 0004 1916      		cp __zero_reg__,r25
+ 958 0006 04F4      		brge .L64
+ 613:ChibiOS/os/nil/src/nil.c ****   return MSG_OK;
+ 959               		.loc 1 613 0
+ 960 0008 9150      		subi r25,lo8(-(-1))
+ 961               	.LVL66:
+ 962 000a 9083      		st Z,r25
+ 614:ChibiOS/os/nil/src/nil.c **** }
+ 963               		.loc 1 614 0
+ 964 000c 80E0      		ldi r24,0
+ 965 000e 90E0      		ldi r25,0
+ 966               	.LVL67:
+ 967 0010 0895      		ret
+ 968               	.LVL68:
+ 969               	.L64:
+ 606:ChibiOS/os/nil/src/nil.c ****       return MSG_TIMEOUT;
+ 970               		.loc 1 606 0
+ 971 0012 6F3F      		cpi r22,-1
+ 972 0014 8FEF      		ldi r24,-1
+ 973 0016 7807      		cpc r23,r24
+ 974               	.LVL69:
+ 975 0018 01F0      		breq .L63
+ 609:ChibiOS/os/nil/src/nil.c ****     nil.current->u1.semp = sp;
+ 976               		.loc 1 609 0
+ 977 001a 9150      		subi r25,lo8(-(-1))
+ 978               	.LVL70:
+ 979 001c 9083      		st Z,r25
+ 610:ChibiOS/os/nil/src/nil.c ****     return chSchGoSleepTimeoutS(NIL_STATE_WTSEM, timeout);
+ 980               		.loc 1 610 0
+ 981 001e A091 0000 		lds r26,nil
+ 982 0022 B091 0000 		lds r27,nil+1
+ 983 0026 1496      		adiw r26,3+1
+ 984 0028 FC93      		st X,r31
+ 985 002a EE93      		st -X,r30
+ 986 002c 1397      		sbiw r26,3
+ 611:ChibiOS/os/nil/src/nil.c ****   }
+ 987               		.loc 1 611 0
+ 988 002e 83E0      		ldi r24,lo8(3)
+ 989 0030 0C94 0000 		jmp chSchGoSleepTimeoutS
+ 990               	.LVL71:
+ 991               	.L63:
+ 607:ChibiOS/os/nil/src/nil.c ****     }
+ 992               		.loc 1 607 0
+ 993 0034 8FEF      		ldi r24,lo8(-1)
+ 994 0036 9FEF      		ldi r25,lo8(-1)
+ 615:ChibiOS/os/nil/src/nil.c **** 
+ 995               		.loc 1 615 0
+ 996 0038 0895      		ret
+ 997               		.cfi_endproc
+ 998               	.LFE39:
+ 1000               		.section	.text.chSemWaitTimeout,"ax",@progbits
+ 1001               	.global	chSemWaitTimeout
+ 1003               	chSemWaitTimeout:
+ 1004               	.LFB38:
+ 571:ChibiOS/os/nil/src/nil.c ****   msg_t msg;
+ 1005               		.loc 1 571 0
+ 1006               		.cfi_startproc
+ 1007               	.LVL72:
+ 1008               	/* prologue: function */
+ 1009               	/* frame size = 0 */
+ 1010               	/* stack size = 0 */
+ 1011               	.L__stack_usage = 0
+ 1012               	.LBB154:
+ 1013               	.LBB155:
+ 325:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 1014               		.loc 2 325 0
+ 1015               	/* #APP */
+ 1016               	 ;  325 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 1017 0000 F894      		cli
+ 1018               	 ;  0 "" 2
+ 1019               	/* #NOAPP */
+ 1020               	.LBE155:
+ 1021               	.LBE154:
+ 575:ChibiOS/os/nil/src/nil.c ****   chSysUnlock();
+ 1022               		.loc 1 575 0
+ 1023 0002 0E94 0000 		call chSemWaitTimeoutS
+ 1024               	.LVL73:
+ 1025               	.LBB156:
+ 1026               	.LBB157:
+ 333:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 1027               		.loc 2 333 0
+ 1028               	/* #APP */
+ 1029               	 ;  333 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 1030 0006 7894      		sei
+ 1031               	 ;  0 "" 2
+ 1032               	/* #NOAPP */
+ 1033               	.LBE157:
+ 1034               	.LBE156:
+ 579:ChibiOS/os/nil/src/nil.c **** 
+ 1035               		.loc 1 579 0
+ 1036 0008 0895      		ret
+ 1037               		.cfi_endproc
+ 1038               	.LFE38:
+ 1040               		.section	.text.chSemSignal,"ax",@progbits
+ 1041               	.global	chSemSignal
+ 1043               	chSemSignal:
+ 1044               	.LFB40:
+ 624:ChibiOS/os/nil/src/nil.c **** 
+ 1045               		.loc 1 624 0
+ 1046               		.cfi_startproc
+ 1047               	.LVL74:
+ 1048               	/* prologue: function */
+ 1049               	/* frame size = 0 */
+ 1050               	/* stack size = 0 */
+ 1051               	.L__stack_usage = 0
+ 1052 0000 FC01      		movw r30,r24
+ 1053               	.LBB158:
+ 1054               	.LBB159:
+ 325:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 1055               		.loc 2 325 0
+ 1056               	/* #APP */
+ 1057               	 ;  325 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 1058 0002 F894      		cli
+ 1059               	 ;  0 "" 2
+ 1060               	.LVL75:
+ 1061               	/* #NOAPP */
+ 1062               	.LBE159:
+ 1063               	.LBE158:
+ 1064               	.LBB160:
+ 1065               	.LBB161:
+ 645:ChibiOS/os/nil/src/nil.c ****     thread_reference_t tr = nil.threads;
+ 1066               		.loc 1 645 0
+ 1067 0004 9081      		ld r25,Z
+ 1068 0006 9F5F      		subi r25,lo8(-(1))
+ 1069 0008 9083      		st Z,r25
+ 1070 000a 1916      		cp __zero_reg__,r25
+ 1071 000c 04F4      		brge .L68
+ 1072               	.LBE161:
+ 1073               	.LBE160:
+ 628:ChibiOS/os/nil/src/nil.c ****   chSysUnlock();
+ 1074               		.loc 1 628 0
+ 1075 000e 0E94 0000 		call chSchRescheduleS
+ 1076               	.LVL76:
+ 1077               	.LBB163:
+ 1078               	.LBB164:
+ 333:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 1079               		.loc 2 333 0
+ 1080               	/* #APP */
+ 1081               	 ;  333 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 1082 0012 7894      		sei
+ 1083               	 ;  0 "" 2
+ 1084               	/* #NOAPP */
+ 1085 0014 0895      		ret
+ 1086               	.LVL77:
+ 1087               	.L68:
+ 1088               	.LBE164:
+ 1089               	.LBE163:
+ 1090               	.LBB166:
+ 1091               	.LBB162:
+ 1092 0016 CF01      		movw r24,r30
+ 1093               	.LVL78:
+ 1094 0018 0E94 0000 		call chSemSignalI.part.1
+ 1095               	.LVL79:
+ 1096               	.LBE162:
+ 1097               	.LBE166:
+ 628:ChibiOS/os/nil/src/nil.c ****   chSysUnlock();
+ 1098               		.loc 1 628 0
+ 1099 001c 0E94 0000 		call chSchRescheduleS
+ 1100               	.LVL80:
+ 1101               	.LBB167:
+ 1102               	.LBB165:
+ 333:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 1103               		.loc 2 333 0
+ 1104               	/* #APP */
+ 1105               	 ;  333 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 1106 0020 7894      		sei
+ 1107               	 ;  0 "" 2
+ 1108               	/* #NOAPP */
+ 1109 0022 0895      		ret
+ 1110               	.LBE165:
+ 1111               	.LBE167:
+ 1112               		.cfi_endproc
+ 1113               	.LFE40:
+ 1115               		.section	.text.chSemSignalI,"ax",@progbits
+ 1116               	.global	chSemSignalI
+ 1118               	chSemSignalI:
+ 1119               	.LFB41:
+ 643:ChibiOS/os/nil/src/nil.c **** 
+ 1120               		.loc 1 643 0
+ 1121               		.cfi_startproc
+ 1122               	.LVL81:
+ 1123               	/* prologue: function */
+ 1124               	/* frame size = 0 */
+ 1125               	/* stack size = 0 */
+ 1126               	.L__stack_usage = 0
+ 1127 0000 FC01      		movw r30,r24
+ 645:ChibiOS/os/nil/src/nil.c ****     thread_reference_t tr = nil.threads;
+ 1128               		.loc 1 645 0
+ 1129 0002 9081      		ld r25,Z
+ 1130 0004 9F5F      		subi r25,lo8(-(1))
+ 1131 0006 9083      		st Z,r25
+ 1132 0008 1916      		cp __zero_reg__,r25
+ 1133 000a 04F4      		brge .L71
+ 1134 000c 0895      		ret
+ 1135               	.L71:
+ 1136 000e CF01      		movw r24,r30
+ 1137               	.LVL82:
+ 1138 0010 0C94 0000 		jmp chSemSignalI.part.1
+ 1139               	.LVL83:
+ 1140               		.cfi_endproc
+ 1141               	.LFE41:
+ 1143               		.section	.text.chSemResetI,"ax",@progbits
+ 1144               	.global	chSemResetI
+ 1146               	chSemResetI:
+ 1147               	.LFB43:
+ 657:ChibiOS/os/nil/src/nil.c **** 
+ 658:ChibiOS/os/nil/src/nil.c ****       chDbgAssert(tr < &nil.threads[NIL_CFG_NUM_THREADS],
+ 659:ChibiOS/os/nil/src/nil.c ****                   "pointer out of range");
+ 660:ChibiOS/os/nil/src/nil.c ****     }
+ 661:ChibiOS/os/nil/src/nil.c ****   }
+ 662:ChibiOS/os/nil/src/nil.c **** }
+ 663:ChibiOS/os/nil/src/nil.c **** 
+ 664:ChibiOS/os/nil/src/nil.c **** /**
+ 665:ChibiOS/os/nil/src/nil.c ****  * @brief   Performs a reset operation on the semaphore.
+ 666:ChibiOS/os/nil/src/nil.c ****  * @post    After invoking this function all the threads waiting on the
+ 667:ChibiOS/os/nil/src/nil.c ****  *          semaphore, if any, are released and the semaphore counter is set
+ 668:ChibiOS/os/nil/src/nil.c ****  *          to the specified, non negative, value.
+ 669:ChibiOS/os/nil/src/nil.c ****  *
+ 670:ChibiOS/os/nil/src/nil.c ****  * @param[in] sp        pointer to a @p semaphore_t structure
+ 671:ChibiOS/os/nil/src/nil.c ****  * @param[in] n         the new value of the semaphore counter. The value must
+ 672:ChibiOS/os/nil/src/nil.c ****  *                      be non-negative.
+ 673:ChibiOS/os/nil/src/nil.c ****  *
+ 674:ChibiOS/os/nil/src/nil.c ****  * @api
+ 675:ChibiOS/os/nil/src/nil.c ****  */
+ 676:ChibiOS/os/nil/src/nil.c **** void chSemReset(semaphore_t *sp, cnt_t n) {
+ 677:ChibiOS/os/nil/src/nil.c **** 
+ 678:ChibiOS/os/nil/src/nil.c ****   chSysLock();
+ 679:ChibiOS/os/nil/src/nil.c ****   chSemResetI(sp, n);
+ 680:ChibiOS/os/nil/src/nil.c ****   chSchRescheduleS();
+ 681:ChibiOS/os/nil/src/nil.c ****   chSysUnlock();
+ 682:ChibiOS/os/nil/src/nil.c **** }
+ 683:ChibiOS/os/nil/src/nil.c **** 
+ 684:ChibiOS/os/nil/src/nil.c **** /**
+ 685:ChibiOS/os/nil/src/nil.c ****  * @brief   Performs a reset operation on the semaphore.
+ 686:ChibiOS/os/nil/src/nil.c ****  * @post    After invoking this function all the threads waiting on the
+ 687:ChibiOS/os/nil/src/nil.c ****  *          semaphore, if any, are released and the semaphore counter is set
+ 688:ChibiOS/os/nil/src/nil.c ****  *          to the specified, non negative, value.
+ 689:ChibiOS/os/nil/src/nil.c ****  * @post    This function does not reschedule so a call to a rescheduling
+ 690:ChibiOS/os/nil/src/nil.c ****  *          function must be performed before unlocking the kernel. Note that
+ 691:ChibiOS/os/nil/src/nil.c ****  *          interrupt handlers always reschedule on exit so an explicit
+ 692:ChibiOS/os/nil/src/nil.c ****  *          reschedule must not be performed in ISRs.
+ 693:ChibiOS/os/nil/src/nil.c ****  *
+ 694:ChibiOS/os/nil/src/nil.c ****  * @param[in] sp        pointer to a @p semaphore_t structure
+ 695:ChibiOS/os/nil/src/nil.c ****  * @param[in] n         the new value of the semaphore counter. The value must
+ 696:ChibiOS/os/nil/src/nil.c ****  *                      be non-negative.
+ 697:ChibiOS/os/nil/src/nil.c ****  *
+ 698:ChibiOS/os/nil/src/nil.c ****  * @iclass
+ 699:ChibiOS/os/nil/src/nil.c ****  */
+ 700:ChibiOS/os/nil/src/nil.c **** void chSemResetI(semaphore_t *sp, cnt_t n) {
+ 1148               		.loc 1 700 0
+ 1149               		.cfi_startproc
+ 1150               	.LVL84:
+ 1151 0000 CF93      		push r28
+ 1152               	.LCFI12:
+ 1153               		.cfi_def_cfa_offset 3
+ 1154               		.cfi_offset 28, -2
+ 1155 0002 DF93      		push r29
+ 1156               	.LCFI13:
+ 1157               		.cfi_def_cfa_offset 4
+ 1158               		.cfi_offset 29, -3
+ 1159               	/* prologue: function */
+ 1160               	/* frame size = 0 */
+ 1161               	/* stack size = 2 */
+ 1162               	.L__stack_usage = 2
+ 701:ChibiOS/os/nil/src/nil.c ****   thread_t *tp;
+ 702:ChibiOS/os/nil/src/nil.c ****   cnt_t cnt;
+ 703:ChibiOS/os/nil/src/nil.c **** 
+ 704:ChibiOS/os/nil/src/nil.c ****   cnt = sp->cnt;
+ 1163               		.loc 1 704 0
+ 1164 0004 FC01      		movw r30,r24
+ 1165 0006 4081      		ld r20,Z
+ 1166               	.LVL85:
+ 705:ChibiOS/os/nil/src/nil.c ****   sp->cnt = n;
+ 1167               		.loc 1 705 0
+ 1168 0008 6083      		st Z,r22
+ 1169               	.LVL86:
+ 706:ChibiOS/os/nil/src/nil.c ****   tp = nil.threads;
+ 707:ChibiOS/os/nil/src/nil.c ****   while (cnt < (cnt_t)0) {
+ 1170               		.loc 1 707 0
+ 1171 000a 47FF      		sbrs r20,7
+ 1172 000c 00C0      		rjmp .L72
+ 1173 000e 6091 0000 		lds r22,nil+2
+ 1174 0012 7091 0000 		lds r23,nil+2+1
+ 1175               	.LVL87:
+ 1176 0016 E0E0      		ldi r30,lo8(nil+10)
+ 1177 0018 F0E0      		ldi r31,hi8(nil+10)
+ 1178               	.LBB168:
+ 1179               	.LBB169:
+ 369:ChibiOS/os/nil/src/nil.c ****   tp->state = NIL_STATE_READY;
+ 1180               		.loc 1 369 0
+ 1181 001a CEEF      		ldi r28,lo8(-2)
+ 1182 001c DFEF      		ldi r29,lo8(-1)
+ 1183 001e 00C0      		rjmp .L74
+ 1184               	.LVL88:
+ 1185               	.L75:
+ 1186 0020 3896      		adiw r30,8
+ 1187               	.LVL89:
+ 1188               	.L74:
+ 1189 0022 DF01      		movw r26,r30
+ 1190 0024 1297      		sbiw r26,2
+ 1191               	.LVL90:
+ 1192               	.LBE169:
+ 1193               	.LBE168:
+ 708:ChibiOS/os/nil/src/nil.c **** 
+ 709:ChibiOS/os/nil/src/nil.c ****     chDbgAssert(tp < &nil.threads[NIL_CFG_NUM_THREADS],
+ 710:ChibiOS/os/nil/src/nil.c ****                 "pointer out of range");
+ 711:ChibiOS/os/nil/src/nil.c **** 
+ 712:ChibiOS/os/nil/src/nil.c ****     /* Is this thread waiting on this semaphore?*/
+ 713:ChibiOS/os/nil/src/nil.c ****     if (tp->u1.semp == sp) {
+ 1194               		.loc 1 713 0
+ 1195 0026 2181      		ldd r18,Z+1
+ 1196 0028 3281      		ldd r19,Z+2
+ 1197 002a 2817      		cp r18,r24
+ 1198 002c 3907      		cpc r19,r25
+ 1199 002e 01F4      		brne .L75
+ 714:ChibiOS/os/nil/src/nil.c **** 
+ 715:ChibiOS/os/nil/src/nil.c ****       chDbgAssert(NIL_THD_IS_WTSEM(tp), "not waiting");
+ 716:ChibiOS/os/nil/src/nil.c **** 
+ 717:ChibiOS/os/nil/src/nil.c ****       cnt++;
+ 1200               		.loc 1 717 0
+ 1201 0030 4F5F      		subi r20,lo8(-(1))
+ 1202               	.LVL91:
+ 1203               	.LBB171:
+ 1204               	.LBB170:
+ 369:ChibiOS/os/nil/src/nil.c ****   tp->state = NIL_STATE_READY;
+ 1205               		.loc 1 369 0
+ 1206 0032 D283      		std Z+2,r29
+ 1207 0034 C183      		std Z+1,r28
+ 370:ChibiOS/os/nil/src/nil.c ****   tp->timeout = (systime_t)0;
+ 1208               		.loc 1 370 0
+ 1209 0036 1082      		st Z,__zero_reg__
+ 371:ChibiOS/os/nil/src/nil.c ****   if (tp < nil.next) {
+ 1210               		.loc 1 371 0
+ 1211 0038 1696      		adiw r26,5+1
+ 1212 003a 1C92      		st X,__zero_reg__
+ 1213 003c 1E92      		st -X,__zero_reg__
+ 1214 003e 1597      		sbiw r26,5
+ 1215 0040 A617      		cp r26,r22
+ 1216 0042 B707      		cpc r27,r23
+ 1217 0044 00F4      		brsh .L76
+ 1218 0046 BD01      		movw r22,r26
+ 1219               	.L76:
+ 1220               	.LVL92:
+ 1221 0048 3896      		adiw r30,8
+ 1222               	.LVL93:
+ 1223               	.LBE170:
+ 1224               	.LBE171:
+ 707:ChibiOS/os/nil/src/nil.c **** 
+ 1225               		.loc 1 707 0
+ 1226 004a 4111      		cpse r20,__zero_reg__
+ 1227 004c 00C0      		rjmp .L74
+ 1228 004e 7093 0000 		sts nil+2+1,r23
+ 1229 0052 6093 0000 		sts nil+2,r22
+ 1230               	.LVL94:
+ 1231               	.L72:
+ 1232               	/* epilogue start */
+ 718:ChibiOS/os/nil/src/nil.c ****       (void) chSchReadyI(tp, MSG_RESET);
+ 719:ChibiOS/os/nil/src/nil.c ****     }
+ 720:ChibiOS/os/nil/src/nil.c ****     tp++;
+ 721:ChibiOS/os/nil/src/nil.c ****   }
+ 722:ChibiOS/os/nil/src/nil.c **** }
+ 1233               		.loc 1 722 0
+ 1234 0056 DF91      		pop r29
+ 1235 0058 CF91      		pop r28
+ 1236 005a 0895      		ret
+ 1237               		.cfi_endproc
+ 1238               	.LFE43:
+ 1240               		.section	.text.chSemReset,"ax",@progbits
+ 1241               	.global	chSemReset
+ 1243               	chSemReset:
+ 1244               	.LFB42:
+ 676:ChibiOS/os/nil/src/nil.c **** 
+ 1245               		.loc 1 676 0
+ 1246               		.cfi_startproc
+ 1247               	.LVL95:
+ 1248               	/* prologue: function */
+ 1249               	/* frame size = 0 */
+ 1250               	/* stack size = 0 */
+ 1251               	.L__stack_usage = 0
+ 1252               	.LBB172:
+ 1253               	.LBB173:
+ 325:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 1254               		.loc 2 325 0
+ 1255               	/* #APP */
+ 1256               	 ;  325 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 1257 0000 F894      		cli
+ 1258               	 ;  0 "" 2
+ 1259               	/* #NOAPP */
+ 1260               	.LBE173:
+ 1261               	.LBE172:
+ 679:ChibiOS/os/nil/src/nil.c ****   chSchRescheduleS();
+ 1262               		.loc 1 679 0
+ 1263 0002 0E94 0000 		call chSemResetI
+ 1264               	.LVL96:
+ 680:ChibiOS/os/nil/src/nil.c ****   chSysUnlock();
+ 1265               		.loc 1 680 0
+ 1266 0006 0E94 0000 		call chSchRescheduleS
+ 1267               	.LVL97:
+ 1268               	.LBB174:
+ 1269               	.LBB175:
+ 333:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 1270               		.loc 2 333 0
+ 1271               	/* #APP */
+ 1272               	 ;  333 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 1273 000a 7894      		sei
+ 1274               	 ;  0 "" 2
+ 1275               	/* #NOAPP */
+ 1276 000c 0895      		ret
+ 1277               	.LBE175:
+ 1278               	.LBE174:
+ 1279               		.cfi_endproc
+ 1280               	.LFE42:
+ 1282               		.section	.text.chEvtSignalI,"ax",@progbits
+ 1283               	.global	chEvtSignalI
+ 1285               	chEvtSignalI:
+ 1286               	.LFB45:
+ 723:ChibiOS/os/nil/src/nil.c **** 
+ 724:ChibiOS/os/nil/src/nil.c **** #if (NIL_CFG_USE_EVENTS == TRUE) || defined(__DOXYGEN__)
+ 725:ChibiOS/os/nil/src/nil.c **** /**
+ 726:ChibiOS/os/nil/src/nil.c ****  * @brief   Adds a set of event flags directly to the specified @p thread_t.
+ 727:ChibiOS/os/nil/src/nil.c ****  *
+ 728:ChibiOS/os/nil/src/nil.c ****  * @param[in] tp        the thread to be signaled
+ 729:ChibiOS/os/nil/src/nil.c ****  * @param[in] mask      the event flags set to be ORed
+ 730:ChibiOS/os/nil/src/nil.c ****  *
+ 731:ChibiOS/os/nil/src/nil.c ****  * @api
+ 732:ChibiOS/os/nil/src/nil.c ****  */
+ 733:ChibiOS/os/nil/src/nil.c **** void chEvtSignal(thread_t *tp, eventmask_t mask) {
+ 734:ChibiOS/os/nil/src/nil.c **** 
+ 735:ChibiOS/os/nil/src/nil.c ****   chSysLock();
+ 736:ChibiOS/os/nil/src/nil.c ****   chEvtSignalI(tp, mask);
+ 737:ChibiOS/os/nil/src/nil.c ****   chSchRescheduleS();
+ 738:ChibiOS/os/nil/src/nil.c ****   chSysUnlock();
+ 739:ChibiOS/os/nil/src/nil.c **** }
+ 740:ChibiOS/os/nil/src/nil.c **** 
+ 741:ChibiOS/os/nil/src/nil.c **** /**
+ 742:ChibiOS/os/nil/src/nil.c ****  * @brief   Adds a set of event flags directly to the specified @p thread_t.
+ 743:ChibiOS/os/nil/src/nil.c ****  * @post    This function does not reschedule so a call to a rescheduling
+ 744:ChibiOS/os/nil/src/nil.c ****  *          function must be performed before unlocking the kernel. Note that
+ 745:ChibiOS/os/nil/src/nil.c ****  *          interrupt handlers always reschedule on exit so an explicit
+ 746:ChibiOS/os/nil/src/nil.c ****  *          reschedule must not be performed in ISRs.
+ 747:ChibiOS/os/nil/src/nil.c ****  *
+ 748:ChibiOS/os/nil/src/nil.c ****  * @param[in] tp        the thread to be signaled
+ 749:ChibiOS/os/nil/src/nil.c ****  * @param[in] mask      the event flags set to be ORed
+ 750:ChibiOS/os/nil/src/nil.c ****  *
+ 751:ChibiOS/os/nil/src/nil.c ****  * @iclass
+ 752:ChibiOS/os/nil/src/nil.c ****  */
+ 753:ChibiOS/os/nil/src/nil.c **** void chEvtSignalI(thread_t *tp, eventmask_t mask) {
+ 1287               		.loc 1 753 0
+ 1288               		.cfi_startproc
+ 1289               	.LVL98:
+ 1290               	/* prologue: function */
+ 1291               	/* frame size = 0 */
+ 1292               	/* stack size = 0 */
+ 1293               	.L__stack_usage = 0
+ 1294 0000 FC01      		movw r30,r24
+ 754:ChibiOS/os/nil/src/nil.c **** 
+ 755:ChibiOS/os/nil/src/nil.c ****   tp->epmask |= mask;
+ 1295               		.loc 1 755 0
+ 1296 0002 8781      		ldd r24,Z+7
+ 1297               	.LVL99:
+ 1298 0004 682B      		or r22,r24
+ 1299               	.LVL100:
+ 1300 0006 6783      		std Z+7,r22
+ 756:ChibiOS/os/nil/src/nil.c ****   if (NIL_THD_IS_WTOREVT(tp) &&
+ 1301               		.loc 1 756 0
+ 1302 0008 8281      		ldd r24,Z+2
+ 1303 000a 8430      		cpi r24,lo8(4)
+ 1304 000c 01F0      		breq .L87
+ 1305               	.L80:
+ 1306 000e 0895      		ret
+ 1307               	.L87:
+ 757:ChibiOS/os/nil/src/nil.c ****       ((tp->epmask & tp->u1.ewmask) != (eventmask_t)0)) {
+ 1308               		.loc 1 757 0 discriminator 1
+ 1309 0010 8381      		ldd r24,Z+3
+ 1310 0012 6823      		and r22,r24
+ 756:ChibiOS/os/nil/src/nil.c ****   if (NIL_THD_IS_WTOREVT(tp) &&
+ 1311               		.loc 1 756 0 discriminator 1
+ 1312 0014 01F0      		breq .L80
+ 1313               	.LVL101:
+ 1314               	.LBB180:
+ 1315               	.LBB181:
+ 1316               	.LBB182:
+ 369:ChibiOS/os/nil/src/nil.c ****   tp->state = NIL_STATE_READY;
+ 1317               		.loc 1 369 0
+ 1318 0016 1482      		std Z+4,__zero_reg__
+ 1319 0018 1382      		std Z+3,__zero_reg__
+ 370:ChibiOS/os/nil/src/nil.c ****   tp->timeout = (systime_t)0;
+ 1320               		.loc 1 370 0
+ 1321 001a 1282      		std Z+2,__zero_reg__
+ 371:ChibiOS/os/nil/src/nil.c ****   if (tp < nil.next) {
+ 1322               		.loc 1 371 0
+ 1323 001c 1682      		std Z+6,__zero_reg__
+ 1324 001e 1582      		std Z+5,__zero_reg__
+ 372:ChibiOS/os/nil/src/nil.c ****     nil.next = tp;
+ 1325               		.loc 1 372 0
+ 1326 0020 8091 0000 		lds r24,nil+2
+ 1327 0024 9091 0000 		lds r25,nil+2+1
+ 1328 0028 E817      		cp r30,r24
+ 1329 002a F907      		cpc r31,r25
+ 1330 002c 00F4      		brsh .L80
+ 373:ChibiOS/os/nil/src/nil.c ****   }
+ 1331               		.loc 1 373 0
+ 1332 002e F093 0000 		sts nil+2+1,r31
+ 1333 0032 E093 0000 		sts nil+2,r30
+ 1334 0036 0895      		ret
+ 1335               	.LBE182:
+ 1336               	.LBE181:
+ 1337               	.LBE180:
+ 1338               		.cfi_endproc
+ 1339               	.LFE45:
+ 1341               		.section	.text.chEvtSignal,"ax",@progbits
+ 1342               	.global	chEvtSignal
+ 1344               	chEvtSignal:
+ 1345               	.LFB44:
+ 733:ChibiOS/os/nil/src/nil.c **** 
+ 1346               		.loc 1 733 0
+ 1347               		.cfi_startproc
+ 1348               	.LVL102:
+ 1349               	/* prologue: function */
+ 1350               	/* frame size = 0 */
+ 1351               	/* stack size = 0 */
+ 1352               	.L__stack_usage = 0
+ 1353               	.LBB183:
+ 1354               	.LBB184:
+ 325:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 1355               		.loc 2 325 0
+ 1356               	/* #APP */
+ 1357               	 ;  325 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 1358 0000 F894      		cli
+ 1359               	 ;  0 "" 2
+ 1360               	/* #NOAPP */
+ 1361               	.LBE184:
+ 1362               	.LBE183:
+ 736:ChibiOS/os/nil/src/nil.c ****   chSchRescheduleS();
+ 1363               		.loc 1 736 0
+ 1364 0002 0E94 0000 		call chEvtSignalI
+ 1365               	.LVL103:
+ 737:ChibiOS/os/nil/src/nil.c ****   chSysUnlock();
+ 1366               		.loc 1 737 0
+ 1367 0006 0E94 0000 		call chSchRescheduleS
+ 1368               	.LVL104:
+ 1369               	.LBB185:
+ 1370               	.LBB186:
+ 333:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 1371               		.loc 2 333 0
+ 1372               	/* #APP */
+ 1373               	 ;  333 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 1374 000a 7894      		sei
+ 1375               	 ;  0 "" 2
+ 1376               	/* #NOAPP */
+ 1377 000c 0895      		ret
+ 1378               	.LBE186:
+ 1379               	.LBE185:
+ 1380               		.cfi_endproc
+ 1381               	.LFE44:
+ 1383               		.section	.text.chEvtWaitAnyTimeoutS,"ax",@progbits
+ 1384               	.global	chEvtWaitAnyTimeoutS
+ 1386               	chEvtWaitAnyTimeoutS:
+ 1387               	.LFB47:
+ 758:ChibiOS/os/nil/src/nil.c ****     (void) chSchReadyI(tp, MSG_OK);
+ 759:ChibiOS/os/nil/src/nil.c ****   }
+ 760:ChibiOS/os/nil/src/nil.c **** }
+ 761:ChibiOS/os/nil/src/nil.c **** 
+ 762:ChibiOS/os/nil/src/nil.c **** /**
+ 763:ChibiOS/os/nil/src/nil.c ****  * @brief   Waits for any of the specified events.
+ 764:ChibiOS/os/nil/src/nil.c ****  * @details The function waits for any event among those specified in
+ 765:ChibiOS/os/nil/src/nil.c ****  *          @p mask to become pending then the events are cleared and
+ 766:ChibiOS/os/nil/src/nil.c ****  *          returned.
+ 767:ChibiOS/os/nil/src/nil.c ****  *
+ 768:ChibiOS/os/nil/src/nil.c ****  * @param[in] mask      mask of the event flags that the function should wait
+ 769:ChibiOS/os/nil/src/nil.c ****  *                      for, @p ALL_EVENTS enables all the events
+ 770:ChibiOS/os/nil/src/nil.c ****  * @param[in] timeout   the number of ticks before the operation timeouts,
+ 771:ChibiOS/os/nil/src/nil.c ****  *                      the following special values are allowed:
+ 772:ChibiOS/os/nil/src/nil.c ****  *                      - @a TIME_IMMEDIATE immediate timeout.
+ 773:ChibiOS/os/nil/src/nil.c ****  *                      - @a TIME_INFINITE no timeout.
+ 774:ChibiOS/os/nil/src/nil.c ****  *                      .
+ 775:ChibiOS/os/nil/src/nil.c ****  * @return              The mask of the served and cleared events.
+ 776:ChibiOS/os/nil/src/nil.c ****  * @retval 0            if the operation has timed out.
+ 777:ChibiOS/os/nil/src/nil.c ****  *
+ 778:ChibiOS/os/nil/src/nil.c ****  * @api
+ 779:ChibiOS/os/nil/src/nil.c ****  */
+ 780:ChibiOS/os/nil/src/nil.c **** eventmask_t chEvtWaitAnyTimeout(eventmask_t mask, systime_t timeout) {
+ 781:ChibiOS/os/nil/src/nil.c ****   eventmask_t m;
+ 782:ChibiOS/os/nil/src/nil.c **** 
+ 783:ChibiOS/os/nil/src/nil.c ****   chSysLock();
+ 784:ChibiOS/os/nil/src/nil.c ****   m = chEvtWaitAnyTimeoutS(mask, timeout);
+ 785:ChibiOS/os/nil/src/nil.c ****   chSysUnlock();
+ 786:ChibiOS/os/nil/src/nil.c **** 
+ 787:ChibiOS/os/nil/src/nil.c ****   return m;
+ 788:ChibiOS/os/nil/src/nil.c **** }
+ 789:ChibiOS/os/nil/src/nil.c **** 
+ 790:ChibiOS/os/nil/src/nil.c **** /**
+ 791:ChibiOS/os/nil/src/nil.c ****  * @brief   Waits for any of the specified events.
+ 792:ChibiOS/os/nil/src/nil.c ****  * @details The function waits for any event among those specified in
+ 793:ChibiOS/os/nil/src/nil.c ****  *          @p mask to become pending then the events are cleared and
+ 794:ChibiOS/os/nil/src/nil.c ****  *          returned.
+ 795:ChibiOS/os/nil/src/nil.c ****  *
+ 796:ChibiOS/os/nil/src/nil.c ****  * @param[in] mask      mask of the event flags that the function should wait
+ 797:ChibiOS/os/nil/src/nil.c ****  *                      for, @p ALL_EVENTS enables all the events
+ 798:ChibiOS/os/nil/src/nil.c ****  * @param[in] timeout   the number of ticks before the operation timeouts,
+ 799:ChibiOS/os/nil/src/nil.c ****  *                      the following special values are allowed:
+ 800:ChibiOS/os/nil/src/nil.c ****  *                      - @a TIME_IMMEDIATE immediate timeout.
+ 801:ChibiOS/os/nil/src/nil.c ****  *                      - @a TIME_INFINITE no timeout.
+ 802:ChibiOS/os/nil/src/nil.c ****  *                      .
+ 803:ChibiOS/os/nil/src/nil.c ****  * @return              The mask of the served and cleared events.
+ 804:ChibiOS/os/nil/src/nil.c ****  * @retval 0            if the operation has timed out.
+ 805:ChibiOS/os/nil/src/nil.c ****  *
+ 806:ChibiOS/os/nil/src/nil.c ****  * @sclass
+ 807:ChibiOS/os/nil/src/nil.c ****  */
+ 808:ChibiOS/os/nil/src/nil.c **** eventmask_t chEvtWaitAnyTimeoutS(eventmask_t mask, systime_t timeout) {
+ 1388               		.loc 1 808 0
+ 1389               		.cfi_startproc
+ 1390               	.LVL105:
+ 1391 0000 1F93      		push r17
+ 1392               	.LCFI14:
+ 1393               		.cfi_def_cfa_offset 3
+ 1394               		.cfi_offset 17, -2
+ 1395 0002 CF93      		push r28
+ 1396               	.LCFI15:
+ 1397               		.cfi_def_cfa_offset 4
+ 1398               		.cfi_offset 28, -3
+ 1399 0004 DF93      		push r29
+ 1400               	.LCFI16:
+ 1401               		.cfi_def_cfa_offset 5
+ 1402               		.cfi_offset 29, -4
+ 1403               	/* prologue: function */
+ 1404               	/* frame size = 0 */
+ 1405               	/* stack size = 3 */
+ 1406               	.L__stack_usage = 3
+ 809:ChibiOS/os/nil/src/nil.c ****   thread_t *ctp = nil.current;
+ 1407               		.loc 1 809 0
+ 1408 0006 C091 0000 		lds r28,nil
+ 1409 000a D091 0000 		lds r29,nil+1
+ 1410               	.LVL106:
+ 810:ChibiOS/os/nil/src/nil.c ****   eventmask_t m;
+ 811:ChibiOS/os/nil/src/nil.c **** 
+ 812:ChibiOS/os/nil/src/nil.c ****   if ((m = (ctp->epmask & mask)) == (eventmask_t)0) {
+ 1411               		.loc 1 812 0
+ 1412 000e 2F81      		ldd r18,Y+7
+ 1413 0010 982F      		mov r25,r24
+ 1414 0012 9223      		and r25,r18
+ 1415               	.LVL107:
+ 1416 0014 01F4      		brne .L90
+ 813:ChibiOS/os/nil/src/nil.c ****     if (TIME_IMMEDIATE == timeout) {
+ 1417               		.loc 1 813 0
+ 1418 0016 6F3F      		cpi r22,-1
+ 1419 0018 9FEF      		ldi r25,-1
+ 1420 001a 7907      		cpc r23,r25
+ 1421               	.LVL108:
+ 1422 001c 01F0      		breq .L94
+ 1423 001e 182F      		mov r17,r24
+ 814:ChibiOS/os/nil/src/nil.c ****       chSysUnlock();
+ 815:ChibiOS/os/nil/src/nil.c **** 
+ 816:ChibiOS/os/nil/src/nil.c ****       return (eventmask_t)0;
+ 817:ChibiOS/os/nil/src/nil.c ****     }
+ 818:ChibiOS/os/nil/src/nil.c ****     ctp->u1.ewmask = mask;
+ 1424               		.loc 1 818 0
+ 1425 0020 8B83      		std Y+3,r24
+ 819:ChibiOS/os/nil/src/nil.c ****     if (chSchGoSleepTimeoutS(NIL_STATE_WTOREVT, timeout) < MSG_OK) {
+ 1426               		.loc 1 819 0
+ 1427 0022 84E0      		ldi r24,lo8(4)
+ 1428               	.LVL109:
+ 1429 0024 0E94 0000 		call chSchGoSleepTimeoutS
+ 1430               	.LVL110:
+ 1431 0028 97FD      		sbrc r25,7
+ 1432 002a 00C0      		rjmp .L94
+ 820:ChibiOS/os/nil/src/nil.c ****       chSysUnlock();
+ 821:ChibiOS/os/nil/src/nil.c **** 
+ 822:ChibiOS/os/nil/src/nil.c ****       return (eventmask_t)0;
+ 823:ChibiOS/os/nil/src/nil.c ****     }
+ 824:ChibiOS/os/nil/src/nil.c ****     m = ctp->epmask & mask;
+ 1433               		.loc 1 824 0
+ 1434 002c 2F81      		ldd r18,Y+7
+ 1435 002e 912F      		mov r25,r17
+ 1436 0030 9223      		and r25,r18
+ 1437               	.LVL111:
+ 1438               	.L90:
+ 825:ChibiOS/os/nil/src/nil.c ****   }
+ 826:ChibiOS/os/nil/src/nil.c ****   ctp->epmask &= ~m;
+ 1439               		.loc 1 826 0
+ 1440 0032 892F      		mov r24,r25
+ 1441 0034 8095      		com r24
+ 1442 0036 2823      		and r18,r24
+ 1443 0038 2F83      		std Y+7,r18
+ 827:ChibiOS/os/nil/src/nil.c **** 
+ 828:ChibiOS/os/nil/src/nil.c ****   return m;
+ 1444               		.loc 1 828 0
+ 1445 003a 892F      		mov r24,r25
+ 1446               	/* epilogue start */
+ 829:ChibiOS/os/nil/src/nil.c **** }
+ 1447               		.loc 1 829 0
+ 1448 003c DF91      		pop r29
+ 1449 003e CF91      		pop r28
+ 1450               	.LVL112:
+ 1451 0040 1F91      		pop r17
+ 1452 0042 0895      		ret
+ 1453               	.LVL113:
+ 1454               	.L94:
+ 1455               	.LBB187:
+ 1456               	.LBB188:
+ 333:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 1457               		.loc 2 333 0
+ 1458               	/* #APP */
+ 1459               	 ;  333 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 1460 0044 7894      		sei
+ 1461               	 ;  0 "" 2
+ 1462               	/* #NOAPP */
+ 1463               	.LBE188:
+ 1464               	.LBE187:
+ 822:ChibiOS/os/nil/src/nil.c ****     }
+ 1465               		.loc 1 822 0
+ 1466 0046 80E0      		ldi r24,0
+ 1467               	/* epilogue start */
+ 1468               		.loc 1 829 0
+ 1469 0048 DF91      		pop r29
+ 1470 004a CF91      		pop r28
+ 1471               	.LVL114:
+ 1472 004c 1F91      		pop r17
+ 1473 004e 0895      		ret
+ 1474               		.cfi_endproc
+ 1475               	.LFE47:
+ 1477               		.section	.text.chEvtWaitAnyTimeout,"ax",@progbits
+ 1478               	.global	chEvtWaitAnyTimeout
+ 1480               	chEvtWaitAnyTimeout:
+ 1481               	.LFB46:
+ 780:ChibiOS/os/nil/src/nil.c ****   eventmask_t m;
+ 1482               		.loc 1 780 0
+ 1483               		.cfi_startproc
+ 1484               	.LVL115:
+ 1485               	/* prologue: function */
+ 1486               	/* frame size = 0 */
+ 1487               	/* stack size = 0 */
+ 1488               	.L__stack_usage = 0
+ 1489               	.LBB189:
+ 1490               	.LBB190:
+ 325:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 1491               		.loc 2 325 0
+ 1492               	/* #APP */
+ 1493               	 ;  325 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 1494 0000 F894      		cli
+ 1495               	 ;  0 "" 2
+ 1496               	/* #NOAPP */
+ 1497               	.LBE190:
+ 1498               	.LBE189:
+ 784:ChibiOS/os/nil/src/nil.c ****   chSysUnlock();
+ 1499               		.loc 1 784 0
+ 1500 0002 0E94 0000 		call chEvtWaitAnyTimeoutS
+ 1501               	.LVL116:
+ 1502               	.LBB191:
+ 1503               	.LBB192:
+ 333:ChibiOS/os/nil/ports/AVR/nilcore.h **** }
+ 1504               		.loc 2 333 0
+ 1505               	/* #APP */
+ 1506               	 ;  333 "ChibiOS/os/nil/ports/AVR/nilcore.h" 1
+ 1507 0006 7894      		sei
+ 1508               	 ;  0 "" 2
+ 1509               	/* #NOAPP */
+ 1510               	.LBE192:
+ 1511               	.LBE191:
+ 788:ChibiOS/os/nil/src/nil.c **** 
+ 1512               		.loc 1 788 0
+ 1513 0008 0895      		ret
+ 1514               		.cfi_endproc
+ 1515               	.LFE46:
+ 1517               		.comm	nil,32,1
+ 1518               		.text
+ 1519               	.Letext0:
+ 1520               		.file 5 "ChibiOS/os/nil/include/nil.h"
+ 1521               		.file 6 "c:\\program files (x86)\\atmel\\studio\\7.0\\toolchain\\avr8\\avr8-gnu-toolchain\\avr\\in
+ 1522               		.file 7 "ChibiOS/os/nil/ports/AVR/compilers/GCC/niltypes.h"
+ 1523               		.file 8 "ChibiOS/os/hal/include/st.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 nil.c
+C:\Users\Noah\AppData\Local\Temp\cccsHypG.s:2      *ABS*:0000003e __SP_H__
+C:\Users\Noah\AppData\Local\Temp\cccsHypG.s:3      *ABS*:0000003d __SP_L__
+C:\Users\Noah\AppData\Local\Temp\cccsHypG.s:4      *ABS*:0000003f __SREG__
+C:\Users\Noah\AppData\Local\Temp\cccsHypG.s:5      *ABS*:00000000 __tmp_reg__
+C:\Users\Noah\AppData\Local\Temp\cccsHypG.s:6      *ABS*:00000001 __zero_reg__
+C:\Users\Noah\AppData\Local\Temp\cccsHypG.s:12     .text.chSemSignalI.part.1:00000000 chSemSignalI.part.1
+                            *COM*:00000020 nil
+C:\Users\Noah\AppData\Local\Temp\cccsHypG.s:76     .text.chSysInit:00000000 chSysInit
+C:\Users\Noah\AppData\Local\Temp\cccsHypG.s:187    .text.chSysHalt:00000000 chSysHalt
+C:\Users\Noah\AppData\Local\Temp\cccsHypG.s:215    .text.chSysTimerHandlerI:00000000 chSysTimerHandlerI
+C:\Users\Noah\AppData\Local\Temp\cccsHypG.s:429    .text.chSysUnconditionalLock:00000000 chSysUnconditionalLock
+C:\Users\Noah\AppData\Local\Temp\cccsHypG.s:445    .text.chSysUnconditionalUnlock:00000000 chSysUnconditionalUnlock
+C:\Users\Noah\AppData\Local\Temp\cccsHypG.s:471    .text.chSysGetStatusAndLockX:00000000 chSysGetStatusAndLockX
+C:\Users\Noah\AppData\Local\Temp\cccsHypG.s:489    .text.chSysRestoreStatusX:00000000 chSysRestoreStatusX
+C:\Users\Noah\AppData\Local\Temp\cccsHypG.s:505    .text.chSchReadyI:00000000 chSchReadyI
+C:\Users\Noah\AppData\Local\Temp\cccsHypG.s:541    .text.chSchRescheduleS:00000000 chSchRescheduleS
+C:\Users\Noah\AppData\Local\Temp\cccsHypG.s:574    .text.chSchGoSleepTimeoutS:00000000 chSchGoSleepTimeoutS
+C:\Users\Noah\AppData\Local\Temp\cccsHypG.s:760    .text.chThdSuspendTimeoutS:00000000 chThdSuspendTimeoutS
+C:\Users\Noah\AppData\Local\Temp\cccsHypG.s:794    .text.chThdResumeI:00000000 chThdResumeI
+C:\Users\Noah\AppData\Local\Temp\cccsHypG.s:848    .text.chThdSleep:00000000 chThdSleep
+C:\Users\Noah\AppData\Local\Temp\cccsHypG.s:890    .text.chThdSleepUntil:00000000 chThdSleepUntil
+C:\Users\Noah\AppData\Local\Temp\cccsHypG.s:943    .text.chSemWaitTimeoutS:00000000 chSemWaitTimeoutS
+C:\Users\Noah\AppData\Local\Temp\cccsHypG.s:1003   .text.chSemWaitTimeout:00000000 chSemWaitTimeout
+C:\Users\Noah\AppData\Local\Temp\cccsHypG.s:1043   .text.chSemSignal:00000000 chSemSignal
+C:\Users\Noah\AppData\Local\Temp\cccsHypG.s:1118   .text.chSemSignalI:00000000 chSemSignalI
+C:\Users\Noah\AppData\Local\Temp\cccsHypG.s:1146   .text.chSemResetI:00000000 chSemResetI
+C:\Users\Noah\AppData\Local\Temp\cccsHypG.s:1243   .text.chSemReset:00000000 chSemReset
+C:\Users\Noah\AppData\Local\Temp\cccsHypG.s:1285   .text.chEvtSignalI:00000000 chEvtSignalI
+C:\Users\Noah\AppData\Local\Temp\cccsHypG.s:1344   .text.chEvtSignal:00000000 chEvtSignal
+C:\Users\Noah\AppData\Local\Temp\cccsHypG.s:1386   .text.chEvtWaitAnyTimeoutS:00000000 chEvtWaitAnyTimeoutS
+C:\Users\Noah\AppData\Local\Temp\cccsHypG.s:1480   .text.chEvtWaitAnyTimeout:00000000 chEvtWaitAnyTimeout
+
+UNDEFINED SYMBOLS
+_port_thread_start
+nil_thd_configs
+_port_switch
+stStopAlarm
+stSetAlarm
+stStartAlarm
+__do_clear_bss

@@ -1,0 +1,396 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="14.0">
+  <PropertyGroup>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectVersion>7.0</ProjectVersion>
+    <ToolchainName>com.Atmel.AVRGCC8.C</ToolchainName>
+    <ProjectGuid>dce6c7e3-ee26-4d79-826b-08594b9ad897</ProjectGuid>
+    <avrdevice>ATmega328P</avrdevice>
+    <avrdeviceseries>none</avrdeviceseries>
+    <OutputType>Executable</OutputType>
+    <Language>C</Language>
+    <OutputFileName>$(MSBuildProjectName)</OutputFileName>
+    <OutputFileExtension>.elf</OutputFileExtension>
+    <OutputDirectory>$(MSBuildProjectDirectory)\$(Configuration)</OutputDirectory>
+    <AssemblyName>ChibiOS</AssemblyName>
+    <Name>ChibiOS</Name>
+    <RootNamespace>ChibiOS</RootNamespace>
+    <ToolchainFlavour>Native</ToolchainFlavour>
+    <KeepTimersRunning>true</KeepTimersRunning>
+    <OverrideVtor>false</OverrideVtor>
+    <CacheFlash>true</CacheFlash>
+    <ProgFlashFromRam>true</ProgFlashFromRam>
+    <RamSnippetAddress>0x20000000</RamSnippetAddress>
+    <UncachedRange />
+    <preserveEEPROM>true</preserveEEPROM>
+    <OverrideVtorValue>exception_table</OverrideVtorValue>
+    <BootSegment>2</BootSegment>
+    <eraseonlaunchrule>0</eraseonlaunchrule>
+    <AsfFrameworkConfig>
+      <framework-data xmlns="">
+        <options />
+        <configurations />
+        <files />
+        <documentation help="" />
+        <offline-documentation help="" />
+        <dependencies>
+          <content-extension eid="atmel.asf" uuidref="Atmel.ASF" version="3.32.0" />
+        </dependencies>
+      </framework-data>
+    </AsfFrameworkConfig>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <ToolchainSettings>
+      <AvrGcc>
+  <avrgcc.common.Device>-mmcu=atmega328p -B "%24(PackRepoDir)\atmel\ATmega_DFP\1.1.130\gcc\dev\atmega328p"</avrgcc.common.Device>
+  <avrgcc.common.outputfiles.hex>True</avrgcc.common.outputfiles.hex>
+  <avrgcc.common.outputfiles.lss>True</avrgcc.common.outputfiles.lss>
+  <avrgcc.common.outputfiles.eep>True</avrgcc.common.outputfiles.eep>
+  <avrgcc.common.outputfiles.srec>True</avrgcc.common.outputfiles.srec>
+  <avrgcc.common.outputfiles.usersignatures>False</avrgcc.common.outputfiles.usersignatures>
+  <avrgcc.compiler.general.ChangeDefaultCharTypeUnsigned>True</avrgcc.compiler.general.ChangeDefaultCharTypeUnsigned>
+  <avrgcc.compiler.general.ChangeDefaultBitFieldUnsigned>True</avrgcc.compiler.general.ChangeDefaultBitFieldUnsigned>
+  <avrgcc.compiler.symbols.DefSymbols>
+    <ListValues>
+      <Value>NDEBUG</Value>
+    </ListValues>
+  </avrgcc.compiler.symbols.DefSymbols>
+  <avrgcc.compiler.directories.IncludePaths>
+    <ListValues>
+      <Value>%24(PackRepoDir)\atmel\ATmega_DFP\1.1.130\include</Value>
+    </ListValues>
+  </avrgcc.compiler.directories.IncludePaths>
+  <avrgcc.compiler.optimization.level>Optimize for size (-Os)</avrgcc.compiler.optimization.level>
+  <avrgcc.compiler.optimization.PackStructureMembers>True</avrgcc.compiler.optimization.PackStructureMembers>
+  <avrgcc.compiler.optimization.AllocateBytesNeededForEnum>True</avrgcc.compiler.optimization.AllocateBytesNeededForEnum>
+  <avrgcc.compiler.warnings.AllWarnings>True</avrgcc.compiler.warnings.AllWarnings>
+  <avrgcc.linker.libraries.Libraries>
+    <ListValues>
+      <Value>nil.h</Value>
+    </ListValues>
+  </avrgcc.linker.libraries.Libraries>
+  <avrgcc.linker.libraries.LibrarySearchPaths>
+    <ListValues>
+      <Value>C:\Users\Noah\Documents\code\lasertag\lasertag\DuinoTagHardware\ChibiOS\ChibiOS\ChibiOS\os\hal\include</Value>
+      <Value>C:\Users\Noah\Documents\code\lasertag\lasertag\DuinoTagHardware\ChibiOS\ChibiOS\ChibiOS\os\nil\include</Value>
+    </ListValues>
+  </avrgcc.linker.libraries.LibrarySearchPaths>
+  <avrgcc.assembler.general.IncludePaths>
+    <ListValues>
+      <Value>%24(PackRepoDir)\atmel\ATmega_DFP\1.1.130\include</Value>
+    </ListValues>
+  </avrgcc.assembler.general.IncludePaths>
+</AvrGcc>
+    </ToolchainSettings>
+    <UsesExternalMakeFile>True</UsesExternalMakeFile>
+    <OutputDirectory>C:\Users\Noah\Documents\code\lasertag\lasertag\DuinoTagHardware\ChibiOS\ChibiOS</OutputDirectory>
+    <BuildTarget>all</BuildTarget>
+    <CleanTarget>clean</CleanTarget>
+    <ExternalMakeFilePath>C:\Users\Noah\Documents\code\lasertag\lasertag\DuinoTagHardware\ChibiOS\ChibiOS\Makefile</ExternalMakeFilePath>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <ToolchainSettings>
+      <AvrGcc>
+  <avrgcc.common.Device>-mmcu=atmega328p -B "%24(PackRepoDir)\atmel\ATmega_DFP\1.1.130\gcc\dev\atmega328p"</avrgcc.common.Device>
+  <avrgcc.common.outputfiles.hex>True</avrgcc.common.outputfiles.hex>
+  <avrgcc.common.outputfiles.lss>True</avrgcc.common.outputfiles.lss>
+  <avrgcc.common.outputfiles.eep>True</avrgcc.common.outputfiles.eep>
+  <avrgcc.common.outputfiles.srec>True</avrgcc.common.outputfiles.srec>
+  <avrgcc.common.outputfiles.usersignatures>False</avrgcc.common.outputfiles.usersignatures>
+  <avrgcc.compiler.general.ChangeDefaultCharTypeUnsigned>True</avrgcc.compiler.general.ChangeDefaultCharTypeUnsigned>
+  <avrgcc.compiler.general.ChangeDefaultBitFieldUnsigned>True</avrgcc.compiler.general.ChangeDefaultBitFieldUnsigned>
+  <avrgcc.compiler.symbols.DefSymbols>
+    <ListValues>
+      <Value>DEBUG</Value>
+    </ListValues>
+  </avrgcc.compiler.symbols.DefSymbols>
+  <avrgcc.compiler.directories.IncludePaths>
+    <ListValues>
+      <Value>%24(PackRepoDir)\atmel\ATmega_DFP\1.1.130\include</Value>
+    </ListValues>
+  </avrgcc.compiler.directories.IncludePaths>
+  <avrgcc.compiler.optimization.level>Optimize (-O1)</avrgcc.compiler.optimization.level>
+  <avrgcc.compiler.optimization.PackStructureMembers>True</avrgcc.compiler.optimization.PackStructureMembers>
+  <avrgcc.compiler.optimization.AllocateBytesNeededForEnum>True</avrgcc.compiler.optimization.AllocateBytesNeededForEnum>
+  <avrgcc.compiler.optimization.DebugLevel>Default (-g2)</avrgcc.compiler.optimization.DebugLevel>
+  <avrgcc.compiler.warnings.AllWarnings>True</avrgcc.compiler.warnings.AllWarnings>
+  <avrgcc.linker.libraries.Libraries>
+    <ListValues>
+      <Value>nil.h</Value>
+    </ListValues>
+  </avrgcc.linker.libraries.Libraries>
+  <avrgcc.linker.libraries.LibrarySearchPaths>
+    <ListValues>
+      <Value>C:\Users\Noah\Documents\code\lasertag\lasertag\DuinoTagHardware\ChibiOS\ChibiOS\ChibiOS\os\hal\include</Value>
+      <Value>C:\Users\Noah\Documents\code\lasertag\lasertag\DuinoTagHardware\ChibiOS\ChibiOS\ChibiOS\os\nil\include</Value>
+    </ListValues>
+  </avrgcc.linker.libraries.LibrarySearchPaths>
+  <avrgcc.assembler.general.IncludePaths>
+    <ListValues>
+      <Value>%24(PackRepoDir)\atmel\ATmega_DFP\1.1.130\include</Value>
+    </ListValues>
+  </avrgcc.assembler.general.IncludePaths>
+  <avrgcc.assembler.debugging.DebugLevel>Default (-Wa,-g)</avrgcc.assembler.debugging.DebugLevel>
+</AvrGcc>
+    </ToolchainSettings>
+    <UsesExternalMakeFile>True</UsesExternalMakeFile>
+    <OutputDirectory>C:\Users\Noah\Documents\code\lasertag\lasertag\DuinoTagHardware\ChibiOS\ChibiOS</OutputDirectory>
+    <BuildTarget>all</BuildTarget>
+    <CleanTarget>clean</CleanTarget>
+    <ExternalMakeFilePath>C:\Users\Noah\Documents\code\lasertag\lasertag\DuinoTagHardware\ChibiOS\ChibiOS\Makefile</ExternalMakeFilePath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="ChibiAtmelStudioReference\adc.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\adc_lld.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\avr_pins.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\avr_timers.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\board.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\can.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\ch.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\chbsem.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\chcond.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\chcore.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\chcore_timer.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\chcustomer.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\chdebug.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\chdynamic.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\chevents.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\chheap.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\chlicense.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\chmboxes.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\chmemcore.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\chmempools.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\chmsg.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\chmtx.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\chprintf.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\chqueues.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\chregistry.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\chschd.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\chsem.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\chstats.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\chstreams.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\chsys.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\chsystypes.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\chthreads.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\chtm.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\chvt.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\dac.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\ext.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\gpt.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\gpt_lld.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\hal.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\hal_buffers.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\hal_channels.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\hal_files.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\hal_ioblock.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\hal_lld.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\hal_mmcsd.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\hal_queues.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\hal_streams.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\i2c.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\i2c_lld.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\i2s.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\icu.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\icu_lld.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\mac.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\memstreams.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\mii.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\mmc_spi.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\nil.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\nilcore.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\nilcore_timer.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\nullstreams.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\osal.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\pal.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\pal_lld.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\pwm.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\pwm_lld.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\rtc.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\sdc.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\serial.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\serial_usb.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\spi.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\spi_lld.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\st.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\st_lld.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\uart.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\usb.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\usb_cdc.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ChibiAtmelStudioReference\wdg.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="halconf.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="main.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="mcuconf.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="nilconf.h">
+      <SubType>compile</SubType>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Makefile">
+      <SubType>compile</SubType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="ChibiAtmelStudioReference" />
+  </ItemGroup>
+  <Import Project="$(AVRSTUDIO_EXE_PATH)\\Vs\\Compiler.targets" />
+</Project>
