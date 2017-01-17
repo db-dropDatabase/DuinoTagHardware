@@ -57,14 +57,14 @@ TARGET = ChibiOS
 OBJDIR = .
 
 # Imported source files
-CHIBIOS = ChibiOS
+CHIBIOS = ./ChibiOS
 include $(CHIBIOS)/os/hal/hal.mk
 include $(CHIBIOS)/os/hal/boards/ARDUINO_UNO/board.mk
 include $(CHIBIOS)/os/hal/ports/AVR/platform.mk
-include $(CHIBIOS)/os/hal/osal/nil/osal.mk
-include $(CHIBIOS)/os/nil/nil.mk
-include $(CHIBIOS)/os/nil/ports/AVR/compilers/GCC/mk/port.mk
-include $(CHIBIOS)/test/nil/test.mk
+include $(CHIBIOS)/os/hal/osal/rt/osal.mk
+include $(CHIBIOS)/os/rt/rt.mk
+include $(CHIBIOS)/os/rt/ports/AVR/compilers/GCC/mk/port.mk
+#include $(CHIBIOS)/test/rt/test.mk
 
 # List C source files here. (C dependencies are automatically generated.)
 SRC = $(KERNSRC) \
@@ -73,7 +73,7 @@ SRC = $(KERNSRC) \
       $(HALSRC) \
       $(PLATFORMSRC) \
       $(BOARDSRC) \
-      $(TESTSRC) \
+      $(CHIBIOS)/os/various/evtimer.c \
       main.c
 
 # List C++ source files here. (C dependencies are automatically generated.)
@@ -254,10 +254,10 @@ LDFLAGS += $(PRINTF_LIB) $(SCANF_LIB) $(MATH_LIB)
 # Type: avrdude -c ?
 # to get a full listing.
 #
-AVRDUDE_PROGRAMMER = avrisp2
+AVRDUDE_PROGRAMMER = avrisp2 
 
 # com1 = serial port. Use lpt1 to connect to parallel port.
-AVRDUDE_PORT = /dev/tty.usbmodem00034091  # programmer connected to serial device
+AVRDUDE_PORT = /dev/tty.usbmodem00034091
 
 AVRDUDE_WRITE_FLASH = -U flash:w:$(TARGET).hex
 #AVRDUDE_WRITE_EEPROM = -U eeprom:w:$(TARGET).eep

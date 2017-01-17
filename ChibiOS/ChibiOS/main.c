@@ -14,51 +14,19 @@
     limitations under the License.
 */
 
+#include <ch.h>
 #include <hal.h>
-#include <nil.h>
 
-/*
- * Thread 1.
- */
-THD_WORKING_AREA(waThread1, 128);
-THD_FUNCTION(Thread1, arg) {
+static WORKING_AREA(waThread1, 32);
+static THD_FUNCTION(Thread1, arg) {
 
   (void)arg;
-
+  chRegSetThreadName("Blinker");
   while (true) {
     palTogglePad(IOPORT2, PORTB_LED1);
-    chThdSleepMilliseconds(500);
+    chThdSleepMilliseconds(1000);
   }
 }
-
-/*
- * Thread 2.
- */
-THD_WORKING_AREA(waThread2, 128);
-THD_FUNCTION(Thread2, arg) {
-
-  (void)arg;
-
-  /*
-   * Activates the serial driver 1 using the driver default configuration.
-   * PA9 and PA10 are routed to USART1.
-   */
-  sdStart(&SD1, NULL);
-
-  while (true) {
-    chnWrite(&SD1, (const uint8_t *)"Hello World!\r\n", 14);
-    chThdSleepMilliseconds(2000);
-  }
-}
-
-/*
- * Threads static table, one entry per thread. The number of entries must
- * match NIL_CFG_NUM_THREADS.
- */
-THD_TABLE_BEGIN
-  THD_TABLE_ENTRY(waThread1, "blinker", Thread1, NULL)
-  THD_TABLE_ENTRY(waThread2, "hello", Thread2, NULL)
-THD_TABLE_END
 
 /*
  * Application entry point.
@@ -74,10 +42,21 @@ int main(void) {
    */
   halInit();
   chSysInit();
-  /* This is now the idle thread loop, you may perform here a low priority
-     task but you must never try to sleep or wait in this loop. Note that
-     this tasks runs at the lowest priority level so any instruction added
-     here will be executed after all other tasks have been started.*/
-  while (true) {
+
+  palClearPad(IOPORT2, PORTB_LED1);
+
+  /*
+   * Activates the serial driver 1 using the driver default configuration.
+   */
+  sdStart(&SD1, NULL);
+
+  /*
+   * Starts the LED blinker thread.
+   */
+  chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO, Thread1, NULL);
+
+  chnWrite(&SD1, (const uint8_t *)"Hello World!\r\n", 14);
+  while(TRUE) {
+    chThdSleepMilliseconds(1000);
   }
 }
