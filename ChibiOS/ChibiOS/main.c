@@ -16,16 +16,41 @@
 
 #include <ch.h>
 #include <hal.h>
+#include <CheapRandom.h>
 
-static WORKING_AREA(waThread1, 32);
-static THD_FUNCTION(Thread1, arg) {
+static WORKING_AREA(waBlinker1, 32);
+static THD_FUNCTION(Blinker1, arg) {
 
   (void)arg;
-  chRegSetThreadName("Blinker");
+  
   while (true) {
     palTogglePad(IOPORT2, PORTB_LED1);
     chThdSleepMilliseconds(1000);
   }
+}
+
+static WORKING_AREA(waBlinker2, 40);
+static THD_FUNCTION(Blinker2, arg) {
+	
+	(void)arg;
+
+	while(TRUE){
+		uint8_t randNum;
+		returnRandom(&randNum);
+		
+		palSetPad(IOPORT2, *arg);
+		
+		chThdSleepMilliseconds(randNum + 135);
+		
+		palClearPad(IOPORT2, *arg);
+		
+		chThdSleepMilliseconds(235 - randNum);
+		
+		returnRandom(&randNum);
+		
+		chThdSleepMilliseconds(randNum * 10);
+	}
+	
 }
 
 /*
@@ -53,7 +78,8 @@ int main(void) {
   /*
    * Starts the LED blinker thread.
    */
-  chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO, Thread1, NULL);
+  chThdCreateStatic(waBlinker1, sizeof(waBlinker1), NORMALPRIO, Blinker1, NULL);
+  chThdCreateStatic(waBlinker2, sizeof(waBlinker2), NORMALPRIO, Blinker2, &PB2);
 
   chnWrite(&SD1, (const uint8_t *)"Hello World!\r\n", 14);
   while(TRUE) {

@@ -74,7 +74,8 @@ SRC = $(KERNSRC) \
       $(PLATFORMSRC) \
       $(BOARDSRC) \
       $(CHIBIOS)/os/various/evtimer.c \
-      main.c
+      main.c \
+	  CheapRandom.c
 
 # List C++ source files here. (C dependencies are automatically generated.)
 CPPSRC =

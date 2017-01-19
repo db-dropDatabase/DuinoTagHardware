@@ -163,12 +163,18 @@
       </AvrGcc>
     </ToolchainSettings>
     <UsesExternalMakeFile>True</UsesExternalMakeFile>
-    <OutputDirectory>C:\Users\Noah\Documents\code\lasertag\lasertag\DuinoTagHardware\ChibiOS\ChibiOS</OutputDirectory>
+    <OutputDirectory>C:\Users\nkoontz0516\Documents\DuinoStuff\ChibiOS\ChibiOS</OutputDirectory>
     <BuildTarget>all</BuildTarget>
     <CleanTarget>clean</CleanTarget>
-    <ExternalMakeFilePath>C:\Users\Noah\Documents\code\lasertag\lasertag\DuinoTagHardware\ChibiOS\ChibiOS\Makefile</ExternalMakeFilePath>
+    <ExternalMakeFilePath>C:\Users\nkoontz0516\Documents\DuinoStuff\ChibiOS\ChibiOS\Makefile</ExternalMakeFilePath>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="CheapRandom.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="CheapRandom.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="ChibiAtmelStudioReference\adc.h">
       <SubType>compile</SubType>
     </Compile>
@@ -407,9 +413,6 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="mcuconf.h">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="nilconf.h">
       <SubType>compile</SubType>
     </Compile>
   </ItemGroup>
