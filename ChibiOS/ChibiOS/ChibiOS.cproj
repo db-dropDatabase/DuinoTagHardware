@@ -66,7 +66,7 @@
       </ToolNumber>
       <ToolName xmlns="">Simulator</ToolName>
     </com_atmel_avrdbg_tool_simulator>
-    <CustomProgrammingToolCommand>"C:\Program Files (x86)\Arduino\hardware\tools\avr\bin\avrdude.exe" -C "C:\Program Files (x86)\Arduino\hardware\tools\avr\etc\avrdude.conf" -p atmega328p -c arduino -P COM5 -b 115200 -U flash:w:"C:\Users\Noah\Documents\code\lasertag\lasertag\DuinoTagHardware\ChibiOS\ChibiOS\ChibiOS.hex":i</CustomProgrammingToolCommand>
+    <CustomProgrammingToolCommand>"C:\Program Files (x86)\Arduino\hardware\tools\avr\bin\avrdude.exe" -C "C:\Program Files (x86)\Arduino\hardware\tools\avr\etc\avrdude.conf" -p atmega328p -c arduino -P COM6 -b 115200 -U flash:w:"C:\Users\nkoontz0516\Documents\DuinoStuff\ChibiOS\ChibiOS\ChibiOS.hex":i</CustomProgrammingToolCommand>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <ToolchainSettings>
