@@ -21,7 +21,7 @@
 #include <util/delay.h>
 #include "debounce.h"
 
-typedef struct animation {
+typedef struct _animation {
 	unsigned char frameLength;
 	unsigned char frameNum;
 	unsigned char frames[]; //formatted as such {frame, frame, noseLED, noseLED}
@@ -41,7 +41,14 @@ const volatile animation_t oregonSign = {
 	0, 1, 1, 1}
 };
 
-const volatile animation_t * animRay[] = {&simpleBlink, &oregonSign};
+const volatile animation_t openSign = {
+	.frameLength = 24,
+	.frameNum = 19,
+	.frames = {0b00000000, 0b00000000, 0b10000000, 0b11000000, 0b11100000, 0b11110000, 0b11111000, 0b11111100, 0b11111110, 0b11111111, 0b11111111, 0b00000000, 0b00000000, 0b11111111, 0b11111111, 0b00000000, 0b00000000, 0b11111111, 0b11111111,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 1}
+};
+
+const volatile animation_t * animRay[] = {&simpleBlink, &oregonSign, &openSign};
 
 volatile unsigned char lastButtonState = 0;
 volatile unsigned char pressTime = 0;
@@ -49,6 +56,10 @@ volatile unsigned char pressTime = 0;
 volatile unsigned char animationCycle = 0;
 volatile unsigned char animationState = 0;
 volatile unsigned char animationPoint = 0;
+
+volatile unsigned char ledNum = 0;
+
+volatile unsigned char clkDiv = 0;
 
 static inline void sendLEDs(const unsigned char data){
 	//pulse clock and data eight times
@@ -105,7 +116,7 @@ int main(void)
 	
 	//init timer0 interrupt
 	GTCCR |= (1 << TSM); //pause timer
-	TCCR0B |= (1 << CS01) | (1 << CS00);  //clk/64
+	TCCR0B |= (1 << CS01);  //clk/8
 	TIMSK |= (1 << TOIE0); //enable timer overflow interrupt
 	GTCCR &= ~(1 << TSM); //unpause timer
 
@@ -126,44 +137,52 @@ int main(void)
 ISR(TIMER0_COMPA_vect){
 	//turn off LEDs for brightness
 	sendLEDs(0b00000000);
+	PORTB &= ~(1 << NOSE);
 }
 
 ISR(TIMER0_OVF_vect){
-	if(!(PINB & (1 << BUTTON)) && pressTime < 0xff) pressTime++; //if button reads pressed, inc varible
-	else pressTime = 0;
+	if(++clkDiv >= 8){
+		clkDiv = 0;
+		if(!(PINB & (1 << BUTTON)) && pressTime < 0xff) pressTime++; //if button reads pressed, inc varible
+		else pressTime = 0;
 
-	//if button is simply long pressed
-	if(pressTime == LONGPRESS){
-		//long press code
-		uint8_t temp = getBrightness() + 32;
-		if(temp >= 128) temp = 0;
-		setBrightness(temp);
-	}
-	//else if button is not pressed, but it was pressed before (can't repeat)
-	else if(lastButtonState > SHORTPRESS && lastButtonState < LONGPRESS && !pressTime){
-		//short press code
-		if(++animationPoint >= 2)
+		//if button is simply long pressed
+		if(pressTime == LONGPRESS){
+			//long press code
+			uint8_t temp = getBrightness() + 32;
+			if(temp >= 128) temp = 0;
+			setBrightness(temp);
+		}
+		//else if button is not pressed, but it was pressed before (can't repeat)
+		else if(lastButtonState > SHORTPRESS && lastButtonState < LONGPRESS && !pressTime){
+			//short press code
+			if(++animationPoint >= 3)
 			animationPoint = 0;
-		animationState = 0;
-		animationCycle = 254;
-	}
-
-	lastButtonState = pressTime;
-
-	//if brightness > 0
-	if(getBrightness()){
-		//cycle animation wait
-		//if time for next frame in animation
-		if(++animationCycle >= animRay[animationPoint]->frameLength){
-			animationCycle = 0;
-			//increment frames
-			if(++animationState >= animRay[animationPoint]->frameNum) animationState = 0;
+			animationState = 0;
+			animationCycle = 254;
 		}
 
-		//write leds
-		sendLEDs(animRay[animationPoint]->frames[animationState]);
+		lastButtonState = pressTime;
+		
+		if(getBrightness()){
+			//cycle animation wait
+			//if time for next frame in animation
+			if(++animationCycle >= animRay[animationPoint]->frameLength){
+				animationCycle = 0;
+				//increment frames
+				if(++animationState >= animRay[animationPoint]->frameNum) animationState = 0;
+			}
+		}
+	}
+	
+	//if brightness > 0
+	if(getBrightness()){
+		//write leds, but one at a time
+		sendLEDs(animRay[animationPoint]->frames[animationState] & (1 << ledNum));
+		if(++ledNum >= 8) ledNum = 0;
 		//toggle nose led
 		if(animRay[animationPoint]->frames[animationState + animRay[animationPoint]->frameNum]) PORTB |= (1 << NOSE);
 		else PORTB &= ~(1 << NOSE);
 	}
+	
 }
