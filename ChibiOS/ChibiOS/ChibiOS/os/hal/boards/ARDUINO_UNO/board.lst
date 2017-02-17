@@ -10,7 +10,7 @@
   10               		.section	.text.boardInit,"ax",@progbits
   11               	.global	boardInit
   13               	boardInit:
-  14               	.LFB53:
+  14               	.LFB136:
   15               		.file 1 "ChibiOS/os/hal/boards/ARDUINO_UNO/board.c"
    1:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c **** /*
    2:ChibiOS/os/hal/boards/ARDUINO_UNO/board.c ****     ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio
@@ -72,7 +72,7 @@
   25 0004 1DBA      		out 0x1d,__zero_reg__
   26 0006 0895      		ret
   27               		.cfi_endproc
-  28               	.LFE53:
+  28               	.LFE136:
   30               	.global	pal_default_config
   31               		.section	.rodata.pal_default_config,"a",@progbits
   34               	pal_default_config:
@@ -84,17 +84,24 @@
   40 0005 02        		.byte	2
   41               		.text
   42               	.Letext0:
-  43               		.file 2 "ChibiOS/os/hal/ports/AVR/pal_lld.h"
+  43               		.file 2 "c:\\program files (x86)\\atmel\\studio\\7.0\\toolchain\\avr8\\avr8-gnu-toolchain\\lib\\gc
   44               		.file 3 "c:\\program files (x86)\\atmel\\studio\\7.0\\toolchain\\avr8\\avr8-gnu-toolchain\\avr\\in
+  45               		.file 4 "./ChibiOS/os/rt/ports/AVR/compilers/GCC/chtypes.h"
+  46               		.file 5 "./ChibiOS/os/rt/include/chsystypes.h"
+  47               		.file 6 "./ChibiOS/os/rt/include/chschd.h"
+  48               		.file 7 "./ChibiOS/os/rt/ports/AVR/chcore.h"
+  49               		.file 8 "./ChibiOS/os/rt/include/chsem.h"
+  50               		.file 9 "./ChibiOS/os/rt/include/chmtx.h"
+  51               		.file 10 "./ChibiOS/os/hal/ports/AVR/pal_lld.h"
 DEFINED SYMBOLS
                             *ABS*:00000000 board.c
-C:\Users\Noah\AppData\Local\Temp\ccWadILV.s:2      *ABS*:0000003e __SP_H__
-C:\Users\Noah\AppData\Local\Temp\ccWadILV.s:3      *ABS*:0000003d __SP_L__
-C:\Users\Noah\AppData\Local\Temp\ccWadILV.s:4      *ABS*:0000003f __SREG__
-C:\Users\Noah\AppData\Local\Temp\ccWadILV.s:5      *ABS*:00000000 __tmp_reg__
-C:\Users\Noah\AppData\Local\Temp\ccWadILV.s:6      *ABS*:00000001 __zero_reg__
-C:\Users\Noah\AppData\Local\Temp\ccWadILV.s:13     .text.boardInit:00000000 boardInit
-C:\Users\Noah\AppData\Local\Temp\ccWadILV.s:34     .rodata.pal_default_config:00000000 pal_default_config
+C:\Users\Noah\AppData\Local\Temp\cctDBX6s.s:2      *ABS*:0000003e __SP_H__
+C:\Users\Noah\AppData\Local\Temp\cctDBX6s.s:3      *ABS*:0000003d __SP_L__
+C:\Users\Noah\AppData\Local\Temp\cctDBX6s.s:4      *ABS*:0000003f __SREG__
+C:\Users\Noah\AppData\Local\Temp\cctDBX6s.s:5      *ABS*:00000000 __tmp_reg__
+C:\Users\Noah\AppData\Local\Temp\cctDBX6s.s:6      *ABS*:00000001 __zero_reg__
+C:\Users\Noah\AppData\Local\Temp\cctDBX6s.s:13     .text.boardInit:00000000 boardInit
+C:\Users\Noah\AppData\Local\Temp\cctDBX6s.s:34     .rodata.pal_default_config:00000000 pal_default_config
 
 UNDEFINED SYMBOLS
 __do_copy_data

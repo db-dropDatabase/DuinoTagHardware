@@ -10,7 +10,7 @@
   10               		.section	.text.halInit,"ax",@progbits
   11               	.global	halInit
   13               	halInit:
-  14               	.LFB53:
+  14               	.LFB136:
   15               		.file 1 "ChibiOS/os/hal/src/hal.c"
    1:ChibiOS/os/hal/src/hal.c **** /*
    2:ChibiOS/os/hal/src/hal.c ****     ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio
@@ -176,24 +176,30 @@
   37 0014 0C94 0000 		jmp stInit
   38               	.LVL4:
   39               		.cfi_endproc
-  40               	.LFE53:
+  40               	.LFE136:
   42               		.text
   43               	.Letext0:
-  44               		.file 2 "ChibiOS/os/hal/ports/AVR/pal_lld.h"
-  45               		.file 3 "c:\\program files (x86)\\atmel\\studio\\7.0\\toolchain\\avr8\\avr8-gnu-toolchain\\avr\\in
-  46               		.file 4 "ChibiOS/os/hal/ports/AVR/hal_lld.h"
-  47               		.file 5 "ChibiOS/os/hal/include/serial.h"
-  48               		.file 6 "ChibiOS/os/hal/boards/ARDUINO_UNO/board.h"
-  49               		.file 7 "ChibiOS/os/hal/include/st.h"
-  50               		.file 8 "ChibiOS/os/hal/osal/nil/osal.h"
+  44               		.file 2 "c:\\program files (x86)\\atmel\\studio\\7.0\\toolchain\\avr8\\avr8-gnu-toolchain\\avr\\in
+  45               		.file 3 "./ChibiOS/os/rt/ports/AVR/compilers/GCC/chtypes.h"
+  46               		.file 4 "./ChibiOS/os/rt/include/chsystypes.h"
+  47               		.file 5 "./ChibiOS/os/rt/include/chschd.h"
+  48               		.file 6 "./ChibiOS/os/rt/ports/AVR/chcore.h"
+  49               		.file 7 "./ChibiOS/os/rt/include/chsem.h"
+  50               		.file 8 "./ChibiOS/os/rt/include/chmtx.h"
+  51               		.file 9 "./ChibiOS/os/hal/ports/AVR/pal_lld.h"
+  52               		.file 10 "./ChibiOS/os/hal/ports/AVR/hal_lld.h"
+  53               		.file 11 "./ChibiOS/os/hal/include/serial.h"
+  54               		.file 12 "./ChibiOS/os/hal/boards/ARDUINO_UNO/board.h"
+  55               		.file 13 "./ChibiOS/os/hal/include/st.h"
+  56               		.file 14 "./ChibiOS/os/hal/osal/rt/osal.h"
 DEFINED SYMBOLS
                             *ABS*:00000000 hal.c
-C:\Users\Noah\AppData\Local\Temp\ccp4vI8J.s:2      *ABS*:0000003e __SP_H__
-C:\Users\Noah\AppData\Local\Temp\ccp4vI8J.s:3      *ABS*:0000003d __SP_L__
-C:\Users\Noah\AppData\Local\Temp\ccp4vI8J.s:4      *ABS*:0000003f __SREG__
-C:\Users\Noah\AppData\Local\Temp\ccp4vI8J.s:5      *ABS*:00000000 __tmp_reg__
-C:\Users\Noah\AppData\Local\Temp\ccp4vI8J.s:6      *ABS*:00000001 __zero_reg__
-C:\Users\Noah\AppData\Local\Temp\ccp4vI8J.s:13     .text.halInit:00000000 halInit
+C:\Users\Noah\AppData\Local\Temp\ccKeMf7f.s:2      *ABS*:0000003e __SP_H__
+C:\Users\Noah\AppData\Local\Temp\ccKeMf7f.s:3      *ABS*:0000003d __SP_L__
+C:\Users\Noah\AppData\Local\Temp\ccKeMf7f.s:4      *ABS*:0000003f __SREG__
+C:\Users\Noah\AppData\Local\Temp\ccKeMf7f.s:5      *ABS*:00000000 __tmp_reg__
+C:\Users\Noah\AppData\Local\Temp\ccKeMf7f.s:6      *ABS*:00000001 __zero_reg__
+C:\Users\Noah\AppData\Local\Temp\ccKeMf7f.s:13     .text.halInit:00000000 halInit
 
 UNDEFINED SYMBOLS
 hal_lld_init

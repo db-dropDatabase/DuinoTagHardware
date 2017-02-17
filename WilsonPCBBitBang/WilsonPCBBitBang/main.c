@@ -27,23 +27,19 @@ int main(void)
     while (1) 
     {
 		
-		//send some random crap
-		for(unsigned char i = 0; i < 0x04; i++){
+		//send some crap
+		for(unsigned char i = 0; i < 0x08; i++){
 			//BITBANG
 			//one then zero, repeated eight times
-			PORTB = (1 << CLK) | (1 << SIN);
-			_delay_ms(1);
 			PORTB = (1 << SIN);
 			_delay_ms(1);
-			PORTB = (1 << CLK);
+			PORTB = (1 << SIN) | (1 << CLK);
 			_delay_ms(1);
-			PORTB = 0;
+			PORTB = (1 << SIN);
 			_delay_ms(1);
 		}
 		//latch
 		PORTB = (1 << LATCH);
-		_delay_ms(1);
-		PORTB = (1 << CLK);
 		_delay_ms(1);
 		PORTB = 0;
 		_delay_ms(100);

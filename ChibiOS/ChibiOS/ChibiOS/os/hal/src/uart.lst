@@ -8,12 +8,19 @@
    8               	.Ltext0:
    9               		.cfi_sections	.debug_frame
   10               	.Letext0:
+  11               		.file 1 "c:\\program files (x86)\\atmel\\studio\\7.0\\toolchain\\avr8\\avr8-gnu-toolchain\\avr\\in
+  12               		.file 2 "./ChibiOS/os/rt/ports/AVR/compilers/GCC/chtypes.h"
+  13               		.file 3 "./ChibiOS/os/rt/include/chsystypes.h"
+  14               		.file 4 "./ChibiOS/os/rt/include/chschd.h"
+  15               		.file 5 "./ChibiOS/os/rt/ports/AVR/chcore.h"
+  16               		.file 6 "./ChibiOS/os/rt/include/chsem.h"
+  17               		.file 7 "./ChibiOS/os/rt/include/chmtx.h"
 DEFINED SYMBOLS
                             *ABS*:00000000 uart.c
-C:\Users\Noah\AppData\Local\Temp\ccNXpS8y.s:2      *ABS*:0000003e __SP_H__
-C:\Users\Noah\AppData\Local\Temp\ccNXpS8y.s:3      *ABS*:0000003d __SP_L__
-C:\Users\Noah\AppData\Local\Temp\ccNXpS8y.s:4      *ABS*:0000003f __SREG__
-C:\Users\Noah\AppData\Local\Temp\ccNXpS8y.s:5      *ABS*:00000000 __tmp_reg__
-C:\Users\Noah\AppData\Local\Temp\ccNXpS8y.s:6      *ABS*:00000001 __zero_reg__
+C:\Users\Noah\AppData\Local\Temp\ccTqvkKb.s:2      *ABS*:0000003e __SP_H__
+C:\Users\Noah\AppData\Local\Temp\ccTqvkKb.s:3      *ABS*:0000003d __SP_L__
+C:\Users\Noah\AppData\Local\Temp\ccTqvkKb.s:4      *ABS*:0000003f __SREG__
+C:\Users\Noah\AppData\Local\Temp\ccTqvkKb.s:5      *ABS*:00000000 __tmp_reg__
+C:\Users\Noah\AppData\Local\Temp\ccTqvkKb.s:6      *ABS*:00000001 __zero_reg__
 
 NO UNDEFINED SYMBOLS

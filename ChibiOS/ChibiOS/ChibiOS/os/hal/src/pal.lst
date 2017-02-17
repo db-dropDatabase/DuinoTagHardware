@@ -10,7 +10,7 @@
   10               		.section	.text.palReadBus,"ax",@progbits
   11               	.global	palReadBus
   13               	palReadBus:
-  14               	.LFB53:
+  14               	.LFB136:
   15               		.file 1 "ChibiOS/os/hal/src/pal.c"
    1:ChibiOS/os/hal/src/pal.c **** /*
    2:ChibiOS/os/hal/src/pal.c ****     ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio
@@ -109,11 +109,11 @@
   40 0018 8223      		and r24,r18
   41 001a 0895      		ret
   42               		.cfi_endproc
-  43               	.LFE53:
+  43               	.LFE136:
   45               		.section	.text.palWriteBus,"ax",@progbits
   46               	.global	palWriteBus
   48               	palWriteBus:
-  49               	.LFB54:
+  49               	.LFB137:
   71:ChibiOS/os/hal/src/pal.c **** 
   72:ChibiOS/os/hal/src/pal.c **** /**
   73:ChibiOS/os/hal/src/pal.c ****  * @brief   Write to an I/O bus.
@@ -181,11 +181,11 @@
   90 0034 6283      		std Z+2,r22
   91 0036 0895      		ret
   92               		.cfi_endproc
-  93               	.LFE54:
+  93               	.LFE137:
   95               		.section	.text.palSetBusMode,"ax",@progbits
   96               	.global	palSetBusMode
   98               	palSetBusMode:
-  99               	.LFB55:
+  99               	.LFB138:
   95:ChibiOS/os/hal/src/pal.c **** }
   96:ChibiOS/os/hal/src/pal.c **** 
   97:ChibiOS/os/hal/src/pal.c **** /**
@@ -237,22 +237,28 @@
  125 001a 0C94 0000 		jmp _pal_lld_setgroupmode
  126               	.LVL8:
  127               		.cfi_endproc
- 128               	.LFE55:
+ 128               	.LFE138:
  130               		.text
  131               	.Letext0:
  132               		.file 2 "c:\\program files (x86)\\atmel\\studio\\7.0\\toolchain\\avr8\\avr8-gnu-toolchain\\avr\\in
- 133               		.file 3 "ChibiOS/os/hal/ports/AVR/pal_lld.h"
- 134               		.file 4 "ChibiOS/os/hal/include/pal.h"
+ 133               		.file 3 "./ChibiOS/os/rt/ports/AVR/compilers/GCC/chtypes.h"
+ 134               		.file 4 "./ChibiOS/os/rt/include/chsystypes.h"
+ 135               		.file 5 "./ChibiOS/os/rt/include/chschd.h"
+ 136               		.file 6 "./ChibiOS/os/rt/ports/AVR/chcore.h"
+ 137               		.file 7 "./ChibiOS/os/rt/include/chsem.h"
+ 138               		.file 8 "./ChibiOS/os/rt/include/chmtx.h"
+ 139               		.file 9 "./ChibiOS/os/hal/ports/AVR/pal_lld.h"
+ 140               		.file 10 "./ChibiOS/os/hal/include/pal.h"
 DEFINED SYMBOLS
                             *ABS*:00000000 pal.c
-C:\Users\Noah\AppData\Local\Temp\ccpQ0wus.s:2      *ABS*:0000003e __SP_H__
-C:\Users\Noah\AppData\Local\Temp\ccpQ0wus.s:3      *ABS*:0000003d __SP_L__
-C:\Users\Noah\AppData\Local\Temp\ccpQ0wus.s:4      *ABS*:0000003f __SREG__
-C:\Users\Noah\AppData\Local\Temp\ccpQ0wus.s:5      *ABS*:00000000 __tmp_reg__
-C:\Users\Noah\AppData\Local\Temp\ccpQ0wus.s:6      *ABS*:00000001 __zero_reg__
-C:\Users\Noah\AppData\Local\Temp\ccpQ0wus.s:13     .text.palReadBus:00000000 palReadBus
-C:\Users\Noah\AppData\Local\Temp\ccpQ0wus.s:48     .text.palWriteBus:00000000 palWriteBus
-C:\Users\Noah\AppData\Local\Temp\ccpQ0wus.s:98     .text.palSetBusMode:00000000 palSetBusMode
+C:\Users\Noah\AppData\Local\Temp\ccNgotV5.s:2      *ABS*:0000003e __SP_H__
+C:\Users\Noah\AppData\Local\Temp\ccNgotV5.s:3      *ABS*:0000003d __SP_L__
+C:\Users\Noah\AppData\Local\Temp\ccNgotV5.s:4      *ABS*:0000003f __SREG__
+C:\Users\Noah\AppData\Local\Temp\ccNgotV5.s:5      *ABS*:00000000 __tmp_reg__
+C:\Users\Noah\AppData\Local\Temp\ccNgotV5.s:6      *ABS*:00000001 __zero_reg__
+C:\Users\Noah\AppData\Local\Temp\ccNgotV5.s:13     .text.palReadBus:00000000 palReadBus
+C:\Users\Noah\AppData\Local\Temp\ccNgotV5.s:48     .text.palWriteBus:00000000 palWriteBus
+C:\Users\Noah\AppData\Local\Temp\ccNgotV5.s:98     .text.palSetBusMode:00000000 palSetBusMode
 
 UNDEFINED SYMBOLS
 _pal_lld_setgroupmode

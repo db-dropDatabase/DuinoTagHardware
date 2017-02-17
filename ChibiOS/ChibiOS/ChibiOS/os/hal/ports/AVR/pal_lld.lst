@@ -10,7 +10,7 @@
   10               		.section	.text._pal_lld_init,"ax",@progbits
   11               	.global	_pal_lld_init
   13               	_pal_lld_init:
-  14               	.LFB53:
+  14               	.LFB136:
   15               		.file 1 "ChibiOS/os/hal/ports/AVR/pal_lld.c"
    1:ChibiOS/os/hal/ports/AVR/pal_lld.c **** /*
    2:ChibiOS/os/hal/ports/AVR/pal_lld.c ****     ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio
@@ -117,11 +117,11 @@
   42 0018 8AB9      		out 0xa,r24
   43 001a 0895      		ret
   44               		.cfi_endproc
-  45               	.LFE53:
+  45               	.LFE136:
   47               		.section	.text._pal_lld_setgroupmode,"ax",@progbits
   48               	.global	_pal_lld_setgroupmode
   50               	_pal_lld_setgroupmode:
-  51               	.LFB54:
+  51               	.LFB137:
   77:ChibiOS/os/hal/ports/AVR/pal_lld.c **** #endif
   78:ChibiOS/os/hal/ports/AVR/pal_lld.c **** 
   79:ChibiOS/os/hal/ports/AVR/pal_lld.c **** #if defined(PORTE) || defined(__DOXYGEN__)
@@ -271,19 +271,25 @@
  117               		.loc 1 142 0
  118 0046 0895      		ret
  119               		.cfi_endproc
- 120               	.LFE54:
+ 120               	.LFE137:
  122               		.text
  123               	.Letext0:
- 124               		.file 2 "ChibiOS/os/hal/ports/AVR/pal_lld.h"
- 125               		.file 3 "c:\\program files (x86)\\atmel\\studio\\7.0\\toolchain\\avr8\\avr8-gnu-toolchain\\avr\\in
+ 124               		.file 2 "c:\\program files (x86)\\atmel\\studio\\7.0\\toolchain\\avr8\\avr8-gnu-toolchain\\avr\\in
+ 125               		.file 3 "./ChibiOS/os/rt/ports/AVR/compilers/GCC/chtypes.h"
+ 126               		.file 4 "./ChibiOS/os/rt/include/chsystypes.h"
+ 127               		.file 5 "./ChibiOS/os/rt/include/chschd.h"
+ 128               		.file 6 "./ChibiOS/os/rt/ports/AVR/chcore.h"
+ 129               		.file 7 "./ChibiOS/os/rt/include/chsem.h"
+ 130               		.file 8 "./ChibiOS/os/rt/include/chmtx.h"
+ 131               		.file 9 "./ChibiOS/os/hal/ports/AVR/pal_lld.h"
 DEFINED SYMBOLS
                             *ABS*:00000000 pal_lld.c
-C:\Users\Noah\AppData\Local\Temp\ccc4QOaA.s:2      *ABS*:0000003e __SP_H__
-C:\Users\Noah\AppData\Local\Temp\ccc4QOaA.s:3      *ABS*:0000003d __SP_L__
-C:\Users\Noah\AppData\Local\Temp\ccc4QOaA.s:4      *ABS*:0000003f __SREG__
-C:\Users\Noah\AppData\Local\Temp\ccc4QOaA.s:5      *ABS*:00000000 __tmp_reg__
-C:\Users\Noah\AppData\Local\Temp\ccc4QOaA.s:6      *ABS*:00000001 __zero_reg__
-C:\Users\Noah\AppData\Local\Temp\ccc4QOaA.s:13     .text._pal_lld_init:00000000 _pal_lld_init
-C:\Users\Noah\AppData\Local\Temp\ccc4QOaA.s:50     .text._pal_lld_setgroupmode:00000000 _pal_lld_setgroupmode
+C:\Users\Noah\AppData\Local\Temp\ccCZZ5gf.s:2      *ABS*:0000003e __SP_H__
+C:\Users\Noah\AppData\Local\Temp\ccCZZ5gf.s:3      *ABS*:0000003d __SP_L__
+C:\Users\Noah\AppData\Local\Temp\ccCZZ5gf.s:4      *ABS*:0000003f __SREG__
+C:\Users\Noah\AppData\Local\Temp\ccCZZ5gf.s:5      *ABS*:00000000 __tmp_reg__
+C:\Users\Noah\AppData\Local\Temp\ccCZZ5gf.s:6      *ABS*:00000001 __zero_reg__
+C:\Users\Noah\AppData\Local\Temp\ccCZZ5gf.s:13     .text._pal_lld_init:00000000 _pal_lld_init
+C:\Users\Noah\AppData\Local\Temp\ccCZZ5gf.s:50     .text._pal_lld_setgroupmode:00000000 _pal_lld_setgroupmode
 
 NO UNDEFINED SYMBOLS

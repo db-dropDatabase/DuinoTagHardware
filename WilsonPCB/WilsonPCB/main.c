@@ -4,10 +4,16 @@
  * Created: 1/6/2017 8:34:29 AM
  * Author : Noah
  */ 
+
+#define F_CPU 1000000UL
 #define BUTTON PB4
+#define SOUT PB1
+#define CLK PB2
+#define LATCH PB3
+#define NOSE PB0
+
 #define SHORTPRESS 0x05
 #define LONGPRESS 0x30
-#define F_CPU 1000000UL
 
 #include <avr/io.h>
 #include <avr/sleep.h>
@@ -15,26 +21,51 @@
 #include <util/delay.h>
 #include "debounce.h"
 
+typedef struct animation {
+	unsigned char frameLength;
+	unsigned char frameNum;
+	unsigned char frames[]; //formatted as such {frame, frame, noseLED, noseLED}
+}animation_t;
+
+const volatile animation_t simpleBlink = {
+	.frameLength = 24,
+	.frameNum = 2,
+	.frames = {0b10101010, 0b01010101,
+	0, 1}
+};
+
+const volatile animation_t oregonSign = {
+	.frameLength = 24,
+	.frameNum = 4,
+	.frames = {0b00000000, 0b00000000, 0b11110000, 0b11111111, 
+	0, 1, 1, 1}
+};
+
+const volatile animation_t * animRay[] = {&simpleBlink, &oregonSign};
+
 volatile unsigned char lastButtonState = 0;
 volatile unsigned char pressTime = 0;
 
+volatile unsigned char animationCycle = 0;
+volatile unsigned char animationState = 0;
+volatile unsigned char animationPoint = 0;
+
 static inline void sendLEDs(const unsigned char data){
-	//turn USI back on
-	PRR &= ~(1 << PRUSI);
-	USICR |= (1 << USIWM0) | (USICS0);
-	USISR = 0;
-	//fill USI data register
-	USIDR = data;
-	//aaaaand pulse clock for awhile
-	while (!(USISR & (1 << USIOIE))){
-		USICR |= (1 << USITC);
-		USICR |= (1 << USITC) | (USICLK);
+	//pulse clock and data eight times
+	for(uint8_t i = 0; i < 8; i++){
+		//set data pin
+		if(data & (1 << i)) PORTB |= (1 << SOUT);
+		else PORTB &= ~(1 << SOUT);
+		//clock high
+		PORTB |= (1 << CLK);
+		//clock low
+		PORTB &= ~(1 << CLK);
 	}
+	//disable data pin
+	PORTB &= ~(1 << SOUT);
 	//pulse latch
-	PORTB |= (1 << PB3);
-	PORTB &= ~(1 << PB3);
-	//now go back to bed
-	PRR |= (1 << PRUSI);
+	PORTB |= (1 << LATCH);
+	PORTB &= ~(1 << LATCH);
 }
 
 static inline void setBrightness(const volatile unsigned char brigntness){
@@ -69,7 +100,7 @@ int main(void)
 	set_sleep_mode(SLEEP_MODE_IDLE);
 	
 	//init ports
-	DDRB |= (1 << PB0) | (1 << PB1) | (1 << PB2) | (1 << PB3);
+	DDRB |= (1 << NOSE) | (1 << SOUT) | (1 << CLK) | (1 << LATCH);
 	PORTB |= (1 << BUTTON); //button pin pullup enabled
 	
 	//init timer0 interrupt
@@ -77,6 +108,8 @@ int main(void)
 	TCCR0B |= (1 << CS01) | (1 << CS00);  //clk/64
 	TIMSK |= (1 << TOIE0); //enable timer overflow interrupt
 	GTCCR &= ~(1 << TSM); //unpause timer
+
+	setBrightness(32);
 
 	//reenable interrupts
 	sei();
@@ -102,18 +135,35 @@ ISR(TIMER0_OVF_vect){
 	//if button is simply long pressed
 	if(pressTime == LONGPRESS){
 		//long press code
-		setBrightness(0);
+		uint8_t temp = getBrightness() + 32;
+		if(temp >= 128) temp = 0;
+		setBrightness(temp);
 	}
 	//else if button is not pressed, but it was pressed before (can't repeat)
 	else if(lastButtonState > SHORTPRESS && lastButtonState < LONGPRESS && !pressTime){
 		//short press code
-		setBrightness(getBrightness() + 0x20);
+		if(++animationPoint >= 2)
+			animationPoint = 0;
+		animationState = 0;
+		animationCycle = 254;
 	}
 
 	lastButtonState = pressTime;
 
-	//cycle animation
+	//if brightness > 0
 	if(getBrightness()){
-		sendLEDs(0b10101010);
+		//cycle animation wait
+		//if time for next frame in animation
+		if(++animationCycle >= animRay[animationPoint]->frameLength){
+			animationCycle = 0;
+			//increment frames
+			if(++animationState >= animRay[animationPoint]->frameNum) animationState = 0;
+		}
+
+		//write leds
+		sendLEDs(animRay[animationPoint]->frames[animationState]);
+		//toggle nose led
+		if(animRay[animationPoint]->frames[animationState + animRay[animationPoint]->frameNum]) PORTB |= (1 << NOSE);
+		else PORTB &= ~(1 << NOSE);
 	}
 }

@@ -10,7 +10,7 @@
   10               		.section	.text.hal_lld_init,"ax",@progbits
   11               	.global	hal_lld_init
   13               	hal_lld_init:
-  14               	.LFB53:
+  14               	.LFB136:
   15               		.file 1 "ChibiOS/os/hal/ports/AVR/hal_lld.c"
    1:ChibiOS/os/hal/ports/AVR/hal_lld.c **** /*
    2:ChibiOS/os/hal/ports/AVR/hal_lld.c ****     ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio
@@ -72,16 +72,23 @@
   21               	.L__stack_usage = 0
   22 0000 0895      		ret
   23               		.cfi_endproc
-  24               	.LFE53:
+  24               	.LFE136:
   26               		.text
   27               	.Letext0:
+  28               		.file 2 "c:\\program files (x86)\\atmel\\studio\\7.0\\toolchain\\avr8\\avr8-gnu-toolchain\\avr\\in
+  29               		.file 3 "./ChibiOS/os/rt/ports/AVR/compilers/GCC/chtypes.h"
+  30               		.file 4 "./ChibiOS/os/rt/include/chsystypes.h"
+  31               		.file 5 "./ChibiOS/os/rt/include/chschd.h"
+  32               		.file 6 "./ChibiOS/os/rt/ports/AVR/chcore.h"
+  33               		.file 7 "./ChibiOS/os/rt/include/chsem.h"
+  34               		.file 8 "./ChibiOS/os/rt/include/chmtx.h"
 DEFINED SYMBOLS
                             *ABS*:00000000 hal_lld.c
-C:\Users\Noah\AppData\Local\Temp\ccOrA5Li.s:2      *ABS*:0000003e __SP_H__
-C:\Users\Noah\AppData\Local\Temp\ccOrA5Li.s:3      *ABS*:0000003d __SP_L__
-C:\Users\Noah\AppData\Local\Temp\ccOrA5Li.s:4      *ABS*:0000003f __SREG__
-C:\Users\Noah\AppData\Local\Temp\ccOrA5Li.s:5      *ABS*:00000000 __tmp_reg__
-C:\Users\Noah\AppData\Local\Temp\ccOrA5Li.s:6      *ABS*:00000001 __zero_reg__
-C:\Users\Noah\AppData\Local\Temp\ccOrA5Li.s:13     .text.hal_lld_init:00000000 hal_lld_init
+C:\Users\Noah\AppData\Local\Temp\ccUcVWfX.s:2      *ABS*:0000003e __SP_H__
+C:\Users\Noah\AppData\Local\Temp\ccUcVWfX.s:3      *ABS*:0000003d __SP_L__
+C:\Users\Noah\AppData\Local\Temp\ccUcVWfX.s:4      *ABS*:0000003f __SREG__
+C:\Users\Noah\AppData\Local\Temp\ccUcVWfX.s:5      *ABS*:00000000 __tmp_reg__
+C:\Users\Noah\AppData\Local\Temp\ccUcVWfX.s:6      *ABS*:00000001 __zero_reg__
+C:\Users\Noah\AppData\Local\Temp\ccUcVWfX.s:13     .text.hal_lld_init:00000000 hal_lld_init
 
 NO UNDEFINED SYMBOLS
