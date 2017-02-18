@@ -120,7 +120,7 @@ int main(void)
 	TIMSK |= (1 << TOIE0); //enable timer overflow interrupt
 	GTCCR &= ~(1 << TSM); //unpause timer
 
-	setBrightness(32);
+	setBrightness(0x40);
 
 	//reenable interrupts
 	sei();
@@ -149,9 +149,7 @@ ISR(TIMER0_OVF_vect){
 		//if button is simply long pressed
 		if(pressTime == LONGPRESS){
 			//long press code
-			uint8_t temp = getBrightness() + 32;
-			if(temp >= 128) temp = 0;
-			setBrightness(temp);
+			setBrightness(getBrightness() + 0x40);
 		}
 		//else if button is not pressed, but it was pressed before (can't repeat)
 		else if(lastButtonState > SHORTPRESS && lastButtonState < LONGPRESS && !pressTime){
