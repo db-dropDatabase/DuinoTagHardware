@@ -48,7 +48,13 @@ const volatile animation_t openSign = {
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 1}
 };
 
-const volatile animation_t * animRay[] = {&simpleBlink, &oregonSign, &openSign};
+const volatile animation_t alwaysOn = {
+	.frameLength = 255,
+	.frameNum = 1,
+	.frames = {0b11111111, 1}
+};
+
+const volatile animation_t * animRay[] = {&simpleBlink, &oregonSign, &openSign, &alwaysOn};
 
 volatile unsigned char lastButtonState = 0;
 volatile unsigned char pressTime = 0;
@@ -154,8 +160,8 @@ ISR(TIMER0_OVF_vect){
 		//else if button is not pressed, but it was pressed before (can't repeat)
 		else if(lastButtonState > SHORTPRESS && lastButtonState < LONGPRESS && !pressTime){
 			//short press code
-			if(++animationPoint >= 3)
-			animationPoint = 0;
+			if(++animationPoint >= 4)
+				animationPoint = 0;
 			animationState = 0;
 			animationCycle = 254;
 		}
@@ -179,7 +185,7 @@ ISR(TIMER0_OVF_vect){
 		sendLEDs(animRay[animationPoint]->frames[animationState] & (1 << ledNum));
 		if(++ledNum >= 8) ledNum = 0;
 		//toggle nose led
-		if(animRay[animationPoint]->frames[animationState + animRay[animationPoint]->frameNum]) PORTB |= (1 << NOSE);
+		if(animRay[animationPoint]->frames[animationState + animRay[animationPoint]->frameNum] && ledNum == 0) PORTB |= (1 << NOSE);
 		else PORTB &= ~(1 << NOSE);
 	}
 	
