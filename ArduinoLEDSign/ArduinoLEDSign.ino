@@ -9,10 +9,12 @@ Adafruit_NeoMatrix matrix = Adafruit_NeoMatrix(30, 10, 10, NEO_MATRIX_BOTTOM + N
 FATFS fs;
 DIR dir;
 FILINFO inf;
-UINT fr, read;
 
-BYTE buff[16];
+UINT offset, width, height;
+uint8_t padding;
 
+uint8_t dirName = 1;
+uint8_t fileName = 0; //both start at 1, fileName increments on start
 
 void setup()
 {
@@ -23,83 +25,104 @@ void setup()
   Serial.println(F("Here"));
   Serial.flush();
 
-  cli();
-
   //wait for sdcard to be ready
   while(pf_mount(&fs));
 
-  //signal good stuff
-  digitalWrite(13, HIGH);
+  nextFile();
 
-  //open directory
-  fr = pf_opendir(&dir, "/ANIM1");
-  if(fr) die(fr, F("Opening /ANIM1 dir"));
-
-  //scan directories
-  for(;;){
-	fr = pf_readdir(&dir, &inf);
-	sei();
-	if(fr || !inf.fname[0]) break;
-	if(inf.fattrib & AM_DIR){
-	  Serial.print("Directory: ");
-	  Serial.println(inf.fname);
-	} 
-	else{
-	  Serial.print("File: ");
-	  Serial.print(inf.fsize);
-	  Serial.print(", ");
-	  Serial.println(inf.fname);
-	}
-	Serial.flush();
-	cli();
-  }
-  if(fr) die(fr, F("Scanning directories"));
-
-  //scan again, but this time for a bitmap file
-  //reopen directory
-  fr = pf_opendir(&dir, "/ANIM1");
-  sei();
-  if(fr) die(fr, F("Opening /ANIM1 dir"));
-  cli();
-
-  for(;;){
-
-	fr = pf_readdir(&dir, &inf);
-	sei();
-	if(fr) die(fr, F("Searching for bitmap"));
-	if(!inf.fname[0]) die(FR_NO_FILE, F("Searching for bitmap"));
-	//if not directory
-	if(!(inf.fattrib & AM_DIR)){
-		//if it looks like a bitmap
-		if(!strspn(inf.fname, ".BMP")){
-		  //lets see if it talks like a bitmap
-		  cli();
-		  char filename[32];
-		  sprintf(filename, "/ANIM1/%s", inf.fname);
-		  fr = pf_open(filename);
-		  sei();
-		  if(fr) die(fr, strcat(filename, ": Unable to open"));
-		  else Serial.println("Found file!");
-		  cli();
-		  fr = pf_read(buff, sizeof(buff), &read);
-		  sei();
-		  if(fr) die(fr, F(" Reading file"));
-		  for(; read > 0; read--) Serial.println(buff[sizeof(buff) - read], HEX);
-		  Serial.flush();
-		}
-	}
-  }
-
-  sei();
-
-  for(; read > 0; read--) Serial.println(buff[sizeof(buff) - read]);
-  
 }
 
 void loop()
 {
+  BYTE buff[width*24 + padding];
+  UINT fr;
+ 
+  //seek to pixel array
+  fr = pf_lseek(offset);
+  if(fr) die(fr, "Seeking");
+ 
+  do 
+  {
+	UINT read;
+	
+	fr = pf_read(buff, sizeof(buff), &read);
+  } while (read == sizeof(buff));
+ 
  
 
+}
+
+void nextFile(){
+	BYTE buff[26];
+	UINT fr, read;
+	
+	//increment file
+	fileName++;
+	
+	//open bitmap file (must be 24 bit)
+	do{
+	  char filenameStr[16];
+	  
+	  sprintf(filenameStr, "/%u/%u.BMP", dirName, fileName);
+	  fr = pf_open(filenameStr);
+	  Serial.print("File: ");
+	  Serial.println(filenameStr);
+	  
+	  //if no file, search next directory
+	  if(fr == FR_NO_FILE){
+		  if(fileName == 1) die(fr, F("Could not find first file in nextFile()"));
+		  nextDir();
+		  fileName = 1;
+	  }
+	  else if(fr) die(fr, F("nextFile()"));
+	}while(!fr);
+	
+	
+	//read header of bitmap file
+	pf_read(buff, sizeof(buff), read);
+	
+	//grab offset, width, height
+	
+	offset = buff[10] | (buff[11] << 8) | (buff[12] << 16) | (buff[13] << 24);
+	width = buff[18] | (buff[19] << 8) | (buff[20] << 16) | (buff[21] << 24);
+	height = buff[22] | (buff[23] << 8) | (buff[24] << 16) | (buff[25] << 24);
+	
+	Serial.print("Offset: ");
+	Serial.print(offset);
+	Serial.print(" Width: ");
+	Serial.print(width);
+	Serial.print(" Height: ");
+	Serial.println(height);
+	
+	//calculate padding
+	padding = ((width * 24 + 31)/32)*4;
+	
+	Serial.print("Padding: ");
+	Serial.print(padding);
+	
+	Serial.flush();
+}
+
+void nextDir(){
+	UINT fr;
+	
+	//increment dir
+	dirName++;
+	
+	//search for dir
+	do 
+	{
+		char dirStr[4];
+		
+		sprintf(dirStr, "/%u", dirName);
+		fr = pf_opendir(&dir, dirName);
+		
+		Serial.print("Dir: ");
+		Serial.println(dirName);
+		
+		if(fr == FR_NO_FILE) dirName = 1;
+		else if(fr) die(fr, F("NextFile()"));
+	} while (!fr);
 }
 
 void die(const UINT &error, const __FlashStringHelper * place){
