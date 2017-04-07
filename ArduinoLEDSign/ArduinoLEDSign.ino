@@ -17,7 +17,7 @@ FATFS fs;
 DIR dir;
 FILINFO inf;
 
-UINT offset, width, height;
+UINT offset, width, height, fileSize;
 uint8_t padding;
 
 uint8_t dirName = 1;
@@ -52,45 +52,71 @@ void loop()
 {
   BYTE buff[width*3 + padding];
   UINT fr, read;
-  uint8_t pixelRow = 0;
  
   //seek to pixel array
   fr = pf_lseek(offset);
   if(fr) die(fr, "Seeking");
+  
+  //unsigned int lastTime = 0;
+  //unsigned int endTime = 0;
  
-  for(;;){
-	fr = pf_read(buff, sizeof(buff), &read);
-	if(fr) die(fr, F("Reading row"));
+  do{
+	uint8_t pixelRow = 0;
+	
+	do{
+	  //lastTime = micros();
+	  fr = pf_read(buff, sizeof(buff), &read);
+	  if(fr) die(fr, F("Reading row"));
+	  //endTime = micros();
+	  
+	  /*	  
+	  Serial.print("Read chunk: ");
+	  Serial.print(read);
+	  Serial.print(" Expected: ");
+	  Serial.print(sizeof(buff));
+	  Serial.print(" Time: ");
+	  Serial.println(endTime - lastTime);
+	  Serial.flush();
+	  */
+		  
+      if(read != sizeof(buff)) die(read, F("Reading row: out of file"));
+
+	  //lastTime = micros();
+   	  for (uint8_t i = 0; i < width; i++){
+		const uint8_t optimize = i*3;
+	  	setPixel(i, pixelRow, buff[optimize+2], buff[optimize+1], buff[optimize]);
+	  }
+	  //endTime = micros();
+	  
+	  /*
+	  Serial.print("Set LEDs in time: ");
+	  Serial.println(endTime - lastTime);
+	  Serial.flush();
+	  */
+		
+	  //if run out of rows, finish drawing
+	} while(++pixelRow < MATRIX_HEIGHT);
+	
+	//lastTime = micros();
+	matrix.show();
+	//endTime = micros();
 
 	/*
-	Serial.print("Read chunk: ");
-	Serial.print(read);
-	Serial.print(" Expected: ");
-	Serial.println(sizeof(buff));
-	Serial.flush(); 
+	Serial.print("Show frame in time: ");
+	Serial.println(endTime - lastTime);
+	Serial.flush();
 	*/
-
-	if(read != sizeof(buff)) die(read, F("Reading row: out of file"));
-
-	for (uint8_t i = 0; i < width; i++){
-	  const uint8_t optimize = i*3;
-	  setPixel(i, pixelRow, buff[optimize+2], buff[optimize+1], buff[optimize]);
-	}
-
-	//if run out of rows, finish drawing
-	if(++pixelRow >= MATRIX_HEIGHT) break;
-  } 
- 
-  matrix.show();
-
-  /*
-  Serial.println("Finished frame!");
-  Serial.flush();
-  */
+	delay(200);
+	
+  } while(fs.fptr < fileSize - 1);
 
   //iterate to next file
+  //lastTime = micros();
   nextFile();
+  //endTime = micros();
 
+  //Serial.print("Next file time: ");
+  //Serial.println(endTime - lastTime);
   //animation wait
   //delay(200);
 }
@@ -157,11 +183,12 @@ void nextFile(){
 	//read header of bitmap file
 	pf_read(buff, sizeof(buff), &read);
 	
-	//grab offset, width, height
+	//grab offset, width, height, file size
 	
 	offset = FCC(buff[10], buff[11], buff[12], buff[13]);
 	width = FCC(buff[18], buff[19], buff[20], buff[21]);
 	height = FCC(buff[22], buff[23], buff[24], buff[25]);
+	fileSize = FCC(buff[2], buff[3], buff[4], buff[5]);
 	
 	/*
 	Serial.print("Offset: ");
@@ -169,9 +196,12 @@ void nextFile(){
 	Serial.print(" Width: ");
 	Serial.print(width);
 	Serial.print(" Height: ");
-	Serial.println(height);
+	Serial.print(height);
+	Serial.print(" Size: ");
+	Serial.println(fileSize);
 	Serial.flush();
 	*/
+	
 	
 	//calculate padding
 	padding = (width * 3) % 4; 
