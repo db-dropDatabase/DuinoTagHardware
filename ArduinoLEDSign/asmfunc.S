@@ -3,17 +3,17 @@
 ;---------------------------------------------------------------------------;
 ; Hardware dependent macros to be modified
 
-#define	DDR_CS	_SFR_IO_ADDR(DDRD), 5	// MMC CS pin (DDR, PORT)
-#define	PORT_CS	_SFR_IO_ADDR(PORTD), 5
+#define	DDR_CS	_SFR_IO_ADDR(DDRB), 2	// MMC CS pin (DDR, PORT)
+#define	PORT_CS	_SFR_IO_ADDR(PORTB), 2
 
-#define	DDR_CK	_SFR_IO_ADDR(DDRD), 4	// MMC SCLK pin (DDR, PORT)
-#define	PORT_CK	_SFR_IO_ADDR(PORTD), 4
+#define	DDR_CK	_SFR_IO_ADDR(DDRB), 5	// MMC SCLK pin (DDR, PORT)
+#define	PORT_CK	_SFR_IO_ADDR(PORTB), 5
 
-#define	DDR_DI	_SFR_IO_ADDR(DDRD), 3	// MMC DI pin (DDR, PORT)
-#define	PORT_DI	_SFR_IO_ADDR(PORTD), 3
+#define	DDR_DI	_SFR_IO_ADDR(DDRB), 3	// MMC DI pin (DDR, PORT)
+#define	PORT_DI	_SFR_IO_ADDR(PORTB), 3
 
-#define	PIN_DO	_SFR_IO_ADDR(PIND), 2	// MMC DO pin (PIN, PORT)
-#define	PORT_DO	_SFR_IO_ADDR(PORTD), 2
+#define	PIN_DO	_SFR_IO_ADDR(PINB), 4	// MMC DO pin (PIN, PORT)
+#define	PORT_DO	_SFR_IO_ADDR(PORTB), 4
 
 
 ;---------------------------------------------------------------------------;

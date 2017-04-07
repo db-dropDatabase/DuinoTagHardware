@@ -1,10 +1,17 @@
 #include <string.h>
-#include "Adafruit_GFX.h"
-#include "Adafruit_NeoMatrix.h"
+#include <avr/wdt.h>
 #include "Adafruit_NeoPixel.h"
 #include "pff.h"
 
-Adafruit_NeoMatrix matrix = Adafruit_NeoMatrix(30, 10, 10, NEO_MATRIX_BOTTOM + NEO_MATRIX_LEFT + NEO_MATRIX_ROWS + NEO_MATRIX_ZIGZAG);
+#define MATRIX_WIDTH 40
+#define MATRIX_HEIGHT 5
+#define MATRIX_PIN 19
+
+#define soft_reset() wdt_enable(WDTO_15MS); for(;;)
+
+#define FCC(c1,c2,c3,c4)	(((DWORD)c4<<24)+((DWORD)c3<<16)+((WORD)c2<<8)+(BYTE)c1)
+
+Adafruit_NeoPixel matrix = Adafruit_NeoPixel(MATRIX_WIDTH*MATRIX_HEIGHT, MATRIX_PIN);
 
 FATFS fs;
 DIR dir;
@@ -18,6 +25,9 @@ uint8_t fileName = 0; //both start at 1, fileName increments on start
 
 void setup()
 {
+  MCUSR = 0;
+  wdt_disable();
+
   matrix.begin();
   matrix.show();
 
@@ -28,30 +38,93 @@ void setup()
   //wait for sdcard to be ready
   while(pf_mount(&fs));
 
-  nextFile();
+  Serial.println(F("Sd Mounted!"));
+  Serial.flush();
 
+  nextFile();
+  /*
+  Serial.println("Start loop!");
+  Serial.flush();
+  */
 }
 
 void loop()
 {
-  BYTE buff[width*24 + padding];
-  UINT fr;
+  BYTE buff[width*3 + padding];
+  UINT fr, read;
+  uint8_t pixelRow = 0;
  
   //seek to pixel array
   fr = pf_lseek(offset);
   if(fr) die(fr, "Seeking");
  
-  do 
-  {
-	UINT read;
-	
+  for(;;){
 	fr = pf_read(buff, sizeof(buff), &read);
-  } while (read == sizeof(buff));
- 
- 
+	if(fr) die(fr, F("Reading row"));
 
+	/*
+	Serial.print("Read chunk: ");
+	Serial.print(read);
+	Serial.print(" Expected: ");
+	Serial.println(sizeof(buff));
+	Serial.flush(); 
+	*/
+
+	if(read != sizeof(buff)) die(read, F("Reading row: out of file"));
+
+	for (uint8_t i = 0; i < width; i++){
+	  const uint8_t optimize = i*3;
+	  setPixel(i, pixelRow, buff[optimize+2], buff[optimize+1], buff[optimize]);
+	}
+
+	//if run out of rows, finish drawing
+	if(++pixelRow >= MATRIX_HEIGHT) break;
+  } 
+ 
+  matrix.show();
+
+  /*
+  Serial.println("Finished frame!");
+  Serial.flush();
+  */
+
+  //iterate to next file
+  nextFile();
+
+  //animation wait
+  //delay(200);
 }
 
+//interpolate x/y coordinates to pixels on a zigzag matrix starting from the bottom left
+
+inline void setPixel(const uint8_t &x, const uint8_t &y, const uint8_t &r, uint8_t &g, uint8_t &b){
+	//if y is odd
+	uint8_t pixnum;
+	if(y & 1)
+	  pixnum = (y * (MATRIX_WIDTH)) + x;
+	else
+	  pixnum = (y * (MATRIX_WIDTH)) + ((MATRIX_WIDTH - 1) - x);
+
+	matrix.setPixelColor(pixnum, r, g, b);
+
+	//debug
+	
+	/*
+	Serial.print(F("Pixel: ("));
+	Serial.print(x);
+	Serial.print(F(", "));
+	Serial.print(y);
+	Serial.print(F(") C: "));
+	Serial.print(color, HEX);
+	Serial.print(" Pixel: ");
+	Serial.println(pixnum);
+	Serial.flush();
+	*/
+	
+	
+}
+
+//seek to next bitmap file
 void nextFile(){
 	BYTE buff[26];
 	UINT fr, read;
@@ -65,8 +138,11 @@ void nextFile(){
 	  
 	  sprintf(filenameStr, "/%u/%u.BMP", dirName, fileName);
 	  fr = pf_open(filenameStr);
+	  /*
 	  Serial.print("File: ");
 	  Serial.println(filenameStr);
+	  Serial.flush();
+	  */
 	  
 	  //if no file, search next directory
 	  if(fr == FR_NO_FILE){
@@ -75,34 +151,39 @@ void nextFile(){
 		  fileName = 1;
 	  }
 	  else if(fr) die(fr, F("nextFile()"));
-	}while(!fr);
+	}while(fr);
 	
 	
 	//read header of bitmap file
-	pf_read(buff, sizeof(buff), read);
+	pf_read(buff, sizeof(buff), &read);
 	
 	//grab offset, width, height
 	
-	offset = buff[10] | (buff[11] << 8) | (buff[12] << 16) | (buff[13] << 24);
-	width = buff[18] | (buff[19] << 8) | (buff[20] << 16) | (buff[21] << 24);
-	height = buff[22] | (buff[23] << 8) | (buff[24] << 16) | (buff[25] << 24);
+	offset = FCC(buff[10], buff[11], buff[12], buff[13]);
+	width = FCC(buff[18], buff[19], buff[20], buff[21]);
+	height = FCC(buff[22], buff[23], buff[24], buff[25]);
 	
+	/*
 	Serial.print("Offset: ");
 	Serial.print(offset);
 	Serial.print(" Width: ");
 	Serial.print(width);
 	Serial.print(" Height: ");
 	Serial.println(height);
+	Serial.flush();
+	*/
 	
 	//calculate padding
-	padding = ((width * 24 + 31)/32)*4;
+	padding = (width * 3) % 4; 
 	
+	/*
 	Serial.print("Padding: ");
-	Serial.print(padding);
-	
+	Serial.println(padding);
 	Serial.flush();
+	*/
 }
 
+//seek to next animation dir
 void nextDir(){
 	UINT fr;
 	
@@ -115,16 +196,20 @@ void nextDir(){
 		char dirStr[4];
 		
 		sprintf(dirStr, "/%u", dirName);
-		fr = pf_opendir(&dir, dirName);
+		fr = pf_opendir(&dir, dirStr);
 		
+		/*
 		Serial.print("Dir: ");
 		Serial.println(dirName);
+		Serial.flush(); 
+		*/
 		
 		if(fr == FR_NO_FILE) dirName = 1;
 		else if(fr) die(fr, F("NextFile()"));
 	} while (!fr);
 }
 
+//debug on fails
 void die(const UINT &error, const __FlashStringHelper * place){
 	sei();
 
@@ -147,13 +232,14 @@ void die(const UINT &error, const __FlashStringHelper * place){
 		  Serial.println(F("SDCard not working"));
 		  break;
 		default:
-		  Serial.println(F("Unknown Error"));
+		  Serial.print(F("Unknown Error: "));
+		  Serial.println(error);
 		  break;
 	}
 
 	Serial.flush();
 	//die
-	for(;;);
+	soft_reset();
 }
 
 void die(const UINT &error, const char * place){
@@ -178,11 +264,12 @@ void die(const UINT &error, const char * place){
 		Serial.println(F("SDCard not working"));
 		break;
 		default:
-		Serial.println(F("Unknown Error"));
+		Serial.print(F("Unknown Error: "));
+		Serial.println(error);
 		break;
 	}
 
 	Serial.flush();
 	//die
-	for(;;);
+	soft_reset();
 }

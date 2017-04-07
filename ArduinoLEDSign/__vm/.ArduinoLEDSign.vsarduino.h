@@ -10,17 +10,18 @@
 
 #define __AVR_ATmega328p__
 #define __AVR_ATmega328P__
-#define ARDUINO 10801
+#define ARDUINO 10802
 #define ARDUINO_MAIN
 #define F_CPU 16000000L
 #define __AVR__
 #define F_CPU 16000000L
-#define ARDUINO 10801
+#define ARDUINO 10802
 #define ARDUINO_AVR_UNO
 #define ARDUINO_ARCH_AVR
 
 //
 //
+inline void setPixel(const uint8_t &x, const uint8_t &y, const uint8_t &r, uint8_t &g, uint8_t &b);
 void nextFile();
 void nextDir();
 void die(const UINT &error, const __FlashStringHelper * place);
