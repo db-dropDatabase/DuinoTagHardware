@@ -15,11 +15,12 @@
 #define SHORTPRESS 0x05
 #define LONGPRESS 0x30
 
+#define BRIGHT_INC 0x40 //should be a divisor of 255 if you want it to wrap around at 0x00
+
 #include <avr/io.h>
 #include <avr/sleep.h>
 #include <avr/interrupt.h>
-#include <util/delay.h>
-#include "debounce.h"
+#include <avr/wdt.h>
 
 typedef struct _animation {
 	unsigned char frameLength;
@@ -63,8 +64,6 @@ volatile unsigned char animationCycle = 0;
 volatile unsigned char animationState = 0;
 volatile unsigned char animationPoint = 0;
 
-volatile unsigned char ledNum = 0;
-
 volatile unsigned char clkDiv = 0;
 
 static inline void sendLEDs(const unsigned char data){
@@ -90,10 +89,10 @@ static inline void setBrightness(const volatile unsigned char brigntness){
 		TIMSK &= ~(1 << OCIE0A); //disable brightness interrupt
 		OCR0A = 0; //erase brightness value
 		sendLEDs(0b00000000); //turn off leds
+		PORTB &= ~(1 << NOSE);
 	}
 	else if(brigntness == 0xff) {
 		TIMSK &= ~(1 << OCIE0A); //disable brightness interrupt
-		OCR0A = 0xFF; //erase brightness value
 	}
 	else{
 		OCR0A = brigntness;  //store brightness value
@@ -106,40 +105,52 @@ static inline unsigned char getBrightness(){ return OCR0A; }
 
 int main(void)
 {
+	//disable WDT just in case
+	if(MCUSR & (1 << WDRF)){
+		MCUSR = 0;
+		wdt_disable();
+	}
+
 	//disable interrupts during setup
 	cli();
 	
 	//init sleep stuff
-	MCUSR |= (1 << BODS) |  (1 << SE) | (1 << BODSE); //disable brownn out detection
-	PRR |= (1 << PRTIM1) | (1 << PRUSI) | (1 << PRADC);  //disable timer1, USI, and ADC
-	ACSR |= (1 << ACD); //power off the ADC some more
-	sleep_enable();
-	set_sleep_mode(SLEEP_MODE_IDLE);
-	
+	MCUCR = (1 << SE);
+	PRR = (1 << PRTIM1) | (1 << PRUSI) | (1 << PRADC);  //disable timer1, USI, and ADC
+	ACSR = (1 << ACD); //power off the ADC some more
+
 	//init ports
-	DDRB |= (1 << NOSE) | (1 << SOUT) | (1 << CLK) | (1 << LATCH);
-	PORTB |= (1 << BUTTON); //button pin pullup enabled
+	DDRB = (1 << NOSE) | (1 << SOUT) | (1 << CLK) | (1 << LATCH);
+	PORTB = (1 << BUTTON); //button pin pullup enabled
 	
 	//init timer0 interrupt
-	GTCCR |= (1 << TSM); //pause timer
-	TCCR0B |= (1 << CS01);  //clk/8
-	TIMSK |= (1 << TOIE0); //enable timer overflow interrupt
-	GTCCR &= ~(1 << TSM); //unpause timer
+	GTCCR = (1 << TSM); //pause timer
+	TCCR0B = (1 << CS01);  //clk/8
+	TIMSK = (1 << TOIE0); //enable timer overflow interrupt
+	GTCCR = 0; //unpause timer
 
-	setBrightness(0x40);
+	//init pin change interrupt
+	PCMSK = (1 << BUTTON);
+
+	//init brightness
+	setBrightness(BRIGHT_INC);
 
 	//reenable interrupts
 	sei();
 	
-    /* Replace with your application code */
     while (1) 
     {
+		//enable BOD disabling during sleep
+		MCUCR |= (1 << BODS) | (1 << BODSE);
+		MCUCR |= (1 << BODS);
+		MCUCR &= ~(1 << BODSE);
+
 		//sleep, cuz
 		sleep_cpu();
     }
 }
 
-
+//isr to control brightness of LEDs
 ISR(TIMER0_COMPA_vect){
 	//turn off LEDs for brightness
 	sendLEDs(0b00000000);
@@ -147,28 +158,30 @@ ISR(TIMER0_COMPA_vect){
 }
 
 ISR(TIMER0_OVF_vect){
-	if(++clkDiv >= 8){
-		clkDiv = 0;
-		if(!(PINB & (1 << BUTTON)) && pressTime < 0xff) pressTime++; //if button reads pressed, inc varible
-		else pressTime = 0;
+	//if brightness isn't off
+	if(getBrightness()){
+		if(++clkDiv == 8){
+			clkDiv = 0;
+			if(!(PINB & (1 << BUTTON)) && pressTime < LONGPRESS) pressTime++; //if button reads pressed, inc variable
+			else pressTime = 0;
 
-		//if button is simply long pressed
-		if(pressTime == LONGPRESS){
-			//long press code
-			setBrightness(getBrightness() + 0x40);
-		}
-		//else if button is not pressed, but it was pressed before (can't repeat)
-		else if(lastButtonState > SHORTPRESS && lastButtonState < LONGPRESS && !pressTime){
-			//short press code
-			if(++animationPoint >= 4)
-				animationPoint = 0;
-			animationState = 0;
-			animationCycle = 254;
-		}
+			//if button is simply long pressed
+			if(pressTime == LONGPRESS){
+				pressTime = 0;
+				//long press code
+				setBrightness(getBrightness() + BRIGHT_INC);
+			}
+			//else if button is not pressed, but it was pressed before (can't repeat)
+			else if(lastButtonState > SHORTPRESS && !pressTime){
+				//short press code
+				if(++animationPoint == 4)
+					animationPoint = 0;
+				animationState = 0;
+				animationCycle = 254;
+			}
 
-		lastButtonState = pressTime;
+			lastButtonState = pressTime;
 		
-		if(getBrightness()){
 			//cycle animation wait
 			//if time for next frame in animation
 			if(++animationCycle >= animRay[animationPoint]->frameLength){
@@ -177,16 +190,62 @@ ISR(TIMER0_OVF_vect){
 				if(++animationState >= animRay[animationPoint]->frameNum) animationState = 0;
 			}
 		}
-	}
-	
-	//if brightness > 0
-	if(getBrightness()){
+
 		//write leds, but one at a time
-		sendLEDs(animRay[animationPoint]->frames[animationState] & (1 << ledNum));
-		if(++ledNum >= 8) ledNum = 0;
+		sendLEDs(animRay[animationPoint]->frames[animationState] & (1 << clkDiv));
 		//toggle nose led
-		if(animRay[animationPoint]->frames[animationState + animRay[animationPoint]->frameNum] && ledNum == 0) PORTB |= (1 << NOSE);
+		if(animRay[animationPoint]->frames[animationState + animRay[animationPoint]->frameNum] && !clkDiv) PORTB |= (1 << NOSE);
 		else PORTB &= ~(1 << NOSE);
 	}
-	
+	//else activate sleeping and waiting for pin change (SUPER POWER SAVE)
+	else{
+		//reset animations
+		animationState = 0;
+		animationCycle = 254;
+		clkDiv = 0;
+
+		//disable timer0 for wdt poweroff
+		PRR |= (1 << PRTIM0);
+
+		//enable global pin change
+		GIMSK = (1 << PCIE);
+
+		//set sleep mode to PWR_DOWN
+		set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+	}
+}
+
+//initial super sleep button detect isr
+//triggers watchdog isr, which debounces the input
+//all to save all the power
+ISR(PCINT0_vect){
+	//if button down
+	if(!(PINB & (1 << BUTTON))){
+		//activate watchdog sleep debounce
+		WDTCR = (1 << WDCE) | (1 << WDE);
+		//set wdt to interrupt and prescale to 0.5s
+		WDTCR = (1 << WDIE) | (1 << WDP2) | (1 << WDP0);
+		//self disable pin change
+		GIMSK = 0;
+	}
+}
+
+//wdt super sleep debouching isr
+//waits 0.5s before checking button input to see if still down
+//in deep sleep of course
+ISR(WDT_vect){
+	//if button down
+	if(!(PINB & (1 << BUTTON))){
+		//turn on timer
+		PRR &= ~(1 << PRTIM0);
+		//turn on lights
+		setBrightness(BRIGHT_INC);
+		//reset sleep mode
+		set_sleep_mode(SLEEP_MODE_IDLE);
+	}
+	//else go back to pin change
+	else GIMSK = (1 << PCIE);
+
+	//self disable
+	wdt_disable();
 }
