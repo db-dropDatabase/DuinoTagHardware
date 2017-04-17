@@ -67,6 +67,7 @@ volatile unsigned char animationPoint = 0;
 volatile unsigned char clkDiv = 0;
 
 static inline void sendLEDs(const unsigned char data){
+	//Bitbang version, takes moar instructions
 	//pulse clock and data eight times
 	for(uint8_t i = 0; i < 8; i++){
 		//set data pin
@@ -79,6 +80,7 @@ static inline void sendLEDs(const unsigned char data){
 	}
 	//disable data pin
 	PORTB &= ~(1 << SOUT);
+
 	//pulse latch
 	PORTB |= (1 << LATCH);
 	PORTB &= ~(1 << LATCH);
@@ -158,30 +160,29 @@ ISR(TIMER0_COMPA_vect){
 }
 
 ISR(TIMER0_OVF_vect){
-	//if brightness isn't off
-	if(getBrightness()){
-		if(++clkDiv == 8){
-			clkDiv = 0;
-			if(!(PINB & (1 << BUTTON)) && pressTime < LONGPRESS) pressTime++; //if button reads pressed, inc variable
-			else pressTime = 0;
+	if(++clkDiv == 8){
+		clkDiv = 0;
 
-			//if button is simply long pressed
-			if(pressTime == LONGPRESS){
-				pressTime = 0;
-				//long press code
-				setBrightness(getBrightness() + BRIGHT_INC);
-			}
-			//else if button is not pressed, but it was pressed before (can't repeat)
-			else if(lastButtonState > SHORTPRESS && !pressTime){
-				//short press code
-				if(++animationPoint == 4)
-					animationPoint = 0;
-				animationState = 0;
-				animationCycle = 254;
-			}
+		//button stuff
+		if(!(PINB & (1 << BUTTON))){
+			if(pressTime <= LONGPRESS) pressTime++; //if button reads pressed, inc variable
+		}
+		else pressTime = 0;
 
-			lastButtonState = pressTime;
-		
+		//if button is simply long pressed
+		if(pressTime == LONGPRESS){
+			//long press code
+			setBrightness(getBrightness() + BRIGHT_INC);
+		}
+		//else if button is not pressed, but it was pressed before (can't repeat)
+		else if(lastButtonState > SHORTPRESS && lastButtonState < LONGPRESS && !pressTime){
+			//short press code
+			if(++animationPoint == 4)
+				animationPoint = 0;
+			animationState = 0;
+			animationCycle = 0;
+		}
+		else{
 			//cycle animation wait
 			//if time for next frame in animation
 			if(++animationCycle >= animRay[animationPoint]->frameLength){
@@ -190,18 +191,24 @@ ISR(TIMER0_OVF_vect){
 				if(++animationState >= animRay[animationPoint]->frameNum) animationState = 0;
 			}
 		}
+		//remember button state
+		lastButtonState = pressTime;
+	}
 
+	//if brightness is still on (it could be changed during loop)
+	if(getBrightness()){
 		//write leds, but one at a time
 		sendLEDs(animRay[animationPoint]->frames[animationState] & (1 << clkDiv));
 		//toggle nose led
 		if(animRay[animationPoint]->frames[animationState + animRay[animationPoint]->frameNum] && !clkDiv) PORTB |= (1 << NOSE);
 		else PORTB &= ~(1 << NOSE);
 	}
-	//else activate sleeping and waiting for pin change (SUPER POWER SAVE)
+
+	//if no brightness, activate sleeping and waiting for pin change (SUPER POWER SAVE)
 	else{
 		//reset animations
 		animationState = 0;
-		animationCycle = 254;
+		animationCycle = 0;
 		clkDiv = 0;
 
 		//disable timer0 for wdt poweroff
