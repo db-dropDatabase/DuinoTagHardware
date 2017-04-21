@@ -46,10 +46,12 @@ user = network.get_user(secrets["username"])
 print("Got user: " + user.get_name())
 
 #get the recent tracks of the user
-history = user.get_recent_tracks(limit = 50)
+history = user.get_recent_tracks(limit = 0)
 
 #put them into a friendly array, and dedupe while we're at it
 strippedHistory = []
+
+print("Start parsing")
 
 for track in history:
     #wrap track in better API
@@ -62,18 +64,23 @@ for track in history:
             checkTrack.timestamp_array.append(strippedTrack.timestamp_array[0])
             checkTrack.timestamp_array.sort(reverse = True)
             dupeFound = True
-            print("Dupe Found: " + checkTrack.title)
-            print(checkTrack.timestamp_array)
+            #print("Dupe Found: " + strippedTrack.title)
+            #print(checkTrack.timestamp_array)
             break
-    
+
     if(dupeFound == False):
         strippedHistory.append(strippedTrack)
     
 #clear memory some
 history.clear()
 
+print("End parsing")
+print("Start JSON")
+
 #write history to file
 write_history(strippedHistory)
+
+print("End JSON")
 
 strippedHistory = load_history()
 
