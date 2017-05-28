@@ -72,16 +72,16 @@ for track in history:
         strippedHistory.append(strippedTrack)
     
 #clear memory some
-history.clear()
+#history.clear()
 
-print("End parsing")
-print("Start JSON")
+#print("End parsing")
+#print("Start JSON")
 
 #write history to file
-write_history(strippedHistory)
+#write_history(strippedHistory)
 
-print("End JSON")
+#print("End JSON")
 
-strippedHistory = load_history()
+#strippedHistory = load_history()
 
-print(strippedHistory[0].title)
+#print(strippedHistory[0].title)
