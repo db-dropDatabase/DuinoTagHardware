@@ -11,6 +11,7 @@
 #define CLK PB2
 #define LATCH PB3
 #define NOSE PB0
+#define BLANK PB5
 
 #define SHORTPRESS 0x05
 #define LONGPRESS 0x30
@@ -90,15 +91,13 @@ static inline void setBrightness(const volatile unsigned char brigntness){
 	if(brigntness == 0){
 		TIMSK &= ~(1 << OCIE0A); //disable brightness interrupt
 		OCR0A = 0; //erase brightness value
-		sendLEDs(0b00000000); //turn off leds
-		PORTB &= ~(1 << NOSE);
-	}
-	else if(brigntness == 0xff) {
-		TIMSK &= ~(1 << OCIE0A); //disable brightness interrupt
+		PORTB |= (1 << BLANK); //turn off leds
+		PORTB &= ~(1 << NOSE); //can't forget that
 	}
 	else{
 		OCR0A = brigntness;  //store brightness value
-		TIMSK |= (1 << OCIE0A); //enable brightness interrupt
+		if(brigntness == 0xff) TIMSK &= ~(1 << OCIE0A); //disable brightness interrupt
+		else TIMSK |= (1 << OCIE0A); //enable brightness interrupt
 	}
 	
 }
@@ -122,7 +121,7 @@ int main(void)
 	ACSR = (1 << ACD); //power off the ADC some more
 
 	//init ports
-	DDRB = (1 << NOSE) | (1 << SOUT) | (1 << CLK) | (1 << LATCH);
+	DDRB = (1 << NOSE) | (1 << SOUT) | (1 << CLK) | (1 << LATCH) | (1 << BLANK);
 	PORTB = (1 << BUTTON); //button pin pullup enabled
 	
 	//init timer0 interrupt
@@ -147,7 +146,7 @@ int main(void)
 		MCUCR |= (1 << BODS);
 		MCUCR &= ~(1 << BODSE);
 
-		//sleep, cuz
+		//sleep
 		sleep_cpu();
     }
 }
@@ -155,7 +154,7 @@ int main(void)
 //isr to control brightness of LEDs
 ISR(TIMER0_COMPA_vect){
 	//turn off LEDs for brightness
-	sendLEDs(0b00000000);
+	PORTB |= (1 << BLANK);
 	PORTB &= ~(1 << NOSE);
 }
 
@@ -199,6 +198,8 @@ ISR(TIMER0_OVF_vect){
 	if(getBrightness()){
 		//write leds, but one at a time
 		sendLEDs(animRay[animationPoint]->frames[animationState] & (1 << clkDiv));
+		//make sure they are on
+		PORTB &= ~(1 << BLANK);
 		//toggle nose led
 		if(animRay[animationPoint]->frames[animationState + animRay[animationPoint]->frameNum] && !clkDiv) PORTB |= (1 << NOSE);
 		else PORTB &= ~(1 << NOSE);
@@ -209,7 +210,7 @@ ISR(TIMER0_OVF_vect){
 		//reset animations
 		animationState = 0;
 		animationCycle = 0;
-		clkDiv = 0;
+		clkDiv = 8;
 
 		//disable timer0 for wdt poweroff
 		PRR |= (1 << PRTIM0);
