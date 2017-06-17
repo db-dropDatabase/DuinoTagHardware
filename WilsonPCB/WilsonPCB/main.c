@@ -226,8 +226,8 @@ ISR(TIMER0_OVF_vect){
 //triggers watchdog isr, which debounces the input
 //all to save all the power
 ISR(PCINT0_vect){
-	//if button down
-	if(!(PINB & (1 << BUTTON))){
+	//if button down and button has been up before
+	if(!(PINB & (1 << BUTTON)) && !lastButtonState){
 		//activate watchdog sleep debounce
 		WDTCR = (1 << WDCE) | (1 << WDE);
 		//set wdt to interrupt and prescale to 0.5s
@@ -235,6 +235,8 @@ ISR(PCINT0_vect){
 		//self disable pin change
 		GIMSK = 0;
 	}
+	//else signal when button goes up
+	else if(PINB & (1 << BUTTON)) lastButtonState = 0;
 }
 
 //wdt super sleep debouching isr
@@ -242,7 +244,7 @@ ISR(PCINT0_vect){
 //in deep sleep of course
 ISR(WDT_vect){
 	//if button down
-	if(!(PINB & (1 << BUTTON))){
+	if(!(PINB & (1 << BUTTON)) ){
 		//turn on timer
 		PRR &= ~(1 << PRTIM0);
 		//turn on lights
