@@ -5,7 +5,7 @@
 
 #define MATRIX_WIDTH 40
 #define MATRIX_HEIGHT 5
-#define MATRIX_PIN 19
+#define MATRIX_PIN 4
 
 #define soft_reset() wdt_enable(WDTO_15MS); for(;;)
 
@@ -31,15 +31,15 @@ void setup()
   matrix.begin();
   matrix.show();
 
-  Serial.begin(9600);
-  Serial.println(F("Here"));
-  Serial.flush();
+  //Serial.begin(9600);
+  //Serial.println(F("Here"));
+  //Serial.flush();
 
   //wait for sdcard to be ready
   while(pf_mount(&fs));
 
-  Serial.println(F("Sd Mounted!"));
-  Serial.flush();
+  //Serial.println(F("Sd Mounted!"));
+  //Serial.flush();
 
   nextFile();
   /*
@@ -172,7 +172,7 @@ void nextFile(){
 	  
 	  //if no file, search next directory
 	  if(fr == FR_NO_FILE){
-		  if(fileName == 1) die(fr, F("Could not find first file in nextFile()"));
+		 // if(fileName == 1) die(fr, F("Could not find first file in nextFile()"));
 		  nextDir();
 		  fileName = 1;
 	  }
@@ -242,7 +242,7 @@ void nextDir(){
 //debug on fails
 void die(const UINT &error, const __FlashStringHelper * place){
 	sei();
-
+	/*
 	Serial.println(place);
 
 	switch(error){
@@ -269,12 +269,13 @@ void die(const UINT &error, const __FlashStringHelper * place){
 
 	Serial.flush();
 	//die
+	*/
 	soft_reset();
 }
 
 void die(const UINT &error, const char * place){
 	sei();
-
+	/*
 	Serial.println(place);
 
 	switch(error){
@@ -300,6 +301,7 @@ void die(const UINT &error, const char * place){
 	}
 
 	Serial.flush();
+	*/
 	//die
 	soft_reset();
 }
