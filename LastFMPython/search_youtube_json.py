@@ -8,7 +8,7 @@ import os
 import pafy
 import vlc
 
-listening_history_file = "LastFMPython\\history.json"
+listening_history_file = "history.json"
 
 #class which makes the storing of my last.fm data a little safer and intuitive
 SmallTrack = namedtuple("SmallTrack", "title artist album timestamp_array")
@@ -48,6 +48,6 @@ for i in range(0, 100):
     url = 'https://www.youtube.com/watch?v=' + get_track(youtube, search)
     print(url)
     vid = pafy.new(url)
-    vid.getbestaudio().download(quiet = True)
+    vid.getbestaudio(preftype="m4a", ftypestrict=True).download(filepath=vid.videoid + ".m4a", quiet = True)
 
 

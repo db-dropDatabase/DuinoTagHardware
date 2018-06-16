@@ -55,7 +55,7 @@ void loop()
  
   //seek to pixel array
   fr = pf_lseek(offset);
-  if(fr) die(fr, "Seeking");
+  if(fr) die(fr);
   
   //unsigned int lastTime = 0;
   //unsigned int endTime = 0;
@@ -66,7 +66,7 @@ void loop()
 	do{
 	  //lastTime = micros();
 	  fr = pf_read(buff, sizeof(buff), &read);
-	  if(fr) die(fr, F("Reading row"));
+	  if(fr) die(fr);
 	  //endTime = micros();
 	  
 	  /*	  
@@ -79,7 +79,7 @@ void loop()
 	  Serial.flush();
 	  */
 		  
-      if(read != sizeof(buff)) die(read, F("Reading row: out of file"));
+      if(read != sizeof(buff)) die(read);
 
 	  //lastTime = micros();
    	  for (uint8_t i = 0; i < width; i++){
@@ -176,7 +176,7 @@ void nextFile(){
 		  nextDir();
 		  fileName = 1;
 	  }
-	  else if(fr) die(fr, F("nextFile()"));
+	  else if(fr) die(fr);
 	}while(fr);
 	
 	
@@ -235,12 +235,18 @@ void nextDir(){
 		*/
 		
 		if(fr == FR_NO_FILE) dirName = 1;
-		else if(fr) die(fr, F("NextFile()"));
+		else if(fr) die(fr);
 	} while (!fr);
 }
 
 //debug on fails
-void die(const UINT &error, const __FlashStringHelper * place){
+void die(const UINT &error){
+	matrix.setPixelColor(0, 255, 0, 0);
+	matrix.show();
+	delay(500);
+	matrix.clear();
+	matrix.show();
+
 	sei();
 	/*
 	Serial.println(place);
@@ -273,9 +279,16 @@ void die(const UINT &error, const __FlashStringHelper * place){
 	soft_reset();
 }
 
-void die(const UINT &error, const char * place){
+/*
+void die(const UINT &error){
+	matrix.setPixelColor(0, 255, 0, 0);
+	matrix.show();
+	delay(500);
+	matrix.clear();
+	matrix.show();
+
 	sei();
-	/*
+	
 	Serial.println(place);
 
 	switch(error){
@@ -301,7 +314,8 @@ void die(const UINT &error, const char * place){
 	}
 
 	Serial.flush();
-	*/
+	
 	//die
 	soft_reset();
 }
+*/

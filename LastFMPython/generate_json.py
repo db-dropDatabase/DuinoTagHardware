@@ -5,8 +5,8 @@ import json
 import pylast
 
 
-secrets_file = "LastFMPython\\secrets.yaml"
-listening_history_file = "LastFMPython\\history.json"
+secrets_file = "secrets.yaml"
+listening_history_file = "history.json"
 
 #get secrets from a file *not* on github
 def load_secrets():
